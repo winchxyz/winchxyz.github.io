@@ -184,9 +184,12 @@ export const MATERIALS = [
     id: 2,
     name: 'Obsidian glass',
     sw: '#3a4b52',
-    desc: 'Three refracted rays instead of one, at slightly different indices of refraction, recombined as red, green and blue. That is the whole trick behind dispersion — the reason a prism throws a rainbow and cheap CG glass never does.',
-    p: { rough: 0.02, metal: 0.0, ior: 1.52, aniso: 0.0, film: 0.0, trans: 1.0 },
-    stats: [['IOR r/g/b', '1.505 / 1.520 / 1.545'], ['abbe', '≈ 42'], ['bounces', '2'], ['model', 'dielectric']],
+    desc: 'Three refracted rays instead of one, at slightly different indices of refraction, recombined as red, green and blue. That is the whole trick behind dispersion — the reason a prism throws a rainbow and cheap CG glass never does. This one is heavily absorbing, so thickness reads as darkness.',
+    p: {
+      rough: 0.02, metal: 0.0, ior: 1.52, aniso: 0.0, film: 0.0, trans: 1.0,
+      absorb: [0.68, 0.46, 0.40], dispersion: 0.017,
+    },
+    stats: [['IOR r/g/b', '1.503 / 1.520 / 1.537'], ['abbe', '≈ 42'], ['bounces', '2'], ['model', 'dielectric']],
   },
   {
     id: 3,
@@ -212,6 +215,17 @@ export const MATERIALS = [
     p: { rough: 0.55, metal: 0.15, ior: 1.7, aniso: 0.0, film: 0.0, trans: 0.0, emissive: 1.0 },
     stats: [['T skin', '1 100 K'], ['T core', '2 400 K'], ['curve', 'Planck'], ['exposure', '+1.4 EV']],
   },
+  {
+    id: 6,
+    name: 'Cast crystal',
+    sw: '#dfeef5',
+    desc: 'The same dielectric solver as the obsidian, with the tint taken out and the dispersion turned up. Absorption is near zero, so thickness reads as depth rather than as darkness, and the three wavelengths separate far enough that the edges throw real colour. Lead crystal is dense, slow glass — a low Abbe number, which is the number that says how hard it splits light.',
+    p: {
+      rough: 0.015, metal: 0.0, ior: 1.62, aniso: 0.0, film: 0.0, trans: 1.0,
+      absorb: [0.055, 0.030, 0.075], dispersion: 0.042,
+    },
+    stats: [['IOR r/g/b', '1.578 / 1.620 / 1.662'], ['abbe', '≈ 19'], ['absorption', '≈ 0'], ['model', 'dielectric']],
+  },
 ];
 
 /* ── physics sliders ───────────────────────────────────────────────────── */
@@ -227,7 +241,7 @@ export const SLIDERS = [
 /* ── keyboard ──────────────────────────────────────────────────────────── */
 
 export const SHORTCUTS = [
-  ['1 – 6',  'material preset'],
+  ['1 – 7',  'material preset'],
   ['drag',   'orbit the sculpture'],
   ['grab',   'pull the cloth around'],
   ['P',      'photo mode — UI off, 2× render scale'],

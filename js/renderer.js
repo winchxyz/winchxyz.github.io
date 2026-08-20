@@ -584,6 +584,7 @@ export class Renderer {
         uMatId: p.matId,
         uRough: p.rough, uMetal: p.metal, uIor: p.ior,
         uAniso: p.aniso, uFilm: p.film, uTrans: p.trans, uEmissive: p.emissive,
+        uAbsorb: p.absorb, uDispersion: p.dispersion,
         uSteps: this.tier.steps, uTransSteps: this.tier.transSteps,
         uReflSteps: this.tier.reflSteps, uShadowSteps: this.tier.shadowSteps,
         uReflect: this.tier.reflect * (p.reflect ?? 1),

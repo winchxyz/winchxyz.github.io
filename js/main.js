@@ -112,6 +112,7 @@ async function boot() {
   wireInput();
   wireKeys();
   populateNumbers();
+  ui.updatePhysReadout(renderer, director);
 
   // Render a couple of frames before revealing anything, so the first thing
   // anyone sees is a finished image rather than a compile hitch.
@@ -199,8 +200,7 @@ function populateNumbers() {
 
 function wireInput() {
   const canvas = $('#gl');
-  const orbit = { yaw: 0, pitch: 0, vy: 0, vp: 0 };
-  director.orbit = orbit;
+  const orbit = director.orbit;   // the director owns it; drag just adds velocity
 
   let dragging = false;
   let mode = null;          // 'orbit' | 'cloth'
@@ -300,6 +300,7 @@ function wireInput() {
     if (id === 'stiff') director.cloth.stiff = v;
     if (id === 'damp') director.cloth.damp = v;
     if (id === 'iters') { director.cloth.iters = v; populateNumbers(); }
+    ui.updatePhysReadout(renderer, director);
   };
 
   $$('[data-action="reset-cloth"]').forEach((b) => b.addEventListener('click', () => {
@@ -318,16 +319,6 @@ function wireInput() {
     if (!document.hidden) last = performance.now();
   });
 
-  // orbit integration lives on the director so the loop can read it
-  director.integrateOrbit = (dt) => {
-    orbit.yaw += orbit.vy;
-    orbit.pitch = clamp(orbit.pitch + orbit.vp, -0.75, 0.95);
-    orbit.vy = damp(orbit.vy, 0, 9, dt);
-    orbit.vp = damp(orbit.vp, 0, 9, dt);
-    // ease back toward the directed framing, slowly enough not to fight
-    orbit.yaw = damp(orbit.yaw, 0, 0.28, dt);
-    orbit.pitch = damp(orbit.pitch, 0, 0.28, dt);
-  };
 }
 
 function wireKeys() {
@@ -335,7 +326,7 @@ function wireKeys() {
     if (e.target.matches('input, textarea')) return;
     const k = e.key;
 
-    if (k >= '1' && k <= '6') { ui.selectMaterial(+k - 1); return; }
+    if (k >= '1' && k <= '9' && +k <= MATERIALS.length) { ui.selectMaterial(+k - 1); return; }
 
     switch (k.toLowerCase()) {
       case 'p': {
@@ -414,24 +405,10 @@ function loop(now) {
   director.integrateOrbit?.(dt);
   director.fade = damp(director.fade, 1, 2.4, dt);
 
+  // The orbit is folded into the framing solve inside the director now, so
+  // that dragging cannot push the subject off the edge of a frame that was
+  // just carefully composed for this aspect ratio.
   const p = director.update(dt, renderer);
-
-  // user orbit, applied on top of the directed camera
-  const o = director.orbit;
-  if (o && (Math.abs(o.yaw) > 1e-4 || Math.abs(o.pitch) > 1e-4)) {
-    const t = p.camTarget;
-    let dx = p.camPos[0] - t[0], dy = p.camPos[1] - t[1], dz = p.camPos[2] - t[2];
-    const r = Math.hypot(dx, dy, dz);
-    let yaw = Math.atan2(dx, dz) + o.yaw;
-    let pitch = Math.asin(clamp(dy / r, -1, 1)) + o.pitch;
-    pitch = clamp(pitch, -0.55, 1.15);
-    const cp = Math.cos(pitch);
-    p.camPos = [
-      t[0] + Math.sin(yaw) * cp * r,
-      t[1] + Math.sin(pitch) * r,
-      t[2] + Math.cos(yaw) * cp * r,
-    ];
-  }
 
   renderer.render(p, dt);
 
@@ -441,7 +418,7 @@ function loop(now) {
   adapt(dt);
   ui.updateHud(renderer, msAvg, fpsAvg);
 
-  if (renderer.frame % 90 === 0) populateNumbers();
+  if (renderer.frame % 90 === 0) { populateNumbers(); ui.updatePhysReadout(renderer, director); }
 }
 
 /* ── go ────────────────────────────────────────────────────────────────── */

@@ -51,6 +51,8 @@ export class UI {
 
   buildMaterials() {
     const list = $('#mat-list');
+    list.setAttribute('role', 'tablist');   // the buttons already say role=tab
+    list.setAttribute('aria-label', 'material presets');
     MATERIALS.forEach((m, i) => {
       const li = el('li');
       const b = el('button', '', `
@@ -385,6 +387,26 @@ export class UI {
     c.strokeStyle = ms > 20 ? '#E4B34E' : '#C6F24E';
     c.lineWidth = 1;
     c.stroke();
+  }
+
+  /* The physics readout. This element existed in the markup from the start
+     and nothing ever wrote to it, so it rendered as an empty bordered box —
+     which reads as a loading state that never finishes. */
+  updatePhysReadout(renderer, director) {
+    const el2 = $('#phys-readout');
+    if (!el2 || !renderer) return;
+    const nodes = renderer.clothN * renderer.clothN;
+    const iters = Math.round(director.cloth.iters);
+    const rows = [
+      ['nodes', fmt(nodes)],
+      ['constraints', fmt(nodes * 12)],
+      ['solves / frame', fmt(nodes * 12 * iters)],
+      ['integrator', 'Verlet'],
+      ['relaxation', 'Jacobi ω 1.72'],
+      ['collision', 'SDF + floor'],
+    ];
+    const next = rows.map(([k, v]) => `<div>${k} <b>${v}</b></div>`).join('');
+    if (el2.innerHTML !== next) el2.innerHTML = next;
   }
 
   /* ── toast ─────────────────────────────────────────────────────────── */

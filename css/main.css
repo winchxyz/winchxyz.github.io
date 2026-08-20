@@ -48,6 +48,7 @@ html{
   color-scheme:dark;
   -webkit-text-size-adjust:100%;
   scroll-behavior:auto;      /* JS owns smooth scrolling */
+  overflow-x:clip;           /* belt and braces; the real fix is min-width:0 */
 }
 
 body{
@@ -68,6 +69,22 @@ body{
 body.has-cursor,
 body.has-cursor a,
 body.has-cursor button{ cursor:none; }
+
+/* No text selection, anywhere on the page.
+
+   A drag here means orbit the sculpture or grab the cloth. A drag that also
+   paints a selection across the headline reads as a broken interaction
+   rather than a deliberate one.
+
+   The cost is real and worth stating: nothing on the page can be copied,
+   including the shell commands. Anything that should be exempt needs
+   `user-select:text` put back on it explicitly. */
+*{
+  -webkit-user-select:none;
+  -moz-user-select:none;
+  user-select:none;
+  -webkit-tap-highlight-color:transparent;
+}
 
 ::selection{ background:var(--lime); color:var(--ink); }
 
@@ -439,6 +456,18 @@ html.scrolled .scroll-cue{ opacity:0; pointer-events:none; }
 .grid-2{ display:grid; grid-template-columns:1fr 1fr; gap:clamp(28px,5vw,80px); align-items:start; }
 @media (max-width:900px){ .grid-2{ grid-template-columns:1fr; } }
 
+/* Grid and flex items default to `min-width:auto`, which resolves to their
+   MIN-CONTENT size — so one long unbreakable line inside the code block was
+   forcing its track wider than the viewport, and `overflow-x:auto` on the
+   <pre> could not save it because the track itself refused to shrink.
+   On a 375px phone the page laid out 554px wide because of this.
+   `min-width:0` is the fix, and it belongs on every such container. */
+.grid-2 > *,
+.mat-lab > *,
+.phys-panel > *,
+.codeblock,
+.codeblock pre{ min-width:0; }
+
 .col p{ color:var(--muted); margin:0 0 18px; max-width:52ch; }
 .col p:last-child{ margin-bottom:0; }
 
@@ -500,15 +529,18 @@ html.scrolled .scroll-cue{ opacity:0; pointer-events:none; }
 .mat-list li.is-on button .num{ color:var(--lime); }
 .mat-list li.is-on .sw{ transform:scale(1.25); box-shadow:0 0 0 1px rgba(198,242,78,.5), 0 0 16px -2px currentColor; }
 
-.mat-detail{ min-height:220px; }
+/* Cap the detail column. It sits in a `1fr` track, so on a wide viewport it
+   stretched the whole way across — which left the stats grid with an empty
+   trailing cell and pushed the copy under the sculpture. */
+.mat-detail{ min-height:220px; max-width:620px; }
 .mat-name{
   margin:0 0 10px; font-size:clamp(26px,3.4vw,46px); font-weight:600;
   letter-spacing:-.03em; color:var(--chalk); line-height:1.05;
 }
 .mat-desc{ margin:0 0 24px; color:var(--muted); max-width:48ch; font-size:15px; }
 .mat-params{
-  display:grid; grid-template-columns:repeat(auto-fill,minmax(128px,1fr));
-  gap:1px; margin:0 0 22px;
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(118px,1fr));
+  gap:1px; margin:0 0 22px; max-width:620px;
   background:var(--line-2); border:1px solid var(--line-2);
 }
 .mat-params div{ background:var(--ink); padding:11px 12px; }
@@ -777,6 +809,22 @@ body.cur-drag .c-lbl{ opacity:1; }
 
 @media (max-width:760px){
   :root{ --nav-h:58px; }
+
+  /* On a phone the type runs the full width, so there is nowhere for the 3D
+     to go that is not behind something being read. It becomes atmosphere:
+     one scrim across every section, strong enough that copy always wins. */
+  .sec::before{
+    content:""; position:absolute; inset:0; z-index:-1; pointer-events:none;
+    background:linear-gradient(180deg,
+      rgba(7,9,10,.55) 0%, rgba(7,9,10,.86) 28%, rgba(7,9,10,.90) 100%) !important;
+  }
+
+  /* A 22px-tall slider is a 22px touch target. Pointer-coarse wants 44. */
+  .slider input[type=range]{ height:44px; }
+  .slider input[type=range]::-webkit-slider-thumb{ width:18px; height:18px; margin-top:-8px; }
+  .slider input[type=range]::-moz-range-thumb{ width:18px; height:18px; }
+  .chip{ padding:10px 15px; }
+  .mat-list button{ padding:16px 4px; }
   #nav nav a:not(.cta){ display:none; }
   #hud{ display:none; }
   .sec{ min-height:auto; padding:clamp(80px,12vh,120px) 0; }

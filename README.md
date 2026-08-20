@@ -46,7 +46,7 @@ pixel of it walks the field until it hits the surface. It writes its own
 `gl_FragDepth`, which is how the cloth and the particles can be occluded by a
 shape that does not exist as triangles.
 
-**Six materials, no textures.** GGX with height-correlated Smith visibility,
+**Seven materials, no textures.** GGX with height-correlated Smith visibility,
 anisotropic GGX with a tangent frame built from a procedural direction field
 (a distance field has no UVs), thin-film interference for the anodised
 titanium, three-ray dispersion for the glass, a Charlie sheen lobe for the
@@ -78,7 +78,7 @@ step so the dark gradients do not band.
 
 | | |
 |---|---|
-| **1** – **6** | material preset |
+| **1** – **7** | material preset |
 | **drag** | orbit the sculpture — or, in the physics section, grab the cloth |
 | **P** | photo mode — UI hidden, higher render scale |
 | **Enter** | save a PNG |
@@ -152,15 +152,15 @@ GPU=1 node tools/gputest.mjs                    # per-program compile times
 GPU=1 PAGE=bisect.html node tools/gputest.mjs   # which part of one costs what
 ```
 
-The hero image at the top is a real GPU capture. The four below are
-software-rendered at a few frames a second, so they are honest about layout
-and lighting and unfairly harsh about everything the temporal accumulation
-would have cleaned up.
+Every image in this README is a real GPU capture taken through that harness,
+at 1920×1080 and at 390×844, on an RTX 4070 at 60 fps.
 
 | | |
 |---|---|
 | ![](docs/materials.png) | ![](docs/physics.png) |
 | ![](docs/work.png) | ![](docs/contact.png) |
+
+<img src="docs/mobile.png" width="300" alt="the same page at 390px" />
 
 ---
 
@@ -195,6 +195,29 @@ by sniffing the user agent, then adapts to the measured frame time with
 hysteresis and a cooldown. If a load starts and never finishes, the next one
 comes back a tier quieter — a page too heavy for an unfamiliar driver is
 otherwise unrecoverable, because reloading does exactly the same thing again.
+
+### Composition is specified on the screen, not in the world
+
+Each section used to name a camera position in world units. That framing is
+only correct at the one aspect ratio it was tuned at — the type sits in a
+centred, max-width column, so as the viewport widens the column stays put
+while a world-space offset keeps sliding the sculpture outward until it runs
+off the edge. Which it did, at 16:9.
+
+A keyframe now says where the subject should appear *on screen* and how much
+of the frame it should fill, and the camera is solved from that every frame
+against the current aspect ratio:
+
+```
+d      = max( R / (fill · tan(fov/2)),  R / (fillW · aspect · tan(fov/2)) )
+camPos = pivot + dir·d + right·(−ndcX · d · aspect · tan(fov/2))
+                       + up   ·(−ndcY · d · tan(fov/2))
+```
+
+The horizontal position is a fraction of the **content column** rather than of
+the viewport, so the sculpture tracks the type instead of the window. Portrait
+gets its own composition — top centre, using the full width — because on a
+phone there is no empty column to the right to put anything in.
 
 ### Why the distance field reads its noise from a texture
 
@@ -243,6 +266,16 @@ compiler decides to paste it.
 
 Everything after that was refinement in the same session, with
 [Claude Code](https://claude.com/claude-code).
+
+---
+
+### Notes on the interaction
+
+Text selection is disabled across the page. A drag here means orbit the
+sculpture or grab the cloth, and a drag that also paints a selection across
+the headline reads as a bug. The cost is that nothing can be copied, shell
+commands included; `user-select:text` has to be put back on anything that
+should be exempt.
 
 ---
 

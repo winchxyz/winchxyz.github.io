@@ -199,8 +199,15 @@ try {
   }
 
   /* ── screenshot ────────────────────────────────────────────────────── */
+  /* The page viewport, which is NOT the same thing as the browser window.
+     This was pinned at 1280x800 while WIN only resized the window, so every
+     screenshot taken during development was 16:10 and the 16:9 framing was
+     never once looked at. */
+  const [vw, vh] = (process.env.VIEW || '1280x800').split('x').map(Number);
   await cdp.send('Emulation.setDeviceMetricsOverride', {
-    width: 1280, height: 800, deviceScaleFactor: 1, mobile: false,
+    width: vw, height: vh,
+    deviceScaleFactor: Number(process.env.DPR || 1),
+    mobile: process.env.MOBILE === '1',
   });
   await cdp.send('Page.navigate', { url: SITE });
 
@@ -233,6 +240,12 @@ try {
     console.log('scrolled to ' + goto);
   }
 
+  // arbitrary setup before the settle window (select a material, open a panel)
+  if (process.env.PRE) {
+    try { await evaluate(cdp, process.env.PRE); console.log('pre: ok'); }
+    catch (e) { console.log('pre failed: ' + e.message); }
+  }
+
   // let the software rasteriser grind out some frames
   const startFrame = await evaluate(cdp, 'window.__winch?.renderer?.frame ?? -1');
   await sleep(Number(process.env.SETTLE || 25000));
@@ -245,6 +258,26 @@ try {
   if (process.env.PROBE) {
     try { console.log('probe: ' + await evaluate(cdp, process.env.PROBE)); }
     catch (e) { console.log('probe failed: ' + e.message); }
+  }
+
+  /* SHOTS captures several sections in one browser session. Launching Chrome
+     and waiting for boot costs far more than the screenshots do, so grabbing
+     a whole page's worth in one run is the difference between auditing every
+     section at every breakpoint and auditing one. */
+  const shots = (process.env.SHOTS || '').split(',').map((x) => x.trim()).filter(Boolean);
+  if (shots.length) {
+    const dwell = Number(process.env.DWELL || 3500);
+    for (const sel of shots) {
+      const id = sel.replace(/^#/, '');
+      await evaluate(cdp, `(() => { const n = document.querySelector('${sel}'); if (n) scrollTo({top: n.offsetTop, behavior: 'auto'}); return !!n; })()`);
+      await sleep(dwell);
+      const s2 = await cdp.send('Page.captureScreenshot', { format: 'png' });
+      const path = OUT.replace(/\.png$/, '') + '-' + id + '.png';
+      writeFileSync(path, Buffer.from(s2.data, 'base64'));
+      console.log('wrote ' + path);
+    }
+    cdp.close(); chrome.kill();
+    process.exit(0);
   }
 
   const shot = await cdp.send('Page.captureScreenshot', { format: 'png' });

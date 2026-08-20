@@ -36,6 +36,8 @@ uniform float uAniso;
 uniform float uFilm;
 uniform float uTrans;
 uniform float uEmissive;
+uniform vec3  uAbsorb;       // Beer-Lambert coefficient, per channel
+uniform float uDispersion;   // IOR spread between red and blue
 
 /* Every one of these is a LOOP BOUND, and every one of them is a uniform
    rather than a constant on purpose.
@@ -230,8 +232,11 @@ Surf describe(vec3 p, vec3 n){
     s.albedo = mix(base, base * film * 1.9, uFilm);
     s.rough  = clamp(uRough + tfbm2(q * 6.0) * 0.10 - 0.04, 0.03, 1.0);
   }
-  else if (uMatId == 2){                  // obsidian glass
-    s.albedo = vec3(0.045);
+  else if (uMatId == 2 || uMatId == 6){   // the two dielectrics
+    // Whatever colour a piece of glass has comes from absorption along the
+    // path, not from an albedo, so both share one branch here and differ
+    // only in uAbsorb and uDispersion.
+    s.albedo = vec3(0.03);
     s.metal  = 0.0;
     s.rough  = uRough;
   }
@@ -424,9 +429,10 @@ vec3 refractChannel(vec3 p, vec3 n, vec3 rd, float ior){
   vec3 out2 = refract(dir, n2, ior);
   if (dot(out2, out2) < 1e-6) out2 = reflect(dir, n2);   // total internal reflection
 
-  // Beer-Lambert through a very slightly tinted glass
+  // Beer-Lambert. The obsidian absorbs hard so thickness reads as darkness;
+  // the crystal barely absorbs at all, so thickness reads as depth.
   float pathLen = distance(p, p2);
-  vec3 absorb = exp(-vec3(0.62, 0.42, 0.36) * pathLen * 1.1);
+  vec3 absorb = exp(-uAbsorb * pathLen * 1.1);
 
   return envColor(normalize(out2), 0.03, uRimBoost) * absorb;
 }
@@ -447,7 +453,7 @@ vec3 shadeFloor(vec3 p, vec3 rd, float t){
   vec2 g2 = abs(fract(p.xz * 0.1 - 0.5) - 0.5) / max(w * 0.1, 1e-4);
   float line2 = 1.0 - min(min(g2.x, g2.y), 1.0);
 
-  float rough = 0.30 + 0.16 * tfbm2(vec3(p.x, 0.0, p.z) * 0.8);
+  float rough = 0.44 + 0.18 * tfbm2(vec3(p.x, 0.0, p.z) * 0.8);
   vec3 base = vec3(0.014, 0.016, 0.017);
   vec3 col = base;
   // The grid is a hint that there is a floor, not a feature. At any more
@@ -488,7 +494,7 @@ vec3 shadeFloor(vec3 p, vec3 rd, float t){
   col = col * (0.22 + 0.78 * sh) * ao;
   // ab.y is the grazing-angle bias term, and it gets large near the horizon —
   // which is correct, and is also why this needs no extra multiplier on top
-  col += env * (f0 * ab.x + ab.y) * ao;
+  col += env * (f0 * ab.x + ab.y) * ao * 0.78;
   col += vec3(0.018, 0.021, 0.024) * ao;
 
   return col;
@@ -515,9 +521,10 @@ void main(){
   float dist = -1.0;
 
   if (h.id == 0){
-    col = envColor(rd, 0.0, uRimBoost);
-    // never let the raw sun blow out the background plate
-    col = min(col, vec3(1.6));
+    // The backdrop gets a tenth of the sources: enough that the room still
+    // glows where a light is, not so much that a softbox becomes a panel.
+    col = envColor(rd, 0.0, uRimBoost, 0.10);
+    col = min(col, vec3(1.2));
     gl_FragDepth = 1.0;
   }
   else {
@@ -540,7 +547,7 @@ void main(){
         // one interior march per channel — this is where dispersion comes
         // from, and doing it with a single shared path is exactly the
         // shortcut that makes most real-time glass look like plastic
-        float d = 0.017;   // ~Abbe 42
+        float d = uDispersion;
         vec3 tr = vec3(
           refractChannel(p, n, rd, uIor - d).r,
           refractChannel(p, n, rd, uIor    ).g,

@@ -444,7 +444,14 @@ float softbox(vec3 d, vec3 dir, vec2 halfSize, float soft){
   return smoothstep(soft, 0.0, length(e)) * smoothstep(0.0, 0.06, z);
 }
 
-vec3 envColor(vec3 d, float rough, float rimBoost){
+/* lightGain scales the emissive sources only — not the backdrop.
+
+   A backlight points roughly where the camera is looking, so it lands in
+   frame as a bright rectangle unless it is flagged off. A reflection of it
+   is exactly what you want; a wall of it behind the type is not. Primary
+   rays that hit nothing therefore ask for a fraction of the sources, and
+   everything else asks for all of them. */
+vec3 envColor(vec3 d, float rough, float rimBoost, float lightGain){
   float h = d.y * 0.5 + 0.5;
 
   // Backdrop. This is what a mirror sees when it is not looking at a light,
@@ -459,20 +466,22 @@ vec3 envColor(vec3 d, float rough, float rimBoost){
   float soft = 0.05 + rough * rough * 1.7;
 
   // key — large, high, slightly warm, camera left
-  sky += vec3(1.00, 0.96, 0.90) * 3.60 * softbox(d, normalize(vec3(-0.55, 0.72, 0.42)), vec2(0.30, 0.20), soft);
+  sky += lightGain * vec3(1.00, 0.96, 0.90) * 3.60 * softbox(d, normalize(vec3(-0.55, 0.72, 0.42)), vec2(0.30, 0.20), soft);
   // fill — cool, wide, camera right and low
-  sky += vec3(0.62, 0.72, 0.95) * 1.05 * softbox(d, normalize(vec3( 0.86, 0.10, 0.16)), vec2(0.62, 0.44), soft + 0.14);
+  sky += lightGain * vec3(0.62, 0.72, 0.95) * 1.05 * softbox(d, normalize(vec3( 0.86, 0.10, 0.16)), vec2(0.62, 0.44), soft + 0.14);
   // Rim — the brand accent, behind the subject and hard off to camera right.
   // A backlight points roughly where the camera is looking, so it is visible
   // in frame unless it is pushed outside the field of view; at 60 degrees off
   // axis it rims the silhouette without becoming a green wall behind it.
   // This is the same reason a real product shot flags its backlight off.
-  sky += vec3(0.78, 0.95, 0.31) * (1.90 + rimBoost) * softbox(d, normalize(vec3(0.80, 0.30, -0.52)), vec2(0.26, 0.17), soft + 0.05);
+  sky += lightGain * vec3(0.78, 0.95, 0.31) * (1.62 + rimBoost) * softbox(d, normalize(vec3(0.80, 0.30, -0.52)), vec2(0.26, 0.17), soft + 0.05);
   // a hard little specular sun so mirror-smooth metal has something to bite on
-  sky += vec3(1.0, 0.98, 0.94) * 5.5 * softbox(d, normalize(vec3(-0.30, 0.86, 0.40)), vec2(0.030, 0.030), soft * 0.35 + 0.006);
+  sky += lightGain * vec3(1.0, 0.98, 0.94) * 5.5 * softbox(d, normalize(vec3(-0.30, 0.86, 0.40)), vec2(0.030, 0.030), soft * 0.35 + 0.006);
 
   return sky;
 }
+
+vec3 envColor(vec3 d, float rough, float rimBoost){ return envColor(d, rough, rimBoost, 1.0); }
 
 // The three sources again, as punctual lights, for the diffuse and direct
 // specular terms. Keeping them in one place means moving the key moves it
@@ -482,7 +491,7 @@ const vec3 L_FILL = vec3( 0.86,  0.10,  0.16);
 const vec3 L_RIM  = vec3( 0.80,  0.30, -0.52);
 const vec3 C_KEY  = vec3(1.00, 0.96, 0.90) * 2.8;
 const vec3 C_FILL = vec3(0.62, 0.72, 0.95) * 1.0;
-const vec3 C_RIM  = vec3(0.78, 0.95, 0.31) * 1.8;
+const vec3 C_RIM  = vec3(0.78, 0.95, 0.31) * 1.5;
 `;
 
 /* ── colour ────────────────────────────────────────────────────────────── */
