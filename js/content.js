@@ -35,11 +35,21 @@ export const LANG_COLOR = {
 
 export const REPOS = [
   {
+    name: 'winchxyz.github.io',
+    group: 'graphics',
+    desc: 'This page. A portfolio that renders itself on the GPU — one WebGL2 context, four thousand lines of hand-written GLSL, and nothing else at all.',
+    lang: 'JavaScript',
+    stars: 0, forks: 0,
+    tags: ['WebGL2', 'GLSL', 'raymarching', 'zero-deps'],
+    url: 'https://github.com/winchxyz/winchxyz.github.io',
+    live: 'https://winchxyz.github.io/',
+  },
+  {
     name: 'moon-rover',
     group: 'graphics',
     desc: 'A 3D lunar rover survey game. WebGL2, no build step, no third-party assets — every texture and every sound is generated at runtime.',
     lang: 'JavaScript',
-    stars: 97, forks: 21,
+    stars: 102, forks: 23,
     tags: ['WebGL2', 'procedural-audio', 'zero-assets', 'gamedev'],
     url: 'https://github.com/winchxyz/moon-rover',
   },
@@ -58,7 +68,7 @@ export const REPOS = [
     group: 'graphics',
     desc: 'A whole cartoon town generated from a seed string and rendered with a hand-written cel-shading pipeline.',
     lang: 'JavaScript',
-    stars: 16, forks: 2,
+    stars: 20, forks: 2,
     tags: ['cel-shading', 'procedural', 'seeded'],
     url: 'https://github.com/winchxyz/bikini-bottom',
   },
