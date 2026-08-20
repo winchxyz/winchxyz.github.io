@@ -123,8 +123,7 @@
   </a>
 
   <p class="hero-footnote mono" data-reveal data-reveal-delay="5">
-    everything you see moving is one WebGL2 context ·
-    <button type="button" class="linkish" data-scrollto="#numbers">the numbers</button>
+    everything you see moving is one WebGL2 context — no engine, no asset files
   </p>
 </section>
 
@@ -168,9 +167,10 @@
     <header class="sec-head">
       <h2 class="h-mono" data-reveal><span class="prompt">$</span> materials</h2>
       <p class="sec-sub" data-reveal data-reveal-delay="1">
-        Nine hundred lines of BRDF. No texture files, no environment map — the studio
-        lighting is an analytic function of the view direction, and every surface
-        detail comes out of noise. Pick one; the sculpture changes while you watch.
+        This is the part of the job I like most: working out how a surface should
+        answer light, and then writing that answer down. Each of these is a few
+        lines of maths — no textures, no photographed environment, nothing
+        downloaded. Pick one and watch it change.
       </p>
     </header>
 
@@ -211,25 +211,9 @@
 </section>
 
 <!-- ── 05 · NUMBERS ──────────────────────────────────────────────────────── -->
-<section class="sec sec-numbers" id="numbers" data-scene="numbers" data-label="04 / the numbers">
-  <div class="wrap">
-    <header class="sec-head">
-      <h2 class="h-mono" data-reveal><span class="prompt">$</span> cat NUMBERS</h2>
-      <p class="sec-sub" data-reveal data-reveal-delay="1">
-        What this page is actually doing, measured on your machine, right now.
-      </p>
-    </header>
-    <ul class="numbers" id="numbers-grid"></ul>
-    <p class="numbers-note mono" data-reveal>
-      Dependencies: <b>0</b>. Asset files: <b>0</b>. Build step: <b>none</b>.
-      Everything above is one <code>&lt;canvas&gt;</code>, hand-written GLSL, and a
-      few thousand lines of JavaScript that never leave your machine.
-    </p>
-  </div>
-</section>
 
 <!-- ── 06 · CONTACT ──────────────────────────────────────────────────────── -->
-<section class="sec sec-contact" id="contact" data-scene="contact" data-label="05 / contact">
+<section class="sec sec-contact" id="contact" data-scene="contact" data-label="04 / contact">
   <div class="wrap">
     <h2 class="contact-h" data-reveal>
       Different problems.<br /><span class="accent">Same habits.</span>

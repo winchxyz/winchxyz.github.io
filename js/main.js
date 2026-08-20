@@ -109,7 +109,6 @@ async function boot() {
   ui.initHud(renderer);
   wireInput();
   wireKeys();
-  populateNumbers();
 
   // Render a couple of frames before revealing anything, so the first thing
   // anyone sees is a finished image rather than a compile hitch.
@@ -153,7 +152,7 @@ async function boot() {
   last = performance.now();
   requestAnimationFrame(loop);
 
-  ui.refreshStats().then(() => populateNumbers());
+  ui.refreshStats();
 
   setTimeout(() => {
     if (!sessionStorage.getItem('winch-hint')) {
@@ -175,21 +174,6 @@ function failGracefully(err) {
   $$('[data-reveal]').forEach((x) => x.classList.add('in'));
 }
 
-/* ── numbers ───────────────────────────────────────────────────────────── */
-
-function populateNumbers() {
-  if (!renderer) return;
-  ui.buildNumbers([
-    [fmt(renderer.particleCount), '', 'particles, solved on the gpu'],
-    [String(renderer.programs.length), '', 'shader programs, linked at load'],
-    [fmt(GLSL_LINES), '', 'lines of glsl, hand written'],
-    [String(renderer.drawCalls), '', 'draw calls per frame'],
-    [`${renderer.iw}×${renderer.ih}`, '', 'internal render resolution'],
-    [(renderer.vramBytes() / 1048576).toFixed(0), 'MB', 'render targets in vram'],
-    [String(MATERIALS.length), '', 'materials, none of them textured'],
-    ['0', '', 'dependencies · asset files · build steps'],
-  ]);
-}
 
 /* ── input ─────────────────────────────────────────────────────────────── */
 
@@ -418,7 +402,6 @@ function loop(now) {
   adapt(dt);
   ui.updateHud(renderer, msAvg, fpsAvg);
 
-  if (renderer.frame % 90 === 0) populateNumbers();
 }
 
 /* ── go ────────────────────────────────────────────────────────────────── */

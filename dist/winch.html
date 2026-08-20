@@ -283,9 +283,12 @@ html.hud-on #hud-toggle{ opacity:0; pointer-events:none; }
   transition:background .4s var(--ease), border-color .4s var(--ease), transform .5s var(--ease);
   border-bottom:1px solid transparent;
 }
+/* Opaque enough that type scrolling underneath disappears rather than
+   ghosting through half-legible, which is what made the last section look
+   broken rather than merely scrolled. */
 html.scrolled #nav{
-  background:linear-gradient(180deg, rgba(7,9,10,.86), rgba(7,9,10,.5) 70%, transparent);
-  -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);
+  background:linear-gradient(180deg, rgba(7,9,10,.97) 0%, rgba(7,9,10,.93) 62%, rgba(7,9,10,0) 100%);
+  -webkit-backdrop-filter:blur(16px); backdrop-filter:blur(16px);
   border-bottom-color:var(--line-2);
 }
 html.nav-hide #nav{ transform:translateY(-100%); }
@@ -710,19 +713,24 @@ html.scrolled .scroll-cue{ opacity:0; pointer-events:none; }
 
 /* ══ CONTACT ═════════════════════════════════════════════════════════════ */
 
-.sec-contact{ padding-bottom:clamp(80px,10vh,140px); }
+.sec-contact{ padding-bottom:clamp(60px,7vh,110px); }
+/* Sized so the whole contact block fits one screen.
+
+   At 98px over two lines the section was taller than the viewport, so
+   scrolling to the end left the headline sliced in half and sitting under
+   the navigation bar. Nothing was broken — it was simply too big to land. */
 .contact-h{
-  margin:0 0 clamp(36px,7vh,72px);
+  margin:0 0 clamp(30px,5vh,54px);
   font-family:var(--display); font-stretch:108%;
-  font-size:clamp(36px,6.6vw,98px); font-weight:720; line-height:.98;
+  font-size:clamp(34px,5.1vw,72px); font-weight:720; line-height:1.0;
   letter-spacing:-.018em; color:var(--chalk);
 }
 
-.links{ list-style:none; margin:0 0 clamp(46px,9vh,90px); padding:0; border-top:1px solid var(--line-2); }
+.links{ list-style:none; margin:0 0 clamp(32px,5vh,58px); padding:0; border-top:1px solid var(--line-2); }
 .links li{ border-bottom:1px solid var(--line-2); }
 .links a{
   display:flex; align-items:center; gap:clamp(14px,2vw,26px);
-  padding:clamp(18px,2.4vw,28px) 4px; position:relative;
+  padding:clamp(15px,1.7vw,21px) 4px; position:relative;
   transition:padding-left .45s var(--ease-out), color .3s;
   color:var(--bone);
 }
@@ -953,8 +961,7 @@ body.cur-drag .c-lbl{ opacity:1; }
   </a>
 
   <p class="hero-footnote mono" data-reveal data-reveal-delay="5">
-    everything you see moving is one WebGL2 context ·
-    <button type="button" class="linkish" data-scrollto="#numbers">the numbers</button>
+    everything you see moving is one WebGL2 context — no engine, no asset files
   </p>
 </section>
 
@@ -998,9 +1005,10 @@ body.cur-drag .c-lbl{ opacity:1; }
     <header class="sec-head">
       <h2 class="h-mono" data-reveal><span class="prompt">$</span> materials</h2>
       <p class="sec-sub" data-reveal data-reveal-delay="1">
-        Nine hundred lines of BRDF. No texture files, no environment map — the studio
-        lighting is an analytic function of the view direction, and every surface
-        detail comes out of noise. Pick one; the sculpture changes while you watch.
+        This is the part of the job I like most: working out how a surface should
+        answer light, and then writing that answer down. Each of these is a few
+        lines of maths — no textures, no photographed environment, nothing
+        downloaded. Pick one and watch it change.
       </p>
     </header>
 
@@ -1041,25 +1049,9 @@ body.cur-drag .c-lbl{ opacity:1; }
 </section>
 
 <!-- ── 05 · NUMBERS ──────────────────────────────────────────────────────── -->
-<section class="sec sec-numbers" id="numbers" data-scene="numbers" data-label="04 / the numbers">
-  <div class="wrap">
-    <header class="sec-head">
-      <h2 class="h-mono" data-reveal><span class="prompt">$</span> cat NUMBERS</h2>
-      <p class="sec-sub" data-reveal data-reveal-delay="1">
-        What this page is actually doing, measured on your machine, right now.
-      </p>
-    </header>
-    <ul class="numbers" id="numbers-grid"></ul>
-    <p class="numbers-note mono" data-reveal>
-      Dependencies: <b>0</b>. Asset files: <b>0</b>. Build step: <b>none</b>.
-      Everything above is one <code>&lt;canvas&gt;</code>, hand-written GLSL, and a
-      few thousand lines of JavaScript that never leave your machine.
-    </p>
-  </div>
-</section>
 
 <!-- ── 06 · CONTACT ──────────────────────────────────────────────────────── -->
-<section class="sec sec-contact" id="contact" data-scene="contact" data-label="05 / contact">
+<section class="sec sec-contact" id="contact" data-scene="contact" data-label="04 / contact">
   <div class="wrap">
     <h2 class="contact-h" data-reveal>
       Different problems.<br /><span class="accent">Same habits.</span>
@@ -4528,14 +4520,7 @@ const K = [
     pGain: 0.48, pCurl: 0.95, pAttract: 0.95, pTangent: 0.80, pSpin: 0.26, pSize: 1.2, pDamp: 0.65, pLife: 0.12,
     bloom: 0.62, streak: 0.20, ca: 0.42, vignette: 0.86, grain: 0.032,
   },
-  { /* 04 numbers */
-    yaw: -0.36, pitch: 0.50, fov: 37, fill: 0.54, fillW: 0.32, fx: 0.72, fy: 0.36,
-    pivot: [0, 0, 0], radius: R_BOUND,
-    shape: 2.55, detail: 0.50, scale: 0.96, rimBoost: 0.45, sceneExposure: 0.98,
-    pGain: 0.78, pCurl: 1.20, pAttract: 1.05, pTangent: 0.90, pSpin: 0.34, pSize: 1.4, pDamp: 0.60, pLife: 0.14,
-    bloom: 0.78, streak: 0.30, ca: 0.50, vignette: 0.82, grain: 0.030,
-  },
-  { /* 05 contact */
+  { /* 04 contact */
     yaw: -0.26, pitch: 0.05, fov: 46, fill: 0.66, fillW: 0.38, fx: 0.80, fy: 0.52,
     pivot: [0, 0, 0], radius: R_BOUND,
     shape: 3.00, detail: 0.55, scale: 1.02, rimBoost: 1.05, sceneExposure: 1.08,
@@ -4949,15 +4934,6 @@ class UI {
     });
   }
 
-  buildNumbers(rows) {
-    const g = $('#numbers-grid');
-    g.innerHTML = '';
-    rows.forEach(([n, unit, label]) => {
-      const li = el('li');
-      li.innerHTML = `<span class="n">${n}${unit ? `<em>${unit}</em>` : ''}</span><span class="l">${label}</span>`;
-      g.appendChild(li);
-    });
-  }
 
   buildRail() {
     const ol = $('#rail-ticks');
@@ -5008,7 +4984,10 @@ class UI {
   scrollTo(sel) {
     const n = sel && document.querySelector(sel);
     if (!n) return;
-    scrollTo({ top: n.offsetTop, behavior: this.reduced ? 'auto' : 'smooth' });
+    // offsetTop puts the section's top edge at the viewport's top edge, which
+    // is underneath the fixed navigation. Back off by its height.
+    const nav = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--nav-h')) || 68;
+    scrollTo({ top: Math.max(0, n.offsetTop - nav), behavior: this.reduced ? 'auto' : 'smooth' });
   }
 
   /* ── cursor ────────────────────────────────────────────────────────── */
@@ -5351,7 +5330,6 @@ async function boot() {
   ui.initHud(renderer);
   wireInput();
   wireKeys();
-  populateNumbers();
 
   // Render a couple of frames before revealing anything, so the first thing
   // anyone sees is a finished image rather than a compile hitch.
@@ -5395,7 +5373,7 @@ async function boot() {
   last = performance.now();
   requestAnimationFrame(loop);
 
-  ui.refreshStats().then(() => populateNumbers());
+  ui.refreshStats();
 
   setTimeout(() => {
     if (!sessionStorage.getItem('winch-hint')) {
@@ -5417,21 +5395,6 @@ function failGracefully(err) {
   $$('[data-reveal]').forEach((x) => x.classList.add('in'));
 }
 
-/* ── numbers ───────────────────────────────────────────────────────────── */
-
-function populateNumbers() {
-  if (!renderer) return;
-  ui.buildNumbers([
-    [fmt(renderer.particleCount), '', 'particles, solved on the gpu'],
-    [String(renderer.programs.length), '', 'shader programs, linked at load'],
-    [fmt(GLSL_LINES), '', 'lines of glsl, hand written'],
-    [String(renderer.drawCalls), '', 'draw calls per frame'],
-    [`${renderer.iw}×${renderer.ih}`, '', 'internal render resolution'],
-    [(renderer.vramBytes() / 1048576).toFixed(0), 'MB', 'render targets in vram'],
-    [String(MATERIALS.length), '', 'materials, none of them textured'],
-    ['0', '', 'dependencies · asset files · build steps'],
-  ]);
-}
 
 /* ── input ─────────────────────────────────────────────────────────────── */
 
@@ -5660,7 +5623,6 @@ function loop(now) {
   adapt(dt);
   ui.updateHud(renderer, msAvg, fpsAvg);
 
-  if (renderer.frame % 90 === 0) populateNumbers();
 }
 
 /* ── go ────────────────────────────────────────────────────────────────── */

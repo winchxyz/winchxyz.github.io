@@ -258,9 +258,12 @@ html.hud-on #hud-toggle{ opacity:0; pointer-events:none; }
   transition:background .4s var(--ease), border-color .4s var(--ease), transform .5s var(--ease);
   border-bottom:1px solid transparent;
 }
+/* Opaque enough that type scrolling underneath disappears rather than
+   ghosting through half-legible, which is what made the last section look
+   broken rather than merely scrolled. */
 html.scrolled #nav{
-  background:linear-gradient(180deg, rgba(7,9,10,.86), rgba(7,9,10,.5) 70%, transparent);
-  -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);
+  background:linear-gradient(180deg, rgba(7,9,10,.97) 0%, rgba(7,9,10,.93) 62%, rgba(7,9,10,0) 100%);
+  -webkit-backdrop-filter:blur(16px); backdrop-filter:blur(16px);
   border-bottom-color:var(--line-2);
 }
 html.nav-hide #nav{ transform:translateY(-100%); }
@@ -685,19 +688,24 @@ html.scrolled .scroll-cue{ opacity:0; pointer-events:none; }
 
 /* ══ CONTACT ═════════════════════════════════════════════════════════════ */
 
-.sec-contact{ padding-bottom:clamp(80px,10vh,140px); }
+.sec-contact{ padding-bottom:clamp(60px,7vh,110px); }
+/* Sized so the whole contact block fits one screen.
+
+   At 98px over two lines the section was taller than the viewport, so
+   scrolling to the end left the headline sliced in half and sitting under
+   the navigation bar. Nothing was broken — it was simply too big to land. */
 .contact-h{
-  margin:0 0 clamp(36px,7vh,72px);
+  margin:0 0 clamp(30px,5vh,54px);
   font-family:var(--display); font-stretch:108%;
-  font-size:clamp(36px,6.6vw,98px); font-weight:720; line-height:.98;
+  font-size:clamp(34px,5.1vw,72px); font-weight:720; line-height:1.0;
   letter-spacing:-.018em; color:var(--chalk);
 }
 
-.links{ list-style:none; margin:0 0 clamp(46px,9vh,90px); padding:0; border-top:1px solid var(--line-2); }
+.links{ list-style:none; margin:0 0 clamp(32px,5vh,58px); padding:0; border-top:1px solid var(--line-2); }
 .links li{ border-bottom:1px solid var(--line-2); }
 .links a{
   display:flex; align-items:center; gap:clamp(14px,2vw,26px);
-  padding:clamp(18px,2.4vw,28px) 4px; position:relative;
+  padding:clamp(15px,1.7vw,21px) 4px; position:relative;
   transition:padding-left .45s var(--ease-out), color .3s;
   color:var(--bone);
 }

@@ -46,7 +46,8 @@ pixel of it walks the field until it hits the surface. It writes its own
 `gl_FragDepth`, which is how the particle cloud can be occluded by a shape
 that does not exist as triangles.
 
-**Seven materials, no textures.** The page opens on the cast crystal. GGX with height-correlated Smith visibility,
+**Seven materials, no textures.** The page opens on the cast crystal, and the
+materials section is the one place the page demonstrates rather than asserts. GGX with height-correlated Smith visibility,
 anisotropic GGX with a tangent frame built from a procedural direction field
 (a distance field has no UVs), thin-film interference for the anodised
 titanium, three-ray dispersion for the two glasses, and multi-scatter energy
@@ -170,8 +171,22 @@ at 1920×1080 and at 390×844, on an RTX 4070 at 60 fps.
 | Particles | 262 144 at ultra |
 | Render targets | ~113 MB at full scale |
 
-The page counts most of those live and shows you the real figures — see the
-readout in the corner, and the `cat NUMBERS` section.
+The performance readout in the corner reports the live figures — press **G**
+if it is hidden.
+
+---
+
+## What is not here
+
+There was a physics section: a Verlet cloth you could grab and throw, colliding
+against the same distance field. It was removed, and so was a section of live
+render statistics. Both were interesting and neither was about winch — a
+portfolio that spends two of its seven sections talking about the portfolio has
+lost the plot. Five sections now: who, what he builds, how it is built, the
+work, and how to reach him.
+
+The cloth is in the history if it is ever wanted back — it cost three shader
+programs, two float ping-pongs and nine draw calls a frame.
 
 ---
 
@@ -217,7 +232,7 @@ other. The harness loads it over http and sweeps every section:
 GPU=1 VIEW=390x844 MOBILE=1 PROBE='(async()=>JSON.stringify(await import("/tools/audit.js").then(m=>m.sweep())))()' node tools/gputest.mjs shot out.png
 ```
 
-It found the numbers grid overflowing its cells by up to 50px at 1366 — a
+It found a stats grid overflowing its cells by up to 50px at 1366 — a
 figure like `1,572,864` set at 42px is about 200px wide and the cell's content
 box was 144px. No screenshot had shown it, because the digits simply ran under
 the neighbouring cell and looked plausible.
@@ -308,7 +323,7 @@ Everything after that was refinement in the same session, with
 ### Notes on the interaction
 
 Text selection is disabled across the page. A drag here means orbit the
-sculpture or grab the cloth, and a drag that also paints a selection across
+sculpture, and a drag that also paints a selection across
 the headline reads as a bug. The cost is that nothing can be copied, shell
 commands included; `user-select:text` has to be put back on anything that
 should be exempt.

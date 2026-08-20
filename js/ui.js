@@ -146,15 +146,6 @@ export class UI {
     });
   }
 
-  buildNumbers(rows) {
-    const g = $('#numbers-grid');
-    g.innerHTML = '';
-    rows.forEach(([n, unit, label]) => {
-      const li = el('li');
-      li.innerHTML = `<span class="n">${n}${unit ? `<em>${unit}</em>` : ''}</span><span class="l">${label}</span>`;
-      g.appendChild(li);
-    });
-  }
 
   buildRail() {
     const ol = $('#rail-ticks');
@@ -205,7 +196,10 @@ export class UI {
   scrollTo(sel) {
     const n = sel && document.querySelector(sel);
     if (!n) return;
-    scrollTo({ top: n.offsetTop, behavior: this.reduced ? 'auto' : 'smooth' });
+    // offsetTop puts the section's top edge at the viewport's top edge, which
+    // is underneath the fixed navigation. Back off by its height.
+    const nav = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--nav-h')) || 68;
+    scrollTo({ top: Math.max(0, n.offsetTop - nav), behavior: this.reduced ? 'auto' : 'smooth' });
   }
 
   /* ── cursor ────────────────────────────────────────────────────────── */

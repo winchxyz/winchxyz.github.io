@@ -82,14 +82,7 @@ const K = [
     pGain: 0.48, pCurl: 0.95, pAttract: 0.95, pTangent: 0.80, pSpin: 0.26, pSize: 1.2, pDamp: 0.65, pLife: 0.12,
     bloom: 0.62, streak: 0.20, ca: 0.42, vignette: 0.86, grain: 0.032,
   },
-  { /* 04 numbers */
-    yaw: -0.36, pitch: 0.50, fov: 37, fill: 0.54, fillW: 0.32, fx: 0.72, fy: 0.36,
-    pivot: [0, 0, 0], radius: R_BOUND,
-    shape: 2.55, detail: 0.50, scale: 0.96, rimBoost: 0.45, sceneExposure: 0.98,
-    pGain: 0.78, pCurl: 1.20, pAttract: 1.05, pTangent: 0.90, pSpin: 0.34, pSize: 1.4, pDamp: 0.60, pLife: 0.14,
-    bloom: 0.78, streak: 0.30, ca: 0.50, vignette: 0.82, grain: 0.030,
-  },
-  { /* 05 contact */
+  { /* 04 contact */
     yaw: -0.26, pitch: 0.05, fov: 46, fill: 0.66, fillW: 0.38, fx: 0.80, fy: 0.52,
     pivot: [0, 0, 0], radius: R_BOUND,
     shape: 3.00, detail: 0.55, scale: 1.02, rimBoost: 1.05, sceneExposure: 1.08,
