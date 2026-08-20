@@ -34,9 +34,41 @@ let scaleCooldown = 0;
 
 /* ── boot ──────────────────────────────────────────────────────────────── */
 
+/* Boot timings, kept permanently. Every stage below happens on the main
+   thread, so if one of them is slow the page is simply frozen and there is no
+   way to tell from outside which one it was. `__winch.bootMarks` makes that
+   answerable after the fact. */
+const bootT0 = performance.now();
+const bootMarks = [];
+const mark = (msg, pct) => {
+  bootMarks.push([msg, Math.round(performance.now() - bootT0)]);
+  ui.boot(msg, pct);
+};
+
+/* If a previous load started and never finished, assume it was too much for
+   this machine and come back quieter. Two failures in a row and it drops to
+   the smallest tier. The flag is cleared the moment a boot completes, so a
+   normal visit never sees this.
+
+   Every WebGL page is one unfamiliar driver away from a first frame that
+   takes a minute, and the failure mode is a tab the browser offers to kill —
+   which the visitor cannot recover from by reloading, because the reload does
+   exactly the same thing. */
+const BOOT_FLAG = 'winch-boot-attempts';
+
+function readBootAttempts() {
+  try { return Number(localStorage.getItem(BOOT_FLAG) || 0); } catch { return 0; }
+}
+function setBootAttempts(n) {
+  try { n ? localStorage.setItem(BOOT_FLAG, String(n)) : localStorage.removeItem(BOOT_FLAG); } catch { /* private mode */ }
+}
+
 async function boot() {
   ui.build();
-  ui.boot('reading the room', 0.08);
+  mark('reading the room', 0.08);
+
+  const failed = readBootAttempts();
+  setBootAttempts(failed + 1);
 
   // The wordmark is drawn into a texture with fillText, so the font has to
   // exist first — otherwise the cloth ends up printed in Times New Roman.
@@ -44,10 +76,10 @@ async function boot() {
     await Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 2500))]);
   } catch { /* no font loading API — the fallback stack is fine */ }
 
-  ui.boot('opening a webgl2 context', 0.18);
+  mark('opening a webgl2 context', 0.18);
 
   try {
-    renderer = new Renderer($('#gl'), (msg) => ui.boot(msg, null));
+    renderer = new Renderer($('#gl'), (msg) => mark(msg, null));
   } catch (err) {
     console.error(err);
     failGracefully(err);
@@ -61,9 +93,21 @@ async function boot() {
   if (forced && TIERS[forced]) {
     renderer.setTier(forced);
     ui.boot(`forced tier: ${forced}`, 0.6);
+  } else if (failed > 0) {
+    const step = ['low', 'medium', 'high', 'ultra'];
+    const now = step.indexOf(renderer.tier.name);
+    const down = step[Math.max(0, now - failed)];
+    renderer.setTier(down);
+    ui.boot(`previous load did not finish — using ${down}`, 0.6);
   }
 
-  ui.boot('warming the pipeline', 0.72);
+  // The driver is compiling on its own threads right now; this loop just
+  // watches, and the boot bar keeps moving because the main thread is free.
+  const compileMs = await renderer.awaitPrograms((frac) => {
+    ui.boot('compiling shaders', 0.2 + frac * 0.5);
+  });
+  mark(`shaders ready in ${compileMs} ms`, 0.72);
+
   ui.initHud(renderer);
   wireInput();
   wireKeys();
@@ -78,22 +122,35 @@ async function boot() {
   // the display driver's watchdog — which reads as "the tab crashed" rather
   // than "that was slow". The adaptive controller walks the scale back up
   // over the first second once there are real frame times to go on.
-  const boostScale = renderer.renderScale;
-  renderer.renderScale = Math.min(0.5, boostScale);
-  renderer.resize(true);
-
-  const p = director.update(1 / 60, renderer);
-  renderer.render(p, 1 / 60);
-  renderer.render(p, 1 / 60);
-
-  renderer.renderScale = Math.min(boostScale, 0.72);
+  // Settle on the starting resolution BEFORE the warm frames, not after.
+  // Resizing reallocates every render target, which forces the driver to
+  // finish whatever is still queued — so doing it after the warm frames
+  // turned their cost into one long synchronous block at the worst possible
+  // moment. The adaptive controller takes it from here.
+  renderer.renderScale = Math.min(renderer.tier.scale, 0.72);
   renderer.resize(true);
   renderer.markCameraCut();
 
-  ui.boot('ready', 1.0);
+  const nextFrame = () => new Promise((r) => requestAnimationFrame(r));
+  const p = director.update(1 / 60, renderer);
+
+  // One warm frame per animation frame, not two back to back. The first one
+  // is where the driver builds its pipeline state, and it is slow exactly
+  // once; giving the browser a chance to paint between them is the difference
+  // between a progress bar and a hung tab.
+  for (let i = 0; i < 2; i++) {
+    await nextFrame();
+    mark(`warm frame ${i + 1}`, 0.78 + i * 0.08);
+    renderer.render(p, 1 / 60);
+  }
+  await nextFrame();
+  mark('warm frames done', 0.94);
+
+  mark('ready', 1.0);
   await new Promise((r) => setTimeout(r, 220));
 
   document.documentElement.classList.add('booted', 'gl-up', 'hud-on');
+  setBootAttempts(0);      // made it — forget the previous failures
   running = true;
   last = performance.now();
   requestAnimationFrame(loop);
@@ -392,4 +449,4 @@ function loop(now) {
 if (document.readyState === 'loading') addEventListener('DOMContentLoaded', boot);
 else boot();
 
-window.__winch = { get renderer() { return renderer; }, director, ui, TIERS };
+window.__winch = { get renderer() { return renderer; }, director, ui, TIERS, bootMarks };

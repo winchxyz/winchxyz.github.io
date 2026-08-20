@@ -54,17 +54,31 @@ try {
     maxPointSize: gl.getParameter(gl.ALIASED_POINT_SIZE_RANGE)[1],
   };
 
+  /* Timed, and reported incrementally. A driver that takes a minute to
+     compile one program looks exactly like a driver that has hung, and the
+     only way to tell them apart is to watch the programs go by one at a
+     time. The yield between them is what lets an outside observer see it. */
+  window.__PROGRESS = [];
+  const yieldFrame = () => new Promise((r) => setTimeout(r, 0));
+
   for (const [name, vs, fs] of PROGRAMS) {
-    const entry = { name, ok: false, error: null, uniforms: [] };
+    const entry = { name, ok: false, error: null, uniforms: [], ms: 0 };
+    window.__CURRENT = name;
+    await yieldFrame();
+    const t0 = performance.now();
     try {
       const p = new Program(gl, vs, fs, name);
+      // linkProgram is async on many drivers; querying LINK_STATUS is the
+      // sync point where the real compile cost actually lands.
       entry.ok = true;
       entry.uniforms = [...p.u.keys()].sort();
       p.dispose();
     } catch (e) {
       entry.error = String(e.message || e);
     }
+    entry.ms = Math.round(performance.now() - t0);
     result.programs.push(entry);
+    window.__PROGRESS.push(`${entry.name} ${entry.ms}ms ${entry.ok ? 'ok' : 'FAIL'}`);
   }
 
   /* Also prove the MRT float targets the renderer depends on are actually

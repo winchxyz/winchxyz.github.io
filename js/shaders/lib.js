@@ -166,6 +166,26 @@ float worley(vec3 p){
 /* ── signed distance fields ────────────────────────────────────────────── */
 
 export const SDF = `
+/* Value noise, read from a 64^3 texture instead of computed.
+
+   This is the single most important line in the file for compile time. The
+   analytic version — eight hash calls and a quintic interpolant — is perhaps
+   a hundred instructions, which is nothing at runtime. But it lives inside
+   the distance field, the distance field is inlined at every march step, at
+   every normal tap and at every ambient occlusion tap, and the compiler
+   expands all of it. Measured on an RTX 4070, stubbing this out took the
+   raymarch program from 65 seconds of compilation to 15.
+
+   The texture is a lattice of random bytes with REPEAT wrapping, so hardware
+   trilinear filtering IS the interpolation. It is trilinear rather than
+   quintic, which is very slightly blockier, and it is one fetch. */
+uniform highp sampler3D uNoise;
+
+float tnoise(vec3 x){ return texture(uNoise, x * (1.0 / 64.0)).r; }
+
+float tfbm2(vec3 p){ return (tnoise(p) + 0.5 * tnoise(p * 2.03 + 7.31)) * (1.0 / 1.5); }
+float tfbm3(vec3 p){ return (tnoise(p) + 0.5 * tnoise(p * 2.03 + 7.31) + 0.25 * tnoise(p * 4.07 + 13.7)) * (1.0 / 1.75); }
+
 mat2 rot2(float a){ float c = cos(a), s = sin(a); return mat2(c, -s, s, c); }
 
 float sdSphere(vec3 p, float r){ return length(p) - r; }
@@ -235,7 +255,7 @@ float formLiquid(vec3 p, float t, float detail){
   if (d > AMP * 2.0) return d - AMP * detail;
 
   vec3 q = p * 1.5 + vec3(0.0, t * 0.11, t * 0.05);
-  float n = noised(q).x + 0.45 * noised(q * 2.03 + 7.31).x;   // mean ~0.725
+  float n = tnoise(q) + 0.45 * tnoise(q * 2.03 + 7.31);   // mean ~0.725
   return d + (n - 0.725) * K * detail;
 }
 
@@ -278,12 +298,19 @@ float sculpture(vec3 p, float t, float shape, float detail){
   int i = int(floor(s));
   float f = smoothstep(0.0, 1.0, fract(s));
 
-  float a, b;
-  if (i == 0){ a = formLiquid(p, t, detail); b = formLattice(p, t); }
-  else if (i == 1){ a = formLattice(p, t);   b = formFrame(p, t); }
-  else if (i == 2){ a = formFrame(p, t);     b = formRing(p, t); }
-  else { return formRing(p, t); }
+  /* Select, then blend — rather than a branch per pair.
 
+     The obvious formulation names formLattice in two branches, formFrame in
+     two and formRing in two, so seven copies of form code get compiled into
+     every one of the dozen places the field is inlined. Choosing by index
+     compiles each form exactly once. */
+  float d0 = formLiquid(p, t, detail);
+  float d1 = formLattice(p, t);
+  float d2 = formFrame(p, t);
+  float d3 = formRing(p, t);
+
+  float a = i == 0 ? d0 : (i == 1 ? d1 : d2);
+  float b = i == 0 ? d1 : (i == 1 ? d2 : d3);
   return mix(a, b, f);
 }
 

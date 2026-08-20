@@ -36,10 +36,13 @@ const chrome = spawn(CHROME, [
   `--user-data-dir=${profile}`,
   '--no-first-run', '--no-default-browser-check', '--disable-extensions',
   '--disable-background-networking', '--disable-sync', '--mute-audio',
-  // Force the software GL stack and allow it explicitly — recent Chrome
-  // refuses to fall back to SwiftShader without this flag.
-  '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader',
-  '--window-size=1280,800',
+  // GPU=1 runs on the real adapter. The default forces the software GL
+  // stack, because the point of this harness is to compile shaders on a
+  // machine that may not have a working driver.
+  ...(process.env.GPU
+    ? ['--ignore-gpu-blocklist', '--enable-gpu-rasterization']
+    : ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader']),
+  `--window-size=${process.env.WIN || '1280,800'}`,
   'about:blank',
 ], { stdio: ['ignore', 'pipe', 'pipe'] });
 
@@ -99,10 +102,20 @@ const evaluate = async (cdp, expr) => {
   return r.result.value;
 };
 
-async function waitFor(cdp, expr, timeoutMs, label) {
+async function waitFor(cdp, expr, timeoutMs, label, watch) {
   const t0 = Date.now();
+  let last = null;
   while (Date.now() - t0 < timeoutMs) {
     try { if (await evaluate(cdp, expr)) return true; } catch { /* not ready */ }
+    if (watch) {
+      // Narrate the boot log while waiting. A page that is stuck and a page
+      // that is merely slow look identical from outside; the stage it last
+      // reached is the whole diagnosis.
+      try {
+        const v = await evaluate(cdp, watch);
+        if (v !== last) { console.log(`  [${((Date.now() - t0) / 1000).toFixed(1)}s] ${v}`); last = v; }
+      } catch { /* page not ready */ }
+    }
     await sleep(400);
   }
   throw new Error(`timed out waiting for ${label} (${timeoutMs}ms)`);
@@ -127,13 +140,41 @@ try {
       if (e.method === 'Log.entryAdded' && e.params.entry.level === 'error') {
         consoleErrors.push('log: ' + e.params.entry.text);
       }
+      if (e.method === 'Inspector.targetCrashed') consoleErrors.push('*** RENDERER CRASHED ***');
     }
     cdp.events.length = 0;
   };
 
   if (MODE === 'compile') {
-    await cdp.send('Page.navigate', { url: `${SITE}/tools/shadertest.html` });
-    await waitFor(cdp, 'window.__RESULT !== undefined', 60000, 'the compile harness');
+    await cdp.send('Page.navigate', { url: `${SITE}/tools/${process.env.PAGE || 'shadertest.html'}` });
+
+    /* Poll the progress list rather than just blocking on the result, so a
+       driver that is merely slow can be told apart from one that has hung —
+       and so the program it is stuck on is named. */
+    const budget = Number(process.env.COMPILE_TIMEOUT || 60000);
+    const t0 = Date.now();
+    let lastSeen = 0;
+    while (Date.now() - t0 < budget) {
+      let done = false;
+      try { done = await evaluate(cdp, 'window.__RESULT !== undefined'); } catch { /* still loading */ }
+      if (done) break;
+      try {
+        const prog = await evaluate(cdp, 'JSON.stringify({p: window.__PROGRESS || [], cur: window.__CURRENT})');
+        const { p, cur } = JSON.parse(prog);
+        while (lastSeen < p.length) console.log('  ' + p[lastSeen++]);
+        if (cur && lastSeen === p.length) process.stdout.write(`\r  compiling ${cur} … ${((Date.now() - t0) / 1000).toFixed(0)}s`);
+      } catch { /* page not ready */ }
+      await sleep(1000);
+    }
+    console.log('');
+    if (!(await evaluate(cdp, 'window.__RESULT !== undefined').catch(() => false))) {
+      collect();
+      console.log(RED(`\ngave up after ${(budget / 1000).toFixed(0)}s — stuck on: `)
+        + (await evaluate(cdp, 'window.__CURRENT').catch(() => '?')));
+      consoleErrors.forEach((e) => console.log('  ' + e));
+      cdp.close(); chrome.kill();
+      process.exit(4);
+    }
     const res = await evaluate(cdp, 'JSON.stringify(window.__RESULT)');
     const r = JSON.parse(res);
     collect();
@@ -147,7 +188,7 @@ try {
     console.log('');
     let bad = 0;
     for (const p of r.programs) {
-      if (p.ok) console.log(`  ${GRN('ok  ')} ${p.name.padEnd(18)} ${p.uniforms.length} uniforms`);
+      if (p.ok) console.log(`  ${GRN('ok  ')} ${p.name.padEnd(18)} ${String(p.ms).padStart(7)} ms   ${p.uniforms.length} uniforms`);
       else { bad++; console.log(`  ${RED('FAIL')} ${p.name}\n${p.error.split('\n').map((l) => '        ' + l).join('\n')}`); }
     }
     if (r.fatal) { console.log('\n  ' + RED('fatal: ') + r.fatal); bad++; }
@@ -163,7 +204,18 @@ try {
   });
   await cdp.send('Page.navigate', { url: SITE });
 
-  await waitFor(cdp, 'document.documentElement.classList.contains("booted")', 180000, 'boot');
+  try {
+    await waitFor(cdp, 'document.documentElement.classList.contains("booted")',
+      Number(process.env.BOOT_TIMEOUT || 180000), 'boot',
+      'document.querySelector("#boot-log")?.textContent + " | cls=" + document.documentElement.className');
+  } catch (e) {
+    collect();
+    console.log('BOOT FAILED: ' + e.message);
+    if (consoleErrors.length) consoleErrors.forEach((x) => console.log('  ' + x));
+    console.log('chrome stderr tail: ' + chromeErr.slice(-2000));
+    cdp.close(); chrome.kill();
+    process.exit(3);
+  }
   const diag = await evaluate(cdp, `JSON.stringify({
     cls: document.documentElement.className,
     gl: !!window.__winch?.renderer,

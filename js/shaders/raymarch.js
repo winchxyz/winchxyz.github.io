@@ -37,8 +37,23 @@ uniform float uFilm;
 uniform float uTrans;
 uniform float uEmissive;
 
-uniform int   uSteps;       // march budget, set by the quality tier
-uniform int   uTransSteps;  // interior march budget for the glass preset
+/* Every one of these is a LOOP BOUND, and every one of them is a uniform
+   rather than a constant on purpose.
+
+   A loop whose trip count the compiler can determine statically is a
+   candidate for full unrolling, and ANGLE hands these to the HLSL compiler
+   which takes that offer enthusiastically. A count-to-160 loop
+   wrapped around a signed distance field evaluation becomes 160 inlined
+   copies of the field; four such loops in one shader produced a program that
+   took sixty-eight seconds to compile on an RTX 4070 and then ran at two
+   frames a minute, because the register pressure left almost no occupancy.
+
+   Making the bound a uniform makes the trip count dynamic, the compiler
+   emits a real loop, and both problems disappear. */
+uniform int   uSteps;        // camera march budget, set by the quality tier
+uniform int   uTransSteps;   // interior march budget for the glass preset
+uniform int   uReflSteps;    // reflection march budget
+uniform int   uShadowSteps;  // soft shadow march budget
 uniform float uReflect;     // 0 or 1 — one-bounce reflections on/off
 uniform float uRimBoost;    // section-driven lift on the accent rim light
 uniform float uExposure;
@@ -54,13 +69,20 @@ const float STEP_K   = 0.62;   // < 1 because the morph, the gyroid and the
 
 float mapS(vec3 p){ return sculpture(p / uScale, uTime, uShape, uDetail) * uScale; }
 
+/* The tetrahedron normal, written as a loop rather than four unrolled taps.
+   Each textual mapS() is another whole copy of the distance field in the
+   compiled program, so four of them here cost four times what one does. */
 vec3 nrmS(vec3 p, float e){
-  const vec2 k = vec2(1.0, -1.0);
-  return normalize(
-    k.xyy * mapS(p + k.xyy * e) +
-    k.yyx * mapS(p + k.yyx * e) +
-    k.yxy * mapS(p + k.yxy * e) +
-    k.xxx * mapS(p + k.xxx * e));
+  vec3 n = vec3(0.0);
+  for (int i = 0; i < 4; i++){
+    // the four vertices of a tetrahedron, as sign triples
+    vec3 k = (i == 0) ? vec3( 1.0, -1.0, -1.0)
+           : (i == 1) ? vec3(-1.0, -1.0,  1.0)
+           : (i == 2) ? vec3(-1.0,  1.0, -1.0)
+                      : vec3( 1.0,  1.0,  1.0);
+    n += k * mapS(p + k * e);
+  }
+  return normalize(n);
 }
 
 /* ── bounding sphere ───────────────────────────────────────────────────────
@@ -76,6 +98,23 @@ bool sphereRange(vec3 ro, vec3 rd, float r, out float t0, out float t1){
   t0 = -b - h;
   t1 = -b + h;
   return t1 > 0.0;
+}
+
+/* One marcher, shared by the camera ray and by both reflection rays.
+
+   It used to be written out three times. Deduplicating it is not tidiness:
+   three copies of a march loop is three copies of the distance field in the
+   compiled program, and shader compile time scales with that. */
+float marchSDF(vec3 ro, vec3 rd, float tStart, float tEnd, float eps, int maxSteps, out bool hit){
+  float t = tStart;
+  hit = false;
+  for (int i = 0; i < maxSteps; i++){
+    if (t > tEnd) break;
+    float d = mapS(ro + rd * t);
+    if (d < eps * t + 2e-4){ hit = true; break; }
+    t += d * STEP_K;
+  }
+  return t;
 }
 
 /* ── march ─────────────────────────────────────────────────────────────── */
@@ -101,12 +140,9 @@ Hit trace(vec3 ro, vec3 rd, float pixelRadius){
     // banding you get from a fixed start into noise the TAA then eats.
     t += (ign(gl_FragCoord.xy, uFrame) - 0.5) * 0.012;
 
-    for (int i = 0; i < 160; i++){
-      if (i >= uSteps || t > tEnd) break;
-      float d = mapS(ro + rd * t);
-      if (d < pixelRadius * t + 2e-4){ h.t = t; h.id = 1; break; }
-      t += d * STEP_K;
-    }
+    bool hit;
+    float tHit = marchSDF(ro, rd, t, tEnd, pixelRadius, uSteps, hit);
+    if (hit){ h.t = tHit; h.id = 1; }
   }
   return h;
 }
@@ -120,7 +156,7 @@ float softShadow(vec3 ro, vec3 rd, float k){
   float tEnd = min(t1, 12.0);
   float ph = 1e20;
 
-  for (int i = 0; i < 40; i++){
+  for (int i = 0; i < uShadowSteps; i++){
     if (t > tEnd) break;
     float d = mapS(ro + rd * t);
     if (d < 1e-4) return 0.0;
@@ -166,7 +202,7 @@ vec3 tangentField(vec3 p, vec3 n){
   if (dot(t, t) < 0.02) t = cross(n, vec3(1.0, 0.0, 0.0));
   t = normalize(t);
   // a slow wobble so the brush lines are not mathematically perfect
-  vec3 w = curlNoise(p * 2.4) * 0.10;
+  vec3 w = (vec3(tnoise(p * 2.4), tnoise(p * 2.4 + 11.3), tnoise(p * 2.4 + 23.7)) - 0.5) * 0.22;
   return normalize(t + w - n * dot(n, w));
 }
 
@@ -183,16 +219,16 @@ Surf describe(vec3 p, vec3 n){
 
   if (uMatId == 0){                       // liquid chrome
     s.albedo = vec3(0.955, 0.960, 0.965);
-    s.rough  = clamp(uRough + fbm(q * 5.0, 3) * 0.09 - 0.03, 0.012, 1.0);
+    s.rough  = clamp(uRough + tfbm3(q * 5.0) * 0.09 - 0.03, 0.012, 1.0);
   }
   else if (uMatId == 1){                  // anodised titanium
-    float thickness = 300.0 + 260.0 * fbm(q * 2.2 + uTime * 0.03, 3)
+    float thickness = 300.0 + 260.0 * tfbm3(q * 2.2 + uTime * 0.03)
                             + 90.0 * sin(q.y * 5.0 + uTime * 0.25);
     float cosT = clamp(dot(n, normalize(uCamPos - p)), 0.0, 1.0);
     vec3 film = thinFilm(cosT, thickness, 2.20);
     vec3 base = vec3(0.62, 0.60, 0.58);   // titanium F0
     s.albedo = mix(base, base * film * 1.9, uFilm);
-    s.rough  = clamp(uRough + fbm(q * 6.0, 2) * 0.10 - 0.04, 0.03, 1.0);
+    s.rough  = clamp(uRough + tfbm2(q * 6.0) * 0.10 - 0.04, 0.03, 1.0);
   }
   else if (uMatId == 2){                  // obsidian glass
     s.albedo = vec3(0.045);
@@ -203,20 +239,20 @@ Surf describe(vec3 p, vec3 n){
     s.albedo = vec3(0.90, 0.90, 0.88);
     // fine brush grain in the roughness, not the normal — cheaper and it
     // survives minification without aliasing into sparkle
-    float grain = fbm(vec3(q.x * 90.0, q.y * 3.0, q.z * 90.0), 2);
+    float grain = tfbm2(vec3(q.x * 90.0, q.y * 3.0, q.z * 90.0));
     s.rough  = clamp(uRough + (grain - 0.5) * 0.22, 0.04, 1.0);
   }
   else if (uMatId == 4){                  // kiln ceramic
-    float glaze = worley(q * 4.5);
+    float glaze = worley(q * 4.5);   // the one place a cell structure is worth its cost
     s.albedo = mix(vec3(0.88, 0.87, 0.82), vec3(0.72, 0.75, 0.70), glaze * 0.6);
     s.metal  = 0.0;
     // glaze pools in the hollows: thinner (rougher) where the form is convex
-    s.rough  = clamp(uRough - glaze * 0.26 + fbm(q * 9.0, 2) * 0.12, 0.05, 1.0);
+    s.rough  = clamp(uRough - glaze * 0.26 + tfbm2(q * 9.0) * 0.12, 0.05, 1.0);
     s.coat   = 0.35;
   }
   else {                                  // molten core
     float depth = clamp(1.0 - length(q) / 1.05, 0.0, 1.0);
-    float veins = fbm(q * 3.4 + vec3(0.0, uTime * 0.12, 0.0), 3);
+    float veins = tfbm3(q * 3.4 + vec3(0.0, uTime * 0.12, 0.0));
     float heat  = clamp(depth * 1.25 + veins * 0.55 - 0.25, 0.0, 1.0);
     float kelvin = mix(1100.0, 2400.0, heat);
     s.albedo = vec3(0.10, 0.085, 0.08);
@@ -332,15 +368,8 @@ vec3 shadeSurface(vec3 p, vec3 n, vec3 rd, Surf s, float ao, float shadowScale){
     float t0, t1;
     vec3 ro2 = p + n * 0.02;
     if (sphereRange(ro2, R, R_BOUND * uScale, t0, t1)){
-      float t = max(t0, 0.01);
-      float tEnd = min(t1, 8.0);
-      bool hit = false;
-      for (int i = 0; i < 48; i++){
-        if (t > tEnd) break;
-        float d = mapS(ro2 + R * t);
-        if (d < 0.0015 * t + 2e-4){ hit = true; break; }
-        t += d * STEP_K;
-      }
+      bool hit;
+      float t = marchSDF(ro2, R, max(t0, 0.01), min(t1, 8.0), 0.0015, uReflSteps, hit);
       if (hit){
         vec3 p2 = ro2 + R * t;
         vec3 n2 = nrmS(p2, 0.0025);
@@ -371,8 +400,7 @@ vec3 shadeSurface(vec3 p, vec3 n, vec3 rd, Surf s, float ao, float shadowScale){
 vec3 exitPoint(vec3 ro, vec3 rd, out bool ok){
   float t = 0.02;
   ok = false;
-  for (int i = 0; i < 64; i++){
-    if (i >= uTransSteps) break;
+  for (int i = 0; i < uTransSteps; i++){
     vec3 p = ro + rd * t;
     float d = -mapS(p);              // inside: distance to the boundary
     if (d < 0.0012){ ok = true; break; }
@@ -419,7 +447,7 @@ vec3 shadeFloor(vec3 p, vec3 rd, float t){
   vec2 g2 = abs(fract(p.xz * 0.1 - 0.5) - 0.5) / max(w * 0.1, 1e-4);
   float line2 = 1.0 - min(min(g2.x, g2.y), 1.0);
 
-  float rough = 0.30 + 0.16 * fbm(vec3(p.x, 0.0, p.z) * 0.8, 2);
+  float rough = 0.30 + 0.16 * tfbm2(vec3(p.x, 0.0, p.z) * 0.8);
   vec3 base = vec3(0.014, 0.016, 0.017);
   vec3 col = base;
   // The grid is a hint that there is a floor, not a feature. At any more
@@ -443,15 +471,8 @@ vec3 shadeFloor(vec3 p, vec3 rd, float t){
     float t0, t1;
     vec3 ro2 = p + n * 0.02;
     if (sphereRange(ro2, R, R_BOUND * uScale, t0, t1)){
-      float tt = max(t0, 0.01);
-      float tEnd = min(t1, 10.0);
-      bool hit = false;
-      for (int i = 0; i < 56; i++){
-        if (tt > tEnd) break;
-        float d = mapS(ro2 + R * tt);
-        if (d < 0.002 * tt + 2e-4){ hit = true; break; }
-        tt += d * STEP_K;
-      }
+      bool hit;
+      float tt = marchSDF(ro2, R, max(t0, 0.01), min(t1, 10.0), 0.002, uReflSteps, hit);
       if (hit){
         vec3 p2 = ro2 + R * tt;
         vec3 n2 = nrmS(p2, 0.0025);

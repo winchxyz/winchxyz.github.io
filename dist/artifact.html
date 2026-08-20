@@ -1143,6 +1143,11 @@ function createContext(canvas) {
     floatBlend:  !!gl.getExtension('EXT_float_blend'),
     aniso:       gl.getExtension('EXT_texture_filter_anisotropic'),
     timer:       gl.getExtension('EXT_disjoint_timer_query_webgl2'),
+    /* Lets the driver compile and link on its own threads. Without it, the
+       first getProgramParameter(LINK_STATUS) blocks the main thread until the
+       program is ready — which for a heavy shader means a frozen tab and a
+       browser offering to kill the page. */
+    parallel:    gl.getExtension('KHR_parallel_shader_compile'),
     debugRender: gl.getExtension('WEBGL_debug_renderer_info'),
     maxTex:      gl.getParameter(gl.MAX_TEXTURE_SIZE),
     maxDrawBuf:  gl.getParameter(gl.MAX_DRAW_BUFFERS),
@@ -1184,44 +1189,76 @@ function annotate(src, log) {
   return out.length ? out.join('\n') : log;
 }
 
-function compile(gl, type, src, label = 'shader') {
+/* Note what is deliberately NOT here any more: a COMPILE_STATUS query.
+   Asking for it forces a synchronisation with the driver's compiler, which is
+   precisely the stall this path exists to avoid. Compile errors are recovered
+   later from the link failure, by checkShader(). */
+function compile(gl, type, src) {
   const sh = gl.createShader(type);
   gl.shaderSource(sh, src);
   gl.compileShader(sh);
-  if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) {
-    const log = gl.getShaderInfoLog(sh) || '(no log)';
-    gl.deleteShader(sh);
-    throw new GLError(`${label} failed to compile:\n${annotate(src, log)}`);
-  }
   return sh;
+}
+
+function checkShader(gl, sh, src, label) {
+  if (gl.getShaderParameter(sh, gl.COMPILE_STATUS)) return null;
+  const log = gl.getShaderInfoLog(sh) || '(no log)';
+  return `${label} failed to compile:\n${annotate(src, log)}`;
 }
 
 const UNIFORM_SETTER = {};
 
 class Program {
-  constructor(gl, vsSrc, fsSrc, label = 'program') {
+  /* `deferred` splits construction in two: issue the work here, collect the
+     result later with finalize(). In between, the driver is free to do it on
+     another thread and the page is free to keep painting. */
+  constructor(gl, vsSrc, fsSrc, label = 'program', deferred = false) {
     this.gl = gl;
     this.label = label;
-
-    const vs = compile(gl, gl.VERTEX_SHADER, vsSrc, `${label}.vert`);
-    const fs = compile(gl, gl.FRAGMENT_SHADER, fsSrc, `${label}.frag`);
-
-    const p = gl.createProgram();
-    gl.attachShader(p, vs);
-    gl.attachShader(p, fs);
-    gl.linkProgram(p);
-    gl.deleteShader(vs);
-    gl.deleteShader(fs);
-
-    if (!gl.getProgramParameter(p, gl.LINK_STATUS)) {
-      const log = gl.getProgramInfoLog(p);
-      gl.deleteProgram(p);
-      throw new GLError(`${label} failed to link: ${log}`);
-    }
-
-    this.p = p;
     this.u = new Map();     // name -> { loc, type }
     this.unit = 0;
+    this.ready = false;
+
+    this._vsSrc = vsSrc;
+    this._fsSrc = fsSrc;
+    this._vs = compile(gl, gl.VERTEX_SHADER, vsSrc);
+    this._fs = compile(gl, gl.FRAGMENT_SHADER, fsSrc);
+
+    const p = gl.createProgram();
+    gl.attachShader(p, this._vs);
+    gl.attachShader(p, this._fs);
+    gl.linkProgram(p);
+    this.p = p;
+
+    if (!deferred) this.finalize();
+  }
+
+  /* Whether the driver is done, asked in a way that does not force a wait.
+     With no extension nothing is happening asynchronously, so the answer is
+     always yes and finalize() blocks exactly as it used to. */
+  isReady(ext) {
+    if (this.ready) return true;
+    if (!ext) return true;
+    return this.gl.getProgramParameter(this.p, ext.COMPLETION_STATUS_KHR);
+  }
+
+  finalize() {
+    if (this.ready) return this;
+    const gl = this.gl, p = this.p;
+
+    if (!gl.getProgramParameter(p, gl.LINK_STATUS)) {
+      // Only now is the per-shader status worth paying for — to say which
+      // stage failed, and on which line.
+      const ve = checkShader(gl, this._vs, this._vsSrc, `${this.label}.vert`);
+      const fe = checkShader(gl, this._fs, this._fsSrc, `${this.label}.frag`);
+      const log = gl.getProgramInfoLog(p);
+      gl.deleteProgram(p);
+      throw new GLError(ve || fe || `${this.label} failed to link: ${log}`);
+    }
+
+    gl.deleteShader(this._vs);
+    gl.deleteShader(this._fs);
+    this._vs = this._fs = this._vsSrc = this._fsSrc = null;
 
     const n = gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS);
     for (let i = 0; i < n; i++) {
@@ -1231,6 +1268,8 @@ class Program {
       const loc = gl.getUniformLocation(p, info.name);
       if (loc) this.u.set(name, { loc, type: info.type, size: info.size });
     }
+    this.ready = true;
+    return this;
   }
 
   use() { this.gl.useProgram(this.p); this.unit = 0; return this; }
@@ -1629,6 +1668,26 @@ float worley(vec3 p){
 /* ── signed distance fields ────────────────────────────────────────────── */
 
 const SDF = `
+/* Value noise, read from a 64^3 texture instead of computed.
+
+   This is the single most important line in the file for compile time. The
+   analytic version — eight hash calls and a quintic interpolant — is perhaps
+   a hundred instructions, which is nothing at runtime. But it lives inside
+   the distance field, the distance field is inlined at every march step, at
+   every normal tap and at every ambient occlusion tap, and the compiler
+   expands all of it. Measured on an RTX 4070, stubbing this out took the
+   raymarch program from 65 seconds of compilation to 15.
+
+   The texture is a lattice of random bytes with REPEAT wrapping, so hardware
+   trilinear filtering IS the interpolation. It is trilinear rather than
+   quintic, which is very slightly blockier, and it is one fetch. */
+uniform highp sampler3D uNoise;
+
+float tnoise(vec3 x){ return texture(uNoise, x * (1.0 / 64.0)).r; }
+
+float tfbm2(vec3 p){ return (tnoise(p) + 0.5 * tnoise(p * 2.03 + 7.31)) * (1.0 / 1.5); }
+float tfbm3(vec3 p){ return (tnoise(p) + 0.5 * tnoise(p * 2.03 + 7.31) + 0.25 * tnoise(p * 4.07 + 13.7)) * (1.0 / 1.75); }
+
 mat2 rot2(float a){ float c = cos(a), s = sin(a); return mat2(c, -s, s, c); }
 
 float sdSphere(vec3 p, float r){ return length(p) - r; }
@@ -1698,7 +1757,7 @@ float formLiquid(vec3 p, float t, float detail){
   if (d > AMP * 2.0) return d - AMP * detail;
 
   vec3 q = p * 1.5 + vec3(0.0, t * 0.11, t * 0.05);
-  float n = noised(q).x + 0.45 * noised(q * 2.03 + 7.31).x;   // mean ~0.725
+  float n = tnoise(q) + 0.45 * tnoise(q * 2.03 + 7.31);   // mean ~0.725
   return d + (n - 0.725) * K * detail;
 }
 
@@ -1741,12 +1800,19 @@ float sculpture(vec3 p, float t, float shape, float detail){
   int i = int(floor(s));
   float f = smoothstep(0.0, 1.0, fract(s));
 
-  float a, b;
-  if (i == 0){ a = formLiquid(p, t, detail); b = formLattice(p, t); }
-  else if (i == 1){ a = formLattice(p, t);   b = formFrame(p, t); }
-  else if (i == 2){ a = formFrame(p, t);     b = formRing(p, t); }
-  else { return formRing(p, t); }
+  /* Select, then blend — rather than a branch per pair.
 
+     The obvious formulation names formLattice in two branches, formFrame in
+     two and formRing in two, so seven copies of form code get compiled into
+     every one of the dozen places the field is inlined. Choosing by index
+     compiles each form exactly once. */
+  float d0 = formLiquid(p, t, detail);
+  float d1 = formLattice(p, t);
+  float d2 = formFrame(p, t);
+  float d3 = formRing(p, t);
+
+  float a = i == 0 ? d0 : (i == 1 ? d1 : d2);
+  float b = i == 0 ? d1 : (i == 1 ? d2 : d3);
   return mix(a, b, f);
 }
 
@@ -2051,8 +2117,23 @@ uniform float uFilm;
 uniform float uTrans;
 uniform float uEmissive;
 
-uniform int   uSteps;       // march budget, set by the quality tier
-uniform int   uTransSteps;  // interior march budget for the glass preset
+/* Every one of these is a LOOP BOUND, and every one of them is a uniform
+   rather than a constant on purpose.
+
+   A loop whose trip count the compiler can determine statically is a
+   candidate for full unrolling, and ANGLE hands these to the HLSL compiler
+   which takes that offer enthusiastically. A count-to-160 loop
+   wrapped around a signed distance field evaluation becomes 160 inlined
+   copies of the field; four such loops in one shader produced a program that
+   took sixty-eight seconds to compile on an RTX 4070 and then ran at two
+   frames a minute, because the register pressure left almost no occupancy.
+
+   Making the bound a uniform makes the trip count dynamic, the compiler
+   emits a real loop, and both problems disappear. */
+uniform int   uSteps;        // camera march budget, set by the quality tier
+uniform int   uTransSteps;   // interior march budget for the glass preset
+uniform int   uReflSteps;    // reflection march budget
+uniform int   uShadowSteps;  // soft shadow march budget
 uniform float uReflect;     // 0 or 1 — one-bounce reflections on/off
 uniform float uRimBoost;    // section-driven lift on the accent rim light
 uniform float uExposure;
@@ -2068,13 +2149,20 @@ const float STEP_K   = 0.62;   // < 1 because the morph, the gyroid and the
 
 float mapS(vec3 p){ return sculpture(p / uScale, uTime, uShape, uDetail) * uScale; }
 
+/* The tetrahedron normal, written as a loop rather than four unrolled taps.
+   Each textual mapS() is another whole copy of the distance field in the
+   compiled program, so four of them here cost four times what one does. */
 vec3 nrmS(vec3 p, float e){
-  const vec2 k = vec2(1.0, -1.0);
-  return normalize(
-    k.xyy * mapS(p + k.xyy * e) +
-    k.yyx * mapS(p + k.yyx * e) +
-    k.yxy * mapS(p + k.yxy * e) +
-    k.xxx * mapS(p + k.xxx * e));
+  vec3 n = vec3(0.0);
+  for (int i = 0; i < 4; i++){
+    // the four vertices of a tetrahedron, as sign triples
+    vec3 k = (i == 0) ? vec3( 1.0, -1.0, -1.0)
+           : (i == 1) ? vec3(-1.0, -1.0,  1.0)
+           : (i == 2) ? vec3(-1.0,  1.0, -1.0)
+                      : vec3( 1.0,  1.0,  1.0);
+    n += k * mapS(p + k * e);
+  }
+  return normalize(n);
 }
 
 /* ── bounding sphere ───────────────────────────────────────────────────────
@@ -2090,6 +2178,23 @@ bool sphereRange(vec3 ro, vec3 rd, float r, out float t0, out float t1){
   t0 = -b - h;
   t1 = -b + h;
   return t1 > 0.0;
+}
+
+/* One marcher, shared by the camera ray and by both reflection rays.
+
+   It used to be written out three times. Deduplicating it is not tidiness:
+   three copies of a march loop is three copies of the distance field in the
+   compiled program, and shader compile time scales with that. */
+float marchSDF(vec3 ro, vec3 rd, float tStart, float tEnd, float eps, int maxSteps, out bool hit){
+  float t = tStart;
+  hit = false;
+  for (int i = 0; i < maxSteps; i++){
+    if (t > tEnd) break;
+    float d = mapS(ro + rd * t);
+    if (d < eps * t + 2e-4){ hit = true; break; }
+    t += d * STEP_K;
+  }
+  return t;
 }
 
 /* ── march ─────────────────────────────────────────────────────────────── */
@@ -2115,12 +2220,9 @@ Hit trace(vec3 ro, vec3 rd, float pixelRadius){
     // banding you get from a fixed start into noise the TAA then eats.
     t += (ign(gl_FragCoord.xy, uFrame) - 0.5) * 0.012;
 
-    for (int i = 0; i < 160; i++){
-      if (i >= uSteps || t > tEnd) break;
-      float d = mapS(ro + rd * t);
-      if (d < pixelRadius * t + 2e-4){ h.t = t; h.id = 1; break; }
-      t += d * STEP_K;
-    }
+    bool hit;
+    float tHit = marchSDF(ro, rd, t, tEnd, pixelRadius, uSteps, hit);
+    if (hit){ h.t = tHit; h.id = 1; }
   }
   return h;
 }
@@ -2134,7 +2236,7 @@ float softShadow(vec3 ro, vec3 rd, float k){
   float tEnd = min(t1, 12.0);
   float ph = 1e20;
 
-  for (int i = 0; i < 40; i++){
+  for (int i = 0; i < uShadowSteps; i++){
     if (t > tEnd) break;
     float d = mapS(ro + rd * t);
     if (d < 1e-4) return 0.0;
@@ -2180,7 +2282,7 @@ vec3 tangentField(vec3 p, vec3 n){
   if (dot(t, t) < 0.02) t = cross(n, vec3(1.0, 0.0, 0.0));
   t = normalize(t);
   // a slow wobble so the brush lines are not mathematically perfect
-  vec3 w = curlNoise(p * 2.4) * 0.10;
+  vec3 w = (vec3(tnoise(p * 2.4), tnoise(p * 2.4 + 11.3), tnoise(p * 2.4 + 23.7)) - 0.5) * 0.22;
   return normalize(t + w - n * dot(n, w));
 }
 
@@ -2197,16 +2299,16 @@ Surf describe(vec3 p, vec3 n){
 
   if (uMatId == 0){                       // liquid chrome
     s.albedo = vec3(0.955, 0.960, 0.965);
-    s.rough  = clamp(uRough + fbm(q * 5.0, 3) * 0.09 - 0.03, 0.012, 1.0);
+    s.rough  = clamp(uRough + tfbm3(q * 5.0) * 0.09 - 0.03, 0.012, 1.0);
   }
   else if (uMatId == 1){                  // anodised titanium
-    float thickness = 300.0 + 260.0 * fbm(q * 2.2 + uTime * 0.03, 3)
+    float thickness = 300.0 + 260.0 * tfbm3(q * 2.2 + uTime * 0.03)
                             + 90.0 * sin(q.y * 5.0 + uTime * 0.25);
     float cosT = clamp(dot(n, normalize(uCamPos - p)), 0.0, 1.0);
     vec3 film = thinFilm(cosT, thickness, 2.20);
     vec3 base = vec3(0.62, 0.60, 0.58);   // titanium F0
     s.albedo = mix(base, base * film * 1.9, uFilm);
-    s.rough  = clamp(uRough + fbm(q * 6.0, 2) * 0.10 - 0.04, 0.03, 1.0);
+    s.rough  = clamp(uRough + tfbm2(q * 6.0) * 0.10 - 0.04, 0.03, 1.0);
   }
   else if (uMatId == 2){                  // obsidian glass
     s.albedo = vec3(0.045);
@@ -2217,20 +2319,20 @@ Surf describe(vec3 p, vec3 n){
     s.albedo = vec3(0.90, 0.90, 0.88);
     // fine brush grain in the roughness, not the normal — cheaper and it
     // survives minification without aliasing into sparkle
-    float grain = fbm(vec3(q.x * 90.0, q.y * 3.0, q.z * 90.0), 2);
+    float grain = tfbm2(vec3(q.x * 90.0, q.y * 3.0, q.z * 90.0));
     s.rough  = clamp(uRough + (grain - 0.5) * 0.22, 0.04, 1.0);
   }
   else if (uMatId == 4){                  // kiln ceramic
-    float glaze = worley(q * 4.5);
+    float glaze = worley(q * 4.5);   // the one place a cell structure is worth its cost
     s.albedo = mix(vec3(0.88, 0.87, 0.82), vec3(0.72, 0.75, 0.70), glaze * 0.6);
     s.metal  = 0.0;
     // glaze pools in the hollows: thinner (rougher) where the form is convex
-    s.rough  = clamp(uRough - glaze * 0.26 + fbm(q * 9.0, 2) * 0.12, 0.05, 1.0);
+    s.rough  = clamp(uRough - glaze * 0.26 + tfbm2(q * 9.0) * 0.12, 0.05, 1.0);
     s.coat   = 0.35;
   }
   else {                                  // molten core
     float depth = clamp(1.0 - length(q) / 1.05, 0.0, 1.0);
-    float veins = fbm(q * 3.4 + vec3(0.0, uTime * 0.12, 0.0), 3);
+    float veins = tfbm3(q * 3.4 + vec3(0.0, uTime * 0.12, 0.0));
     float heat  = clamp(depth * 1.25 + veins * 0.55 - 0.25, 0.0, 1.0);
     float kelvin = mix(1100.0, 2400.0, heat);
     s.albedo = vec3(0.10, 0.085, 0.08);
@@ -2346,15 +2448,8 @@ vec3 shadeSurface(vec3 p, vec3 n, vec3 rd, Surf s, float ao, float shadowScale){
     float t0, t1;
     vec3 ro2 = p + n * 0.02;
     if (sphereRange(ro2, R, R_BOUND * uScale, t0, t1)){
-      float t = max(t0, 0.01);
-      float tEnd = min(t1, 8.0);
-      bool hit = false;
-      for (int i = 0; i < 48; i++){
-        if (t > tEnd) break;
-        float d = mapS(ro2 + R * t);
-        if (d < 0.0015 * t + 2e-4){ hit = true; break; }
-        t += d * STEP_K;
-      }
+      bool hit;
+      float t = marchSDF(ro2, R, max(t0, 0.01), min(t1, 8.0), 0.0015, uReflSteps, hit);
       if (hit){
         vec3 p2 = ro2 + R * t;
         vec3 n2 = nrmS(p2, 0.0025);
@@ -2385,8 +2480,7 @@ vec3 shadeSurface(vec3 p, vec3 n, vec3 rd, Surf s, float ao, float shadowScale){
 vec3 exitPoint(vec3 ro, vec3 rd, out bool ok){
   float t = 0.02;
   ok = false;
-  for (int i = 0; i < 64; i++){
-    if (i >= uTransSteps) break;
+  for (int i = 0; i < uTransSteps; i++){
     vec3 p = ro + rd * t;
     float d = -mapS(p);              // inside: distance to the boundary
     if (d < 0.0012){ ok = true; break; }
@@ -2433,7 +2527,7 @@ vec3 shadeFloor(vec3 p, vec3 rd, float t){
   vec2 g2 = abs(fract(p.xz * 0.1 - 0.5) - 0.5) / max(w * 0.1, 1e-4);
   float line2 = 1.0 - min(min(g2.x, g2.y), 1.0);
 
-  float rough = 0.30 + 0.16 * fbm(vec3(p.x, 0.0, p.z) * 0.8, 2);
+  float rough = 0.30 + 0.16 * tfbm2(vec3(p.x, 0.0, p.z) * 0.8);
   vec3 base = vec3(0.014, 0.016, 0.017);
   vec3 col = base;
   // The grid is a hint that there is a floor, not a feature. At any more
@@ -2457,15 +2551,8 @@ vec3 shadeFloor(vec3 p, vec3 rd, float t){
     float t0, t1;
     vec3 ro2 = p + n * 0.02;
     if (sphereRange(ro2, R, R_BOUND * uScale, t0, t1)){
-      float tt = max(t0, 0.01);
-      float tEnd = min(t1, 10.0);
-      bool hit = false;
-      for (int i = 0; i < 56; i++){
-        if (tt > tEnd) break;
-        float d = mapS(ro2 + R * tt);
-        if (d < 0.002 * tt + 2e-4){ hit = true; break; }
-        tt += d * STEP_K;
-      }
+      bool hit;
+      float tt = marchSDF(ro2, R, max(t0, 0.01), min(t1, 10.0), 0.002, uReflSteps, hit);
       if (hit){
         vec3 p2 = ro2 + R * tt;
         vec3 n2 = nrmS(p2, 0.0025);
@@ -3772,11 +3859,19 @@ function fmtShort(n) {
 /* ── quality tiers ─────────────────────────────────────────────────────── */
 
 const TIERS = {
-  ultra:  { name: 'ultra',  steps: 128, transSteps: 44, reflect: 1, sim: 512, cloth: 128, taa: 1, mips: 6, scale: 1.00, minScale: 0.60 },
-  high:   { name: 'high',   steps: 100, transSteps: 32, reflect: 1, sim: 384, cloth: 128, taa: 1, mips: 6, scale: 0.90, minScale: 0.54 },
-  medium: { name: 'medium', steps:  74, transSteps: 20, reflect: 1, sim: 256, cloth:  96, taa: 1, mips: 5, scale: 0.78, minScale: 0.48 },
-  low:    { name: 'low',    steps:  50, transSteps: 12, reflect: 0, sim: 176, cloth:  72, taa: 0, mips: 4, scale: 0.60, minScale: 0.40 },
+  ultra:  { name: 'ultra',  steps: 128, transSteps: 44, reflSteps: 48, shadowSteps: 32, reflect: 1, sim: 512, cloth: 128, taa: 1, mips: 6, scale: 1.00, minScale: 0.60 },
+  high:   { name: 'high',   steps: 100, transSteps: 32, reflSteps: 40, shadowSteps: 28, reflect: 1, sim: 384, cloth: 128, taa: 1, mips: 6, scale: 0.90, minScale: 0.54 },
+  medium: { name: 'medium', steps:  74, transSteps: 20, reflSteps: 32, shadowSteps: 24, reflect: 1, sim: 256, cloth:  96, taa: 1, mips: 5, scale: 0.78, minScale: 0.48 },
+  low:    { name: 'low',    steps:  50, transSteps: 12, reflSteps: 20, shadowSteps: 14, reflect: 0, sim: 176, cloth:  72, taa: 0, mips: 4, scale: 0.60, minScale: 0.40 },
 };
+
+/* An upper bound on internal pixels, independent of the tier.
+
+   The scale factor alone is not a budget: on a high-DPI display the canvas is
+   already the CSS size times the device pixel ratio, so "ultra at 100%" on a
+   4K panel asks for fourteen million pixels of raymarching. This clamps the
+   product rather than the factor. */
+const MAX_INTERNAL_PIXELS = 2_400_000;
 
 class Renderer {
   constructor(canvas, onLog = () => {}) {
@@ -3814,6 +3909,7 @@ class Renderer {
     this.initCloth();
     onLog('drawing the wordmark');
     this.printTex = this.makePrintTexture();
+    this.noiseTex = this.makeNoiseTexture();
 
     this.pending = { screenshot: null };
     this.installContextLossHandlers();
@@ -3858,9 +3954,13 @@ class Renderer {
 
   /* ── programs ──────────────────────────────────────────────────────── */
 
+  /* Issue every compile, wait for none of them. awaitPrograms() collects the
+     results later, so the several seconds the driver spends on the raymarch
+     program happen while the boot screen is still animating rather than with
+     the whole tab frozen. */
   buildPrograms() {
     const gl = this.gl;
-    const mk = (fs, label, vs = FS_VERT) => new Program(gl, vs, fs, label);
+    const mk = (fs, label, vs = FS_VERT) => new Program(gl, vs, fs, label, true);
 
     this.pRaymarch  = mk(RAYMARCH_FRAG, 'raymarch');
     this.pPartSim   = mk(PARTICLE_SIM_FRAG, 'particle.sim');
@@ -3875,6 +3975,30 @@ class Renderer {
     this.pUp        = mk(BLOOM_UP_FRAG, 'bloom.up');
     this.pStreak    = mk(STREAK_FRAG, 'bloom.streak');
     this.pFinal     = mk(FINAL_FRAG, 'final');
+
+    this.programs = [
+      this.pRaymarch, this.pPartSim, this.pPartDraw, this.pClothInt,
+      this.pClothRel, this.pClothDraw, this.pComposite, this.pTaa,
+      this.pPrefilter, this.pDown, this.pUp, this.pStreak, this.pFinal,
+    ];
+  }
+
+  /* Poll until the driver has them all, yielding a frame between checks, then
+     finalize. Resolves with the number of milliseconds it actually took. */
+  async awaitPrograms(onProgress = () => {}) {
+    const ext = this.caps.parallel;
+    const t0 = performance.now();
+    const frame = () => new Promise((r) => requestAnimationFrame(r));
+
+    for (;;) {
+      const done = this.programs.filter((p) => p.isReady(ext)).length;
+      onProgress(done / this.programs.length);
+      if (done === this.programs.length) break;
+      await frame();
+    }
+    // finalize is the blocking part, but by now the work is already done
+    for (const p of this.programs) p.finalize();
+    return Math.round(performance.now() - t0);
   }
 
   /* ── targets ───────────────────────────────────────────────────────── */
@@ -3891,8 +4015,16 @@ class Renderer {
     this.canvas.height = ch;
     this._lastScale = this.renderScale;
 
-    const w = Math.max(64, Math.round(cw * this.renderScale));
-    const h = Math.max(64, Math.round(ch * this.renderScale));
+    let w = Math.max(64, Math.round(cw * this.renderScale));
+    let h = Math.max(64, Math.round(ch * this.renderScale));
+
+    // Hard ceiling on the pixel count, whatever the scale factor says.
+    const over = (w * h) / MAX_INTERNAL_PIXELS;
+    if (over > 1) {
+      const k = 1 / Math.sqrt(over);
+      w = Math.max(64, Math.round(w * k));
+      h = Math.max(64, Math.round(h * k));
+    }
     this.iw = w; this.ih = h;
 
     const HDR = FMT.RGBA16F;
@@ -4059,6 +4191,39 @@ class Renderer {
     this.cloth = null;
   }
 
+  /* A 64^3 lattice of random bytes, sampled with hardware trilinear filtering
+     and REPEAT wrapping — which makes the filtering itself the interpolation,
+     so this IS value noise, in one fetch.
+
+     The generator is a seeded xorshift rather than Math.random(), so the
+     sculpture's surface is identical on every load and between machines. */
+  makeNoiseTexture() {
+    const gl = this.gl;
+    const N = 64;
+    const data = new Uint8Array(N * N * N);
+
+    let seed = 0x9e3779b9;
+    const rnd = () => {
+      seed ^= seed << 13; seed >>>= 0;
+      seed ^= seed >>> 17;
+      seed ^= seed << 5;  seed >>>= 0;
+      return seed / 4294967296;
+    };
+    for (let i = 0; i < data.length; i++) data[i] = (rnd() * 256) | 0;
+
+    const t = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_3D, t);
+    gl.texStorage3D(gl.TEXTURE_3D, 1, gl.R8, N, N, N);
+    gl.texSubImage3D(gl.TEXTURE_3D, 0, 0, 0, 0, N, N, N, gl.RED, gl.UNSIGNED_BYTE, data);
+    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_R, gl.REPEAT);
+    gl.bindTexture(gl.TEXTURE_3D, null);
+    return t;
+  }
+
   /* The only raster image on the page, and it is drawn here rather than
      loaded — a 2D canvas, one fillText, uploaded once. */
   makePrintTexture() {
@@ -4175,7 +4340,8 @@ class Renderer {
       const src = this.particles.read, dst = this.particles.write;
       dst.bind(false);
       const s = this.pPartSim.use();
-      s.tex('uPos', src.textures[0]).tex('uVel', src.textures[1]);
+      s.tex('uPos', src.textures[0]).tex('uVel', src.textures[1])
+       .tex('uNoise', this.noiseTex, gl.TEXTURE_3D);
       s.setAll({
         uSimRes: [this.simN, this.simN],
         uDt: dt, uTime: this.simTime, uFrame: this.frame,
@@ -4214,7 +4380,8 @@ class Renderer {
         const src = this.cloth.read, dst = this.cloth.write;
         dst.bind(false);
         const s = this.pClothRel.use();
-        s.tex('uCur', src.textures[0]).tex('uPrev', src.textures[1]);
+        s.tex('uCur', src.textures[0]).tex('uPrev', src.textures[1])
+         .tex('uNoise', this.noiseTex, gl.TEXTURE_3D);
         s.setAll({
           uN: [this.clothN, this.clothN],
           uOrigin: this.clothOrigin, uSize: this.clothSize,
@@ -4234,6 +4401,7 @@ class Renderer {
     gl.depthFunc(gl.ALWAYS);   // a fullscreen pass that supplies its own depth
     {
       const s = this.pRaymarch.use();
+      s.tex('uNoise', this.noiseTex, gl.TEXTURE_3D);
       s.setAll({
         uRes: [this.iw, this.ih],
         uTime: this.simTime, uFrame: this.frame,
@@ -4244,6 +4412,7 @@ class Renderer {
         uRough: p.rough, uMetal: p.metal, uIor: p.ior,
         uAniso: p.aniso, uFilm: p.film, uTrans: p.trans, uEmissive: p.emissive,
         uSteps: this.tier.steps, uTransSteps: this.tier.transSteps,
+        uReflSteps: this.tier.reflSteps, uShadowSteps: this.tier.shadowSteps,
         uReflect: this.tier.reflect * (p.reflect ?? 1),
         uRimBoost: p.rimBoost, uExposure: p.sceneExposure,
       });
@@ -4285,7 +4454,15 @@ class Renderer {
         uRes: [this.iw, this.ih],
         uPointScale: p.pSize * this.ih * 0.0016,
         uSizeJitter: 0.9,
-        uIntensity: 1.0, uFade: p.pGain,
+        /* Normalise brightness against the particle count.
+
+           Additive blending sums every sprite, so quadrupling the count
+           quadruples the glow — the ultra tier was washing the entire frame
+           lime while medium looked right, because the gain was tuned at
+           medium and never re-checked at ultra. More particles should buy
+           finer structure, not more light. */
+        uIntensity: clamp(65536 / this.particleCount, 0.22, 1.3),
+        uFade: p.pGain,
       });
       gl.bindVertexArray(this.particleVao);
       gl.drawArrays(gl.POINTS, 0, this.particleCount);
@@ -5406,9 +5583,41 @@ let scaleCooldown = 0;
 
 /* ── boot ──────────────────────────────────────────────────────────────── */
 
+/* Boot timings, kept permanently. Every stage below happens on the main
+   thread, so if one of them is slow the page is simply frozen and there is no
+   way to tell from outside which one it was. `__winch.bootMarks` makes that
+   answerable after the fact. */
+const bootT0 = performance.now();
+const bootMarks = [];
+const mark = (msg, pct) => {
+  bootMarks.push([msg, Math.round(performance.now() - bootT0)]);
+  ui.boot(msg, pct);
+};
+
+/* If a previous load started and never finished, assume it was too much for
+   this machine and come back quieter. Two failures in a row and it drops to
+   the smallest tier. The flag is cleared the moment a boot completes, so a
+   normal visit never sees this.
+
+   Every WebGL page is one unfamiliar driver away from a first frame that
+   takes a minute, and the failure mode is a tab the browser offers to kill —
+   which the visitor cannot recover from by reloading, because the reload does
+   exactly the same thing. */
+const BOOT_FLAG = 'winch-boot-attempts';
+
+function readBootAttempts() {
+  try { return Number(localStorage.getItem(BOOT_FLAG) || 0); } catch { return 0; }
+}
+function setBootAttempts(n) {
+  try { n ? localStorage.setItem(BOOT_FLAG, String(n)) : localStorage.removeItem(BOOT_FLAG); } catch { /* private mode */ }
+}
+
 async function boot() {
   ui.build();
-  ui.boot('reading the room', 0.08);
+  mark('reading the room', 0.08);
+
+  const failed = readBootAttempts();
+  setBootAttempts(failed + 1);
 
   // The wordmark is drawn into a texture with fillText, so the font has to
   // exist first — otherwise the cloth ends up printed in Times New Roman.
@@ -5416,10 +5625,10 @@ async function boot() {
     await Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 2500))]);
   } catch { /* no font loading API — the fallback stack is fine */ }
 
-  ui.boot('opening a webgl2 context', 0.18);
+  mark('opening a webgl2 context', 0.18);
 
   try {
-    renderer = new Renderer($('#gl'), (msg) => ui.boot(msg, null));
+    renderer = new Renderer($('#gl'), (msg) => mark(msg, null));
   } catch (err) {
     console.error(err);
     failGracefully(err);
@@ -5433,9 +5642,21 @@ async function boot() {
   if (forced && TIERS[forced]) {
     renderer.setTier(forced);
     ui.boot(`forced tier: ${forced}`, 0.6);
+  } else if (failed > 0) {
+    const step = ['low', 'medium', 'high', 'ultra'];
+    const now = step.indexOf(renderer.tier.name);
+    const down = step[Math.max(0, now - failed)];
+    renderer.setTier(down);
+    ui.boot(`previous load did not finish — using ${down}`, 0.6);
   }
 
-  ui.boot('warming the pipeline', 0.72);
+  // The driver is compiling on its own threads right now; this loop just
+  // watches, and the boot bar keeps moving because the main thread is free.
+  const compileMs = await renderer.awaitPrograms((frac) => {
+    ui.boot('compiling shaders', 0.2 + frac * 0.5);
+  });
+  mark(`shaders ready in ${compileMs} ms`, 0.72);
+
   ui.initHud(renderer);
   wireInput();
   wireKeys();
@@ -5450,22 +5671,35 @@ async function boot() {
   // the display driver's watchdog — which reads as "the tab crashed" rather
   // than "that was slow". The adaptive controller walks the scale back up
   // over the first second once there are real frame times to go on.
-  const boostScale = renderer.renderScale;
-  renderer.renderScale = Math.min(0.5, boostScale);
-  renderer.resize(true);
-
-  const p = director.update(1 / 60, renderer);
-  renderer.render(p, 1 / 60);
-  renderer.render(p, 1 / 60);
-
-  renderer.renderScale = Math.min(boostScale, 0.72);
+  // Settle on the starting resolution BEFORE the warm frames, not after.
+  // Resizing reallocates every render target, which forces the driver to
+  // finish whatever is still queued — so doing it after the warm frames
+  // turned their cost into one long synchronous block at the worst possible
+  // moment. The adaptive controller takes it from here.
+  renderer.renderScale = Math.min(renderer.tier.scale, 0.72);
   renderer.resize(true);
   renderer.markCameraCut();
 
-  ui.boot('ready', 1.0);
+  const nextFrame = () => new Promise((r) => requestAnimationFrame(r));
+  const p = director.update(1 / 60, renderer);
+
+  // One warm frame per animation frame, not two back to back. The first one
+  // is where the driver builds its pipeline state, and it is slow exactly
+  // once; giving the browser a chance to paint between them is the difference
+  // between a progress bar and a hung tab.
+  for (let i = 0; i < 2; i++) {
+    await nextFrame();
+    mark(`warm frame ${i + 1}`, 0.78 + i * 0.08);
+    renderer.render(p, 1 / 60);
+  }
+  await nextFrame();
+  mark('warm frames done', 0.94);
+
+  mark('ready', 1.0);
   await new Promise((r) => setTimeout(r, 220));
 
   document.documentElement.classList.add('booted', 'gl-up', 'hud-on');
+  setBootAttempts(0);      // made it — forget the previous failures
   running = true;
   last = performance.now();
   requestAnimationFrame(loop);
@@ -5764,7 +5998,7 @@ function loop(now) {
 if (document.readyState === 'loading') addEventListener('DOMContentLoaded', boot);
 else boot();
 
-window.__winch = { get renderer() { return renderer; }, director, ui, TIERS };
+window.__winch = { get renderer() { return renderer; }, director, ui, TIERS, bootMarks };
 
 </script>
 <noscript>

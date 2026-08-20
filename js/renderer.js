@@ -32,11 +32,19 @@ import {
 /* ── quality tiers ─────────────────────────────────────────────────────── */
 
 export const TIERS = {
-  ultra:  { name: 'ultra',  steps: 128, transSteps: 44, reflect: 1, sim: 512, cloth: 128, taa: 1, mips: 6, scale: 1.00, minScale: 0.60 },
-  high:   { name: 'high',   steps: 100, transSteps: 32, reflect: 1, sim: 384, cloth: 128, taa: 1, mips: 6, scale: 0.90, minScale: 0.54 },
-  medium: { name: 'medium', steps:  74, transSteps: 20, reflect: 1, sim: 256, cloth:  96, taa: 1, mips: 5, scale: 0.78, minScale: 0.48 },
-  low:    { name: 'low',    steps:  50, transSteps: 12, reflect: 0, sim: 176, cloth:  72, taa: 0, mips: 4, scale: 0.60, minScale: 0.40 },
+  ultra:  { name: 'ultra',  steps: 128, transSteps: 44, reflSteps: 48, shadowSteps: 32, reflect: 1, sim: 512, cloth: 128, taa: 1, mips: 6, scale: 1.00, minScale: 0.60 },
+  high:   { name: 'high',   steps: 100, transSteps: 32, reflSteps: 40, shadowSteps: 28, reflect: 1, sim: 384, cloth: 128, taa: 1, mips: 6, scale: 0.90, minScale: 0.54 },
+  medium: { name: 'medium', steps:  74, transSteps: 20, reflSteps: 32, shadowSteps: 24, reflect: 1, sim: 256, cloth:  96, taa: 1, mips: 5, scale: 0.78, minScale: 0.48 },
+  low:    { name: 'low',    steps:  50, transSteps: 12, reflSteps: 20, shadowSteps: 14, reflect: 0, sim: 176, cloth:  72, taa: 0, mips: 4, scale: 0.60, minScale: 0.40 },
 };
+
+/* An upper bound on internal pixels, independent of the tier.
+
+   The scale factor alone is not a budget: on a high-DPI display the canvas is
+   already the CSS size times the device pixel ratio, so "ultra at 100%" on a
+   4K panel asks for fourteen million pixels of raymarching. This clamps the
+   product rather than the factor. */
+export const MAX_INTERNAL_PIXELS = 2_400_000;
 
 export class Renderer {
   constructor(canvas, onLog = () => {}) {
@@ -74,6 +82,7 @@ export class Renderer {
     this.initCloth();
     onLog('drawing the wordmark');
     this.printTex = this.makePrintTexture();
+    this.noiseTex = this.makeNoiseTexture();
 
     this.pending = { screenshot: null };
     this.installContextLossHandlers();
@@ -118,9 +127,13 @@ export class Renderer {
 
   /* ── programs ──────────────────────────────────────────────────────── */
 
+  /* Issue every compile, wait for none of them. awaitPrograms() collects the
+     results later, so the several seconds the driver spends on the raymarch
+     program happen while the boot screen is still animating rather than with
+     the whole tab frozen. */
   buildPrograms() {
     const gl = this.gl;
-    const mk = (fs, label, vs = FS_VERT) => new Program(gl, vs, fs, label);
+    const mk = (fs, label, vs = FS_VERT) => new Program(gl, vs, fs, label, true);
 
     this.pRaymarch  = mk(RAYMARCH_FRAG, 'raymarch');
     this.pPartSim   = mk(PARTICLE_SIM_FRAG, 'particle.sim');
@@ -135,6 +148,30 @@ export class Renderer {
     this.pUp        = mk(BLOOM_UP_FRAG, 'bloom.up');
     this.pStreak    = mk(STREAK_FRAG, 'bloom.streak');
     this.pFinal     = mk(FINAL_FRAG, 'final');
+
+    this.programs = [
+      this.pRaymarch, this.pPartSim, this.pPartDraw, this.pClothInt,
+      this.pClothRel, this.pClothDraw, this.pComposite, this.pTaa,
+      this.pPrefilter, this.pDown, this.pUp, this.pStreak, this.pFinal,
+    ];
+  }
+
+  /* Poll until the driver has them all, yielding a frame between checks, then
+     finalize. Resolves with the number of milliseconds it actually took. */
+  async awaitPrograms(onProgress = () => {}) {
+    const ext = this.caps.parallel;
+    const t0 = performance.now();
+    const frame = () => new Promise((r) => requestAnimationFrame(r));
+
+    for (;;) {
+      const done = this.programs.filter((p) => p.isReady(ext)).length;
+      onProgress(done / this.programs.length);
+      if (done === this.programs.length) break;
+      await frame();
+    }
+    // finalize is the blocking part, but by now the work is already done
+    for (const p of this.programs) p.finalize();
+    return Math.round(performance.now() - t0);
   }
 
   /* ── targets ───────────────────────────────────────────────────────── */
@@ -151,8 +188,16 @@ export class Renderer {
     this.canvas.height = ch;
     this._lastScale = this.renderScale;
 
-    const w = Math.max(64, Math.round(cw * this.renderScale));
-    const h = Math.max(64, Math.round(ch * this.renderScale));
+    let w = Math.max(64, Math.round(cw * this.renderScale));
+    let h = Math.max(64, Math.round(ch * this.renderScale));
+
+    // Hard ceiling on the pixel count, whatever the scale factor says.
+    const over = (w * h) / MAX_INTERNAL_PIXELS;
+    if (over > 1) {
+      const k = 1 / Math.sqrt(over);
+      w = Math.max(64, Math.round(w * k));
+      h = Math.max(64, Math.round(h * k));
+    }
     this.iw = w; this.ih = h;
 
     const HDR = FMT.RGBA16F;
@@ -319,6 +364,39 @@ export class Renderer {
     this.cloth = null;
   }
 
+  /* A 64^3 lattice of random bytes, sampled with hardware trilinear filtering
+     and REPEAT wrapping — which makes the filtering itself the interpolation,
+     so this IS value noise, in one fetch.
+
+     The generator is a seeded xorshift rather than Math.random(), so the
+     sculpture's surface is identical on every load and between machines. */
+  makeNoiseTexture() {
+    const gl = this.gl;
+    const N = 64;
+    const data = new Uint8Array(N * N * N);
+
+    let seed = 0x9e3779b9;
+    const rnd = () => {
+      seed ^= seed << 13; seed >>>= 0;
+      seed ^= seed >>> 17;
+      seed ^= seed << 5;  seed >>>= 0;
+      return seed / 4294967296;
+    };
+    for (let i = 0; i < data.length; i++) data[i] = (rnd() * 256) | 0;
+
+    const t = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_3D, t);
+    gl.texStorage3D(gl.TEXTURE_3D, 1, gl.R8, N, N, N);
+    gl.texSubImage3D(gl.TEXTURE_3D, 0, 0, 0, 0, N, N, N, gl.RED, gl.UNSIGNED_BYTE, data);
+    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_R, gl.REPEAT);
+    gl.bindTexture(gl.TEXTURE_3D, null);
+    return t;
+  }
+
   /* The only raster image on the page, and it is drawn here rather than
      loaded — a 2D canvas, one fillText, uploaded once. */
   makePrintTexture() {
@@ -435,7 +513,8 @@ export class Renderer {
       const src = this.particles.read, dst = this.particles.write;
       dst.bind(false);
       const s = this.pPartSim.use();
-      s.tex('uPos', src.textures[0]).tex('uVel', src.textures[1]);
+      s.tex('uPos', src.textures[0]).tex('uVel', src.textures[1])
+       .tex('uNoise', this.noiseTex, gl.TEXTURE_3D);
       s.setAll({
         uSimRes: [this.simN, this.simN],
         uDt: dt, uTime: this.simTime, uFrame: this.frame,
@@ -474,7 +553,8 @@ export class Renderer {
         const src = this.cloth.read, dst = this.cloth.write;
         dst.bind(false);
         const s = this.pClothRel.use();
-        s.tex('uCur', src.textures[0]).tex('uPrev', src.textures[1]);
+        s.tex('uCur', src.textures[0]).tex('uPrev', src.textures[1])
+         .tex('uNoise', this.noiseTex, gl.TEXTURE_3D);
         s.setAll({
           uN: [this.clothN, this.clothN],
           uOrigin: this.clothOrigin, uSize: this.clothSize,
@@ -494,6 +574,7 @@ export class Renderer {
     gl.depthFunc(gl.ALWAYS);   // a fullscreen pass that supplies its own depth
     {
       const s = this.pRaymarch.use();
+      s.tex('uNoise', this.noiseTex, gl.TEXTURE_3D);
       s.setAll({
         uRes: [this.iw, this.ih],
         uTime: this.simTime, uFrame: this.frame,
@@ -504,6 +585,7 @@ export class Renderer {
         uRough: p.rough, uMetal: p.metal, uIor: p.ior,
         uAniso: p.aniso, uFilm: p.film, uTrans: p.trans, uEmissive: p.emissive,
         uSteps: this.tier.steps, uTransSteps: this.tier.transSteps,
+        uReflSteps: this.tier.reflSteps, uShadowSteps: this.tier.shadowSteps,
         uReflect: this.tier.reflect * (p.reflect ?? 1),
         uRimBoost: p.rimBoost, uExposure: p.sceneExposure,
       });
@@ -545,7 +627,15 @@ export class Renderer {
         uRes: [this.iw, this.ih],
         uPointScale: p.pSize * this.ih * 0.0016,
         uSizeJitter: 0.9,
-        uIntensity: 1.0, uFade: p.pGain,
+        /* Normalise brightness against the particle count.
+
+           Additive blending sums every sprite, so quadrupling the count
+           quadruples the glow — the ultra tier was washing the entire frame
+           lime while medium looked right, because the gain was tuned at
+           medium and never re-checked at ultra. More particles should buy
+           finer structure, not more light. */
+        uIntensity: clamp(65536 / this.particleCount, 0.22, 1.3),
+        uFade: p.pGain,
       });
       gl.bindVertexArray(this.particleVao);
       gl.drawArrays(gl.POINTS, 0, this.particleCount);

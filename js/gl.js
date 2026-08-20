@@ -31,6 +31,11 @@ export function createContext(canvas) {
     floatBlend:  !!gl.getExtension('EXT_float_blend'),
     aniso:       gl.getExtension('EXT_texture_filter_anisotropic'),
     timer:       gl.getExtension('EXT_disjoint_timer_query_webgl2'),
+    /* Lets the driver compile and link on its own threads. Without it, the
+       first getProgramParameter(LINK_STATUS) blocks the main thread until the
+       program is ready — which for a heavy shader means a frozen tab and a
+       browser offering to kill the page. */
+    parallel:    gl.getExtension('KHR_parallel_shader_compile'),
     debugRender: gl.getExtension('WEBGL_debug_renderer_info'),
     maxTex:      gl.getParameter(gl.MAX_TEXTURE_SIZE),
     maxDrawBuf:  gl.getParameter(gl.MAX_DRAW_BUFFERS),
@@ -72,44 +77,76 @@ function annotate(src, log) {
   return out.length ? out.join('\n') : log;
 }
 
-export function compile(gl, type, src, label = 'shader') {
+/* Note what is deliberately NOT here any more: a COMPILE_STATUS query.
+   Asking for it forces a synchronisation with the driver's compiler, which is
+   precisely the stall this path exists to avoid. Compile errors are recovered
+   later from the link failure, by checkShader(). */
+export function compile(gl, type, src) {
   const sh = gl.createShader(type);
   gl.shaderSource(sh, src);
   gl.compileShader(sh);
-  if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) {
-    const log = gl.getShaderInfoLog(sh) || '(no log)';
-    gl.deleteShader(sh);
-    throw new GLError(`${label} failed to compile:\n${annotate(src, log)}`);
-  }
   return sh;
+}
+
+function checkShader(gl, sh, src, label) {
+  if (gl.getShaderParameter(sh, gl.COMPILE_STATUS)) return null;
+  const log = gl.getShaderInfoLog(sh) || '(no log)';
+  return `${label} failed to compile:\n${annotate(src, log)}`;
 }
 
 const UNIFORM_SETTER = {};
 
 export class Program {
-  constructor(gl, vsSrc, fsSrc, label = 'program') {
+  /* `deferred` splits construction in two: issue the work here, collect the
+     result later with finalize(). In between, the driver is free to do it on
+     another thread and the page is free to keep painting. */
+  constructor(gl, vsSrc, fsSrc, label = 'program', deferred = false) {
     this.gl = gl;
     this.label = label;
-
-    const vs = compile(gl, gl.VERTEX_SHADER, vsSrc, `${label}.vert`);
-    const fs = compile(gl, gl.FRAGMENT_SHADER, fsSrc, `${label}.frag`);
-
-    const p = gl.createProgram();
-    gl.attachShader(p, vs);
-    gl.attachShader(p, fs);
-    gl.linkProgram(p);
-    gl.deleteShader(vs);
-    gl.deleteShader(fs);
-
-    if (!gl.getProgramParameter(p, gl.LINK_STATUS)) {
-      const log = gl.getProgramInfoLog(p);
-      gl.deleteProgram(p);
-      throw new GLError(`${label} failed to link: ${log}`);
-    }
-
-    this.p = p;
     this.u = new Map();     // name -> { loc, type }
     this.unit = 0;
+    this.ready = false;
+
+    this._vsSrc = vsSrc;
+    this._fsSrc = fsSrc;
+    this._vs = compile(gl, gl.VERTEX_SHADER, vsSrc);
+    this._fs = compile(gl, gl.FRAGMENT_SHADER, fsSrc);
+
+    const p = gl.createProgram();
+    gl.attachShader(p, this._vs);
+    gl.attachShader(p, this._fs);
+    gl.linkProgram(p);
+    this.p = p;
+
+    if (!deferred) this.finalize();
+  }
+
+  /* Whether the driver is done, asked in a way that does not force a wait.
+     With no extension nothing is happening asynchronously, so the answer is
+     always yes and finalize() blocks exactly as it used to. */
+  isReady(ext) {
+    if (this.ready) return true;
+    if (!ext) return true;
+    return this.gl.getProgramParameter(this.p, ext.COMPLETION_STATUS_KHR);
+  }
+
+  finalize() {
+    if (this.ready) return this;
+    const gl = this.gl, p = this.p;
+
+    if (!gl.getProgramParameter(p, gl.LINK_STATUS)) {
+      // Only now is the per-shader status worth paying for — to say which
+      // stage failed, and on which line.
+      const ve = checkShader(gl, this._vs, this._vsSrc, `${this.label}.vert`);
+      const fe = checkShader(gl, this._fs, this._fsSrc, `${this.label}.frag`);
+      const log = gl.getProgramInfoLog(p);
+      gl.deleteProgram(p);
+      throw new GLError(ve || fe || `${this.label} failed to link: ${log}`);
+    }
+
+    gl.deleteShader(this._vs);
+    gl.deleteShader(this._fs);
+    this._vs = this._fs = this._vsSrc = this._fsSrc = null;
 
     const n = gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS);
     for (let i = 0; i < n; i++) {
@@ -119,6 +156,8 @@ export class Program {
       const loc = gl.getUniformLocation(p, info.name);
       if (loc) this.u.set(name, { loc, type: info.type, size: info.size });
     }
+    this.ready = true;
+    return this;
   }
 
   use() { this.gl.useProgram(this.p); this.unit = 0; return this; }

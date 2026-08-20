@@ -1,0 +1,102 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>raymarch compile bisect</title>
+<style>body{background:#07090A;color:#E9EDE3;font:12px ui-monospace,monospace;padding:16px;white-space:pre-wrap}</style>
+<canvas id="c" width="64" height="64" style="display:none"></canvas>
+<div id="out">running…</div>
+
+<script type="module">
+/* Which part of the raymarch shader costs sixty-eight seconds to compile?
+
+   Rather than reason about it, replace one candidate at a time with a cheap
+   stub and compile again. Whatever makes the number collapse is the answer.
+   The stubs are string surgery on the assembled source, so no shader in the
+   real page is affected. */
+
+import { Program, FS_VERT } from '../js/gl.js';
+import { RAYMARCH_FRAG } from '../js/shaders/raymarch.js';
+
+const gl = document.getElementById('c').getContext('webgl2', { antialias: false });
+
+/* Replace a function body, matched from its signature to the closing brace of
+   its top-level block. Written as a brace counter because GLSL bodies nest. */
+function stub(src, signature, body) {
+  const i = src.indexOf(signature);
+  if (i < 0) throw new Error('signature not found: ' + signature);
+  const open = src.indexOf('{', i + signature.length - 1);
+  let depth = 0, j = open;
+  for (; j < src.length; j++) {
+    if (src[j] === '{') depth++;
+    else if (src[j] === '}') { depth--; if (depth === 0) break; }
+  }
+  return src.slice(0, open) + '{ ' + body + ' }' + src.slice(j + 1);
+}
+
+/* Delete a block delimited by a start marker and the matching close brace. */
+function dropBlock(src, marker) {
+  const i = src.indexOf(marker);
+  if (i < 0) return src;
+  const open = src.indexOf('{', i);
+  let depth = 0, j = open;
+  for (; j < src.length; j++) {
+    if (src[j] === '{') depth++;
+    else if (src[j] === '}') { depth--; if (depth === 0) break; }
+  }
+  return src.slice(0, i) + src.slice(j + 1);
+}
+
+const VARIANTS = [
+  ['baseline (unmodified)', (s) => s],
+
+  ['stub worley()',         (s) => stub(s, 'float worley(vec3 p)', 'return 0.5;')],
+  ['stub fbm()',            (s) => stub(s, 'float fbm(vec3 p, int octaves)', 'return 0.5;')],
+  ['stub noised()',         (s) => stub(s, 'vec4 noised(vec3 x)', 'return vec4(0.5, 0.0, 0.0, 0.0);')],
+  ['stub curlNoise()',      (s) => stub(s, 'vec3 curlNoise(vec3 p)', 'return vec3(0.0);')],
+
+  ['stub describe()',       (s) => stub(s, 'Surf describe(vec3 p, vec3 n)',
+                                        'Surf s; s.albedo = vec3(0.9); s.rough = uRough; s.metal = uMetal; s.emis = vec3(0.0); s.aniso = uAniso; s.coat = 0.0; return s;')],
+  ['stub softShadow()',     (s) => stub(s, 'float softShadow(vec3 ro, vec3 rd, float k)', 'return 1.0;')],
+  ['stub calcAO()',         (s) => stub(s, 'float calcAO(vec3 p, vec3 n)', 'return 1.0;')],
+  ['stub envColor()',       (s) => stub(s, 'vec3 envColor(vec3 d, float rough, float rimBoost)', 'return vec3(0.05);')],
+  ['stub shadeFloor()',     (s) => stub(s, 'vec3 shadeFloor(vec3 p, vec3 rd, float t)', 'return vec3(0.02);')],
+  ['stub refractChannel()', (s) => stub(s, 'vec3 refractChannel(vec3 p, vec3 n, vec3 rd, float ior)', 'return vec3(0.1);')],
+  ['stub sculpture()',      (s) => stub(s, 'float sculpture(vec3 p, float t, float shape, float detail)', 'return length(p) - 1.0;')],
+  ['stub shadeSurface()',   (s) => stub(s, 'vec3 shadeSurface(vec3 p, vec3 n, vec3 rd, Surf s, float ao, float shadowScale)', 'return vec3(0.5);')],
+
+  ['no reflections',        (s) => s.replace(/uReflect > 0\.5/g, 'false')],
+  ['no transmission',       (s) => s.replace(/uTrans > 0\.5/g, 'false')],
+];
+
+const result = { renderer: null, programs: [] };
+window.__PROGRESS = [];
+
+try {
+  result.renderer = gl.getParameter(gl.RENDERER);
+  for (const [name, fn] of VARIANTS) {
+    window.__CURRENT = name;
+    await new Promise((r) => setTimeout(r, 0));
+    const entry = { name, ok: false, ms: 0, error: null, uniforms: [] };
+    const t0 = performance.now();
+    try {
+      const src = fn(RAYMARCH_FRAG);
+      const p = new Program(gl, FS_VERT, src, name);
+      entry.ok = true;
+      entry.uniforms = [...p.u.keys()];
+      p.dispose();
+    } catch (e) {
+      entry.error = String(e.message || e).slice(0, 300);
+    }
+    entry.ms = Math.round(performance.now() - t0);
+    result.programs.push(entry);
+    window.__PROGRESS.push(`${String(entry.ms).padStart(7)} ms  ${entry.name}${entry.ok ? '' : '  FAILED'}`);
+    document.getElementById('out').textContent = window.__PROGRESS.join('\n');
+  }
+} catch (e) {
+  result.fatal = String(e.message || e);
+}
+
+result.exts = {};
+result.fbo = 'n/a';
+result.fboSim = 'n/a';
+window.__RESULT = result;
+</script>
