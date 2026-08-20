@@ -24,7 +24,6 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 const { RAYMARCH_FRAG } = await import('../js/shaders/raymarch.js');
 const { PARTICLE_SIM_FRAG, PARTICLE_VERT, PARTICLE_FRAG } = await import('../js/shaders/particles.js');
-const { CLOTH_INTEGRATE_FRAG, CLOTH_RELAX_FRAG, CLOTH_VERT, CLOTH_FRAG } = await import('../js/shaders/cloth.js');
 const {
   COMPOSITE_FRAG, TAA_FRAG, BLOOM_PREFILTER_FRAG, BLOOM_DOWN_FRAG,
   BLOOM_UP_FRAG, STREAK_FRAG, FINAL_FRAG,
@@ -36,9 +35,6 @@ const PROGRAMS = {
   'raymarch':          [FS_VERT, RAYMARCH_FRAG],
   'particle.sim':      [FS_VERT, PARTICLE_SIM_FRAG],
   'particle.draw':     [PARTICLE_VERT, PARTICLE_FRAG],
-  'cloth.integrate':   [FS_VERT, CLOTH_INTEGRATE_FRAG],
-  'cloth.relax':       [FS_VERT, CLOTH_RELAX_FRAG],
-  'cloth.draw':        [CLOTH_VERT, CLOTH_FRAG],
   'composite':         [FS_VERT, COMPOSITE_FRAG],
   'taa':               [FS_VERT, TAA_FRAG],
   'bloom.prefilter':   [FS_VERT, BLOOM_PREFILTER_FRAG],
@@ -176,7 +172,6 @@ const rendererSrc = readFileSync(join(ROOT, 'js/renderer.js'), 'utf8');
 /* Map each `this.pXxx` program handle to its lint name. */
 const HANDLE = {
   pRaymarch: 'raymarch', pPartSim: 'particle.sim', pPartDraw: 'particle.draw',
-  pClothInt: 'cloth.integrate', pClothRel: 'cloth.relax', pClothDraw: 'cloth.draw',
   pComposite: 'composite', pTaa: 'taa', pPrefilter: 'bloom.prefilter',
   pDown: 'bloom.down', pUp: 'bloom.up', pStreak: 'bloom.streak', pFinal: 'final',
 };

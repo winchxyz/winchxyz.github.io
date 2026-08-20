@@ -43,7 +43,7 @@ export const REPOS = [
   {
     name: 'winchxyz.github.io',
     group: 'graphics',
-    desc: 'This page. A portfolio that renders itself on the GPU — one WebGL2 context, four thousand lines of hand-written GLSL, and nothing else at all.',
+    desc: 'This page. A portfolio that renders itself on the GPU — one WebGL2 context, a few thousand lines of hand-written GLSL, and nothing else at all.',
     lang: 'JavaScript',
     stars: 0, forks: 0,
     tags: ['WebGL2', 'GLSL', 'raymarching', 'zero-deps'],
@@ -234,26 +234,14 @@ export const MATERIALS = [
   },
 ];
 
-/* ── physics sliders ───────────────────────────────────────────────────── */
-
-export const SLIDERS = [
-  { id: 'wind',    label: 'wind',        min: 0,   max: 3.0,  step: 0.01, val: 1.45, fmt: (v) => v.toFixed(2) + ' m/s' },
-  { id: 'gravity', label: 'gravity',     min: 0,   max: 24,   step: 0.1,  val: 9.81, fmt: (v) => v.toFixed(2) + ' m/s²' },
-  { id: 'stiff',   label: 'stiffness',   min: 0.1, max: 1.0,  step: 0.01, val: 0.72, fmt: (v) => v.toFixed(2) },
-  { id: 'damp',    label: 'damping',     min: 0.8, max: 1.0,  step: 0.002, val: 0.986, fmt: (v) => v.toFixed(3) },
-  { id: 'iters',   label: 'relaxations', min: 1,   max: 16,   step: 1,    val: 8,    fmt: (v) => v.toFixed(0) + ' / frame' },
-];
-
 /* ── keyboard ──────────────────────────────────────────────────────────── */
 
 export const SHORTCUTS = [
   ['1 – 7',  'material preset'],
   ['drag',   'orbit the sculpture'],
-  ['grab',   'pull the cloth around'],
   ['P',      'photo mode — UI off, 2× render scale'],
   ['Enter',  'save a PNG'],
   ['G',      'performance readout'],
-  ['R',      'reset the cloth'],
   ['M',      'calm mode — halve the motion'],
   ['?',      'this list'],
 ];

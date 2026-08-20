@@ -1,8 +1,8 @@
 # winch — portfolio
 
-A portfolio site that renders itself on the GPU. One WebGL2 context, about
-four thousand lines of hand-written GLSL, and no dependencies at all — no
-engine, no libraries, no asset files, no build step required to run it.
+A portfolio site that renders itself on the GPU. One WebGL2 context, a few
+thousand lines of hand-written GLSL, and no dependencies at all — no engine,
+no libraries, no asset files, no build step required to run it.
 
 **[Open it →](https://winchxyz.github.io/)** · [@winchxyz](https://x.com/winchxyz) · [tryloupe.app](https://tryloupe.app)
 
@@ -26,7 +26,7 @@ Or skip all of that:
 npm run build
 ```
 
-That flattens the whole site into `dist/winch.html` — one file, 212 kB,
+That flattens the whole site into `dist/winch.html` — one file, 217 kB,
 double-click it and it runs. Nothing is fetched at runtime except the two
 Google Fonts, and it falls back to system fonts without them.
 
@@ -37,21 +37,20 @@ Chrome, Edge, Firefox or Safari 15+.
 
 ## What is actually on screen
 
-Everything moving is one `<canvas>`, drawn in seventeen passes per frame.
+Everything moving is one `<canvas>`, drawn in nineteen passes per frame.
 
 **A signed distance field, sphere-traced.** The sculpture has no geometry. It
 is four mathematical forms — a noise-displaced sphere, a gyroid lattice, a
 rounded box frame and a twisted torus — cross-faded as you scroll, and every
 pixel of it walks the field until it hits the surface. It writes its own
-`gl_FragDepth`, which is how the cloth and the particles can be occluded by a
-shape that does not exist as triangles.
+`gl_FragDepth`, which is how the particle cloud can be occluded by a shape
+that does not exist as triangles.
 
 **Seven materials, no textures.** The page opens on the cast crystal. GGX with height-correlated Smith visibility,
 anisotropic GGX with a tangent frame built from a procedural direction field
 (a distance field has no UVs), thin-film interference for the anodised
-titanium, three-ray dispersion for the glass, a Charlie sheen lobe for the
-cloth, and multi-scatter energy compensation so the rough metals are not
-quietly too dark. The environment is an analytic function of the view
+titanium, three-ray dispersion for the two glasses, and multi-scatter energy
+compensation so the rough metals are not quietly too dark. The environment is an analytic function of the view
 direction — a studio written down rather than photographed. There is no HDRI
 and no BRDF lookup table.
 
@@ -62,10 +61,6 @@ zero level set of the sculpture, and then have the normal component of their
 velocity removed so they flow *along* it rather than oscillating through it.
 The renderer binds no vertex buffer: `gl_VertexID` indexes straight into the
 state texture.
-
-**A 128 × 128 Verlet cloth.** Sixteen thousand nodes, structural, shear and
-bend constraints relaxed eight times a frame with Jacobi iteration, colliding
-against the same distance field. Grab it and throw it.
 
 **The post chain.** Temporal anti-aliasing with YCoCg neighbourhood clipping,
 the Call of Duty bloom mip ladder with a Karis average on the first
@@ -79,11 +74,10 @@ step so the dark gradients do not band.
 | | |
 |---|---|
 | **1** – **7** | material preset |
-| **drag** | orbit the sculpture — or, in the physics section, grab the cloth |
+| **drag** | orbit the sculpture |
 | **P** | photo mode — UI hidden, higher render scale |
 | **Enter** | save a PNG |
 | **G** | performance readout |
-| **R** | reset the cloth |
 | **M** | calm mode — halve the motion |
 | **?** | the full list |
 
@@ -108,10 +102,10 @@ js/
     lib.js          shared GLSL — hash, noise, SDF, BRDF, colour
     raymarch.js     the hero pass
     particles.js    solver + attributeless renderer
-    cloth.js        integrate, relax, render
     post.js         composite, TAA, bloom, streak, grade
 tools/
   lint.mjs          static check on the assembled GLSL
+  audit.js          layout auditor, run inside the page
   gputest.mjs       headless Chrome over CDP, no dependencies
   build.mjs         flatten to one file
 ```
@@ -125,7 +119,7 @@ catch a mistake lives on a graphics card. Two tools stand in for one:
 
 ```bash
 npm run lint      # every program: undefined functions, chunk order, uniforms
-npm run verify    # compile all 13 programs for real, in headless Chrome
+npm run verify    # compile all 10 programs for real, in headless Chrome
 ```
 
 `lint.mjs` catches the failure mode that concatenation invites — GLSL has no
@@ -137,11 +131,11 @@ by design.
 
 `gputest.mjs` drives headless Chrome over the DevTools protocol using nothing
 but the Node standard library, forces the SwiftShader software rasteriser,
-and compiles and links all thirteen programs through the real ANGLE
+and compiles and links all ten programs through the real ANGLE
 translator. It can also load the site and screenshot it:
 
 ```bash
-SITE='http://localhost:8141/?tier=medium' SECTION='#physics' node tools/gputest.mjs shot out.png
+SITE='http://localhost:8141' SECTION='#work' node tools/gputest.mjs shot out.png
 ```
 
 `GPU=1` runs the same harness on the real adapter instead — which is how the
@@ -157,7 +151,7 @@ at 1920×1080 and at 390×844, on an RTX 4070 at 60 fps.
 
 | | |
 |---|---|
-| ![](docs/materials.png) | ![](docs/physics.png) |
+| ![](docs/materials.png) | ![](docs/whoami.png) |
 | ![](docs/work.png) | ![](docs/contact.png) |
 
 <img src="docs/mobile.png" width="300" alt="the same page at 390px" />
@@ -171,11 +165,10 @@ at 1920×1080 and at 390×844, on an RTX 4070 at 60 fps.
 | Dependencies | 0 |
 | Asset files | 0 |
 | Build step to run it | none |
-| Lines of GLSL | ~4 200 |
-| Draw calls per frame | 17, or 27 with the cloth |
+| Lines of GLSL | ~2 700 |
+| Draw calls per frame | 19 |
 | Particles | 262 144 at ultra |
-| Cloth nodes | 16 384, 196 608 constraint solves per frame |
-| Render targets | ~90 MB at 1440p |
+| Render targets | ~113 MB at full scale |
 
 The page counts most of those live and shows you the real figures — see the
 readout in the corner, and the `cat NUMBERS` section.
@@ -190,11 +183,28 @@ numbers baked into `js/content.js` are a verified snapshot and the badge next
 to them says `snapshot` instead of `live`. Set `LIVE_STATS = false` at the top
 of that file and the page never touches the network at all.
 
-Quality is detected from core count, memory and the pointer type rather than
-by sniffing the user agent, then adapts to the measured frame time with
-hysteresis and a cooldown. If a load starts and never finishes, the next one
-comes back a tier quieter — a page too heavy for an unfamiliar driver is
-otherwise unrecoverable, because reloading does exactly the same thing again.
+### Everyone starts at the lowest tier
+
+Detection gives a *ceiling*, not a starting point. Guessing a quality tier
+from core count and a renderer string and then opening at it means the very
+first frame — the one that also pays for every shader's first execution and
+every pipeline object the driver builds — is the heaviest frame the machine
+will ever draw. Getting that guess wrong on unfamiliar hardware is exactly
+what makes a tab stop responding.
+
+So every visitor starts at the smallest tier, and the controller promotes one
+step at a time only after two full seconds of headroom at full scale. A fast
+machine reaches `ultra` within a few seconds; a slow one simply never does,
+and never sees a frame it could not afford. A load that starts and never
+finishes lowers the ceiling on the next visit.
+
+Headroom is measured as **dropped frames, not milliseconds**. Rendering is
+locked to the display, so the frame delta sits at the refresh interval —
+16.7 ms on a 60 Hz panel — whether the GPU finished in two milliseconds or in
+sixteen. The first version of this controller tested `msAvg < 11.5` and would
+therefore have sat at the lowest tier forever, on every machine. What vsync
+does reveal is missed frames: take the fastest frame observed as the refresh
+interval and count how often the delta runs long.
 
 ### A layout auditor, because screenshots only catch what you look at
 

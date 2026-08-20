@@ -6,7 +6,7 @@
    calls happen on resize.
    ══════════════════════════════════════════════════════════════════════════ */
 
-import { MATERIALS, SLIDERS, SHORTCUTS, REPOS, ROTATOR, LANG_COLOR, LIVE_STATS, GH_USER, DEFAULT_MATERIAL } from './content.js';
+import { MATERIALS, SHORTCUTS, REPOS, ROTATOR, LANG_COLOR, LIVE_STATS, GH_USER, DEFAULT_MATERIAL } from './content.js';
 import { clamp, damp, fmt, fmtShort } from './math.js';
 
 const $  = (s, r = document) => r.querySelector(s);
@@ -29,7 +29,6 @@ export class UI {
     this.reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     this.onMaterial = () => {};
-    this.onSlider = () => {};
     this.onAction = () => {};
   }
 
@@ -37,7 +36,6 @@ export class UI {
 
   build() {
     this.buildMaterials();
-    this.buildSliders();
     this.buildWork();
     this.buildRail();
     this.buildShortcuts();
@@ -95,34 +93,6 @@ export class UI {
     });
 
     if (!silent) this.onMaterial(i);
-  }
-
-  buildSliders() {
-    const host = $('#sliders');
-    this.sliderValues = {};
-    SLIDERS.forEach((s) => {
-      this.sliderValues[s.id] = s.val;
-      const wrap = el('div', 'slider');
-      const top = el('div', 'slider-top', `<span>${s.label}</span><b data-v="${s.id}">${s.fmt(s.val)}</b>`);
-      const input = el('input');
-      input.type = 'range';
-      input.min = s.min; input.max = s.max; input.step = s.step; input.value = s.val;
-      input.setAttribute('aria-label', s.label);
-      const paint = () => {
-        const p = ((input.value - s.min) / (s.max - s.min)) * 100;
-        input.style.setProperty('--p', p + '%');
-      };
-      paint();
-      input.addEventListener('input', () => {
-        const v = parseFloat(input.value);
-        this.sliderValues[s.id] = v;
-        $(`[data-v="${s.id}"]`).textContent = s.fmt(v);
-        paint();
-        this.onSlider(s.id, v);
-      });
-      wrap.append(top, input);
-      host.appendChild(wrap);
-    });
   }
 
   buildWork() {
@@ -362,7 +332,6 @@ export class UI {
     $('#hud-ms').textContent = ms.toFixed(1);
     $('#hud-res').textContent = `${renderer.iw}×${renderer.ih} · ${(renderer.renderScale * 100).toFixed(0)}%`;
     $('#hud-parts').textContent = fmt(renderer.particleCount);
-    $('#hud-cloth').textContent = `${renderer.clothN}² · ${fmt(renderer.clothN * renderer.clothN * 12)} links`;
     $('#hud-passes').textContent = `${renderer.drawCalls} draws · ${(renderer.vramBytes() / 1048576).toFixed(0)} MB`;
     $('#hud-tier').textContent = renderer.tier.name;
 
@@ -392,22 +361,6 @@ export class UI {
   /* The physics readout. This element existed in the markup from the start
      and nothing ever wrote to it, so it rendered as an empty bordered box —
      which reads as a loading state that never finishes. */
-  updatePhysReadout(renderer, director) {
-    const el2 = $('#phys-readout');
-    if (!el2 || !renderer) return;
-    const nodes = renderer.clothN * renderer.clothN;
-    const iters = Math.round(director.cloth.iters);
-    const rows = [
-      ['nodes', fmt(nodes)],
-      ['constraints', fmt(nodes * 12)],
-      ['solves / frame', fmt(nodes * 12 * iters)],
-      ['integrator', 'Verlet'],
-      ['relaxation', 'Jacobi ω 1.72'],
-      ['collision', 'SDF + floor'],
-    ];
-    const next = rows.map(([k, v]) => `<div>${k} <b>${v}</b></div>`).join('');
-    if (el2.innerHTML !== next) el2.innerHTML = next;
-  }
 
   /* ── toast ─────────────────────────────────────────────────────────── */
 

@@ -62,7 +62,7 @@ html{
 body{
   margin:0;
   font-family:var(--sans);
-  font-size:clamp(15px,.55vw + 13px,17.5px);
+  font-size:clamp(16px,.5vw + 14px,18.5px);
   line-height:1.6;
   color:var(--bone);
   background:var(--ink);
@@ -270,7 +270,7 @@ html.nav-hide #nav{ transform:translateY(-100%); }
 
 #nav nav{ display:flex; align-items:center; gap:clamp(14px,2vw,30px); }
 #nav nav a{
-  font-family:var(--mono); font-size:11.5px; letter-spacing:.1em;
+  font-family:var(--mono); font-size:13px; letter-spacing:.08em;
   color:var(--muted); position:relative; padding:6px 0;
   transition:color .28s var(--ease);
 }
@@ -319,7 +319,7 @@ html.nav-hide #nav{ transform:translateY(-100%); }
 #rail li.is-on::before{ background:var(--lime); width:5px; height:5px; box-shadow:0 0 8px var(--lime); }
 #rail li span{
   position:absolute; left:16px; white-space:nowrap;
-  font-family:var(--mono); font-size:9.5px; letter-spacing:.12em; text-transform:uppercase;
+  font-family:var(--mono); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase;
   color:var(--dim); opacity:0; transform:translateX(-4px);
   transition:all .3s var(--ease); pointer-events:none;
 }
@@ -331,13 +331,22 @@ html.nav-hide #nav{ transform:translateY(-100%); }
 
 main{ position:relative; z-index:10; }
 
+/* Content-height sections, not a stack of full screens.
+
+   Every section used to be min-height:100svh with its content vertically
+   centred, so a short section carried most of a screenful of empty space
+   above and below it, and scrolling felt like paging through slides rather
+   than reading a page. Only the hero is a full screen now; the rest are as
+   tall as their content, with padding doing the separating. */
 .sec{
   position:relative;
-  padding:clamp(96px,14vh,190px) 0;
+  padding:clamp(112px,15vh,208px) 0;
+}
+.sec-hero{
+  padding-top:0;
   min-height:100svh;
   display:flex; align-items:center;
 }
-.sec-hero{ padding-top:0; }
 .wrap{ width:100%; max-width:var(--maxw); margin:0 auto; padding:0 var(--gut); }
 
 /* A soft scrim so type stays readable wherever the 3D happens to be bright. */
@@ -352,7 +361,7 @@ main{ position:relative; z-index:10; }
 .sec::after{
   content:attr(data-label);
   position:absolute; top:clamp(40px,8vh,90px); right:var(--gut);
-  font-family:var(--mono); font-size:10px; letter-spacing:.2em; text-transform:uppercase;
+  font-family:var(--mono); font-size:11px; letter-spacing:.18em; text-transform:uppercase;
   color:var(--dim); opacity:.65; pointer-events:none;
 }
 @media (max-width:700px){ .sec::after{ display:none; } }
@@ -360,20 +369,19 @@ main{ position:relative; z-index:10; }
 /* ══ REVEAL ══════════════════════════════════════════════════════════════ */
 
 [data-reveal]{
-  opacity:0; transform:translateY(22px);
-  transition:opacity .9s var(--ease-out), transform .9s var(--ease-out);
-  transition-delay:calc(var(--d,0) * 90ms);
+  opacity:0; transform:translateY(14px);
+  transition:opacity .58s var(--ease-out), transform .58s var(--ease-out);
+  transition-delay:calc(var(--d,0) * 42ms);
 }
 [data-reveal].in{ opacity:1; transform:none; }
 html[data-nojs] [data-reveal]{ opacity:1; transform:none; }
 
 /* ══ HERO ════════════════════════════════════════════════════════════════ */
 
-.sec-hero{ min-height:100svh; }
 
 .eyebrow{
   display:flex; align-items:center; gap:10px; margin:0 0 clamp(18px,3vh,34px);
-  font-family:var(--mono); font-size:11px; letter-spacing:.22em; text-transform:uppercase;
+  font-family:var(--mono); font-size:12.5px; letter-spacing:.2em; text-transform:uppercase;
   color:var(--muted);
 }
 .eyebrow .tick{
@@ -393,12 +401,19 @@ html[data-nojs] [data-reveal]{ opacity:1; transform:none; }
      large size, not to compensate for the face. */
   letter-spacing:-.012em;
   color:var(--chalk);
-  display:flex;
+  /* NOT display:flex.
+
+     Each letter is its own span so the hover can cascade across them, and as
+     flex items the browser lays every one out as an independent box — which
+     means no kerning is applied between them at all. On a face with real
+     kerning pairs that reads as subtly, unplaceably wrong: the gaps come out
+     mechanically equal instead of optically equal. Inline layout shapes the
+     whole word as text, which is what it is. */
+  display:block;
+  white-space:nowrap;
   text-shadow:0 0 90px rgba(7,9,10,.75);
 }
 .wordmark .letter{
-  display:inline-block;
-  will-change:transform;
   transition:color .5s var(--ease);
 }
 .wordmark:hover .letter{ color:var(--lime); transition-delay:calc(var(--i,0)*40ms); }
@@ -411,7 +426,7 @@ html[data-nojs] [data-reveal]{ opacity:1; transform:none; }
 
 .rotator{
   margin:clamp(14px,2vh,20px) 0 0;
-  font-size:clamp(12px,1.15vw,14.5px); color:var(--muted);
+  font-size:clamp(13.5px,1.2vw,16px); color:var(--muted);
   min-height:1.6em; letter-spacing:0;
 }
 .rotator .caret{ color:var(--lime); }
@@ -421,7 +436,7 @@ html[data-nojs] [data-reveal]{ opacity:1; transform:none; }
 .hero-meta{
   display:flex; flex-wrap:wrap; gap:clamp(12px,2vw,26px); align-items:center;
   margin:clamp(28px,5vh,54px) 0 0;
-  font-size:11.5px; color:var(--dim); letter-spacing:.06em;
+  font-size:13px; color:var(--dim); letter-spacing:.06em;
 }
 .hero-meta b{ color:var(--bone); font-weight:500; font-variant-numeric:tabular-nums; }
 .hero-meta .live{ display:inline-flex; align-items:center; gap:6px; color:var(--dim); }
@@ -433,7 +448,7 @@ html[data-nojs] [data-reveal]{ opacity:1; transform:none; }
 .scroll-cue{
   position:absolute; left:50%; bottom:26px; transform:translateX(-50%);
   display:grid; justify-items:center; gap:8px;
-  font-size:9.5px; letter-spacing:.24em; text-transform:uppercase; color:var(--dim);
+  font-size:11px; letter-spacing:.2em; text-transform:uppercase; color:var(--dim);
   transition:color .3s, opacity .5s;
 }
 .scroll-cue:hover{ color:var(--lime); }
@@ -443,7 +458,7 @@ html.scrolled .scroll-cue{ opacity:0; pointer-events:none; }
 
 .hero-footnote{
   position:absolute; left:var(--gut); bottom:26px;
-  font-size:10.5px; color:var(--dim); letter-spacing:.05em; margin:0;
+  font-size:12px; color:var(--dim); letter-spacing:.05em; margin:0;
   max-width:min(46ch,60vw);
 }
 @media (max-width:820px){ .hero-footnote{ display:none; } }
@@ -453,13 +468,13 @@ html.scrolled .scroll-cue{ opacity:0; pointer-events:none; }
 .h-mono{
   margin:0 0 clamp(20px,3vh,32px);
   font-family:var(--mono); font-weight:500;
-  font-size:clamp(15px,1.5vw,19px); letter-spacing:.02em;
+  font-size:clamp(17px,1.6vw,21px); letter-spacing:.02em;
   color:var(--bone);
 }
 .h-mono .prompt{ color:var(--lime); margin-right:.6em; }
 
 .sec-head{ max-width:70ch; margin-bottom:clamp(34px,6vh,64px); }
-.sec-sub{ margin:0; color:var(--muted); font-size:clamp(14.5px,1.05vw,17px); max-width:62ch; }
+.sec-sub{ margin:0; color:var(--muted); font-size:clamp(16px,1.05vw,18.5px); max-width:60ch; }
 .sec-sub b{ color:var(--bone); font-weight:500; }
 
 .lede{
@@ -502,12 +517,12 @@ html.scrolled .scroll-cue{ opacity:0; pointer-events:none; }
 .codeblock-bar span{ width:8px; height:8px; border-radius:50%; background:var(--line); }
 .codeblock-bar span:first-child{ background:rgba(198,242,78,.5); }
 .codeblock-bar em{
-  margin-left:auto; font-style:normal; font-size:10px;
-  letter-spacing:.14em; color:var(--dim); text-transform:uppercase;
+  margin-left:auto; font-style:normal; font-size:11px;
+  letter-spacing:.12em; color:var(--dim); text-transform:uppercase;
 }
 .codeblock pre{
   margin:0; padding:18px 16px; overflow-x:auto;
-  font-size:clamp(11px,.85vw,12.8px); line-height:1.85; color:var(--muted);
+  font-size:clamp(12.5px,.9vw,14.5px); line-height:1.85; color:var(--muted);
 }
 .codeblock code{ color:inherit; font-size:inherit; }
 .y-k{ color:var(--ash); }
@@ -530,12 +545,12 @@ html.scrolled .scroll-cue{ opacity:0; pointer-events:none; }
 .mat-list button{
   width:100%; display:flex; align-items:center; gap:12px;
   padding:13px 4px; background:none; border:0; cursor:pointer;
-  font-family:var(--mono); font-size:12px; letter-spacing:.04em;
+  font-family:var(--mono); font-size:14px; letter-spacing:.03em;
   color:var(--muted); text-align:left;
   transition:color .28s var(--ease), padding-left .3s var(--ease);
 }
 .mat-list button:hover{ color:var(--bone); padding-left:9px; }
-.mat-list button .num{ color:var(--dim); font-size:10px; min-width:1.4em; }
+.mat-list button .num{ color:var(--dim); font-size:11.5px; min-width:1.6em; }
 .mat-list button .sw{
   width:16px; height:16px; border-radius:50%; margin-left:auto; flex:none;
   border:1px solid var(--line); transition:transform .3s var(--ease), box-shadow .3s;
@@ -554,86 +569,23 @@ html.scrolled .scroll-cue{ opacity:0; pointer-events:none; }
   font-size:clamp(25px,3.1vw,42px); font-weight:660;
   letter-spacing:-.014em; color:var(--chalk); line-height:1.08;
 }
-.mat-desc{ margin:0 0 24px; color:var(--muted); max-width:48ch; font-size:15px; }
+.mat-desc{ margin:0 0 24px; color:var(--muted); max-width:46ch; font-size:16.5px; }
 .mat-params{
   display:grid; grid-template-columns:repeat(auto-fit,minmax(118px,1fr));
   gap:1px; margin:0 0 22px; max-width:620px;
   background:var(--line-2); border:1px solid var(--line-2);
 }
 .mat-params div{ background:var(--ink); padding:11px 12px; }
-.mat-params dt{ font-size:9.5px; letter-spacing:.16em; text-transform:uppercase; color:var(--dim); }
-.mat-params dd{ margin:4px 0 0; font-size:14px; color:var(--lime); font-variant-numeric:tabular-nums; }
-.mat-hint{ font-size:10.5px; color:var(--dim); letter-spacing:.06em; margin:0; }
-
-/* ══ PHYSICS ═════════════════════════════════════════════════════════════ */
-
-.phys-panel{
-  display:grid; grid-template-columns:1fr minmax(190px,240px);
-  gap:clamp(22px,4vw,56px); align-items:start;
-  max-width:920px;
-}
-@media (max-width:820px){ .phys-panel{ grid-template-columns:1fr; } }
-
-.sliders{ display:grid; gap:16px; }
-.slider{ display:grid; gap:7px; }
-.slider-top{
-  display:flex; justify-content:space-between; align-items:baseline;
-  font-family:var(--mono); font-size:10.5px; letter-spacing:.14em; text-transform:uppercase;
-  color:var(--dim);
-}
-.slider-top b{ color:var(--lime); font-weight:500; letter-spacing:0; font-variant-numeric:tabular-nums; text-transform:none; }
-.slider input[type=range]{
-  -webkit-appearance:none; appearance:none; width:100%; height:22px;
-  background:transparent; cursor:pointer; margin:0;
-}
-.slider input[type=range]::-webkit-slider-runnable-track{
-  height:2px; border-radius:2px;
-  background:linear-gradient(90deg,var(--lime) var(--p,50%), rgba(233,237,227,.12) var(--p,50%));
-}
-.slider input[type=range]::-moz-range-track{ height:2px; border-radius:2px; background:rgba(233,237,227,.12); }
-.slider input[type=range]::-moz-range-progress{ height:2px; border-radius:2px; background:var(--lime); }
-.slider input[type=range]::-webkit-slider-thumb{
-  -webkit-appearance:none; appearance:none; width:12px; height:12px; margin-top:-5px;
-  border-radius:50%; background:var(--lime); border:0;
-  box-shadow:0 0 0 3px rgba(7,9,10,.9), 0 0 14px rgba(198,242,78,.7);
-  transition:transform .18s var(--ease);
-}
-.slider input[type=range]:hover::-webkit-slider-thumb{ transform:scale(1.28); }
-.slider input[type=range]::-moz-range-thumb{
-  width:12px; height:12px; border-radius:50%; background:var(--lime); border:0;
-  box-shadow:0 0 0 3px rgba(7,9,10,.9), 0 0 14px rgba(198,242,78,.7);
-}
-
-.phys-side{ display:grid; gap:11px; }
-.phys-readout{
-  font-size:10.5px; line-height:1.85; color:var(--dim);
-  padding:13px 14px; border:1px solid var(--line-2); border-radius:10px;
-  background:rgba(16,20,14,.4);
-}
-.phys-readout b{ color:var(--ash); font-weight:400; float:right; font-variant-numeric:tabular-nums; }
-
-.btn{
-  display:flex; align-items:center; justify-content:space-between; gap:10px;
-  font-family:var(--mono); font-size:11.5px; letter-spacing:.08em;
-  padding:11px 14px; border-radius:9px; cursor:pointer;
-  background:var(--lime); color:var(--ink); border:0; font-weight:700;
-  transition:transform .25s var(--ease), box-shadow .25s var(--ease), background .25s;
-}
-.btn:hover{ background:var(--lime-lt); box-shadow:0 10px 32px -12px rgba(198,242,78,.8); }
-.btn:active{ transform:translateY(1px); }
-.btn kbd{ background:rgba(7,9,10,.16); border-color:rgba(7,9,10,.2); color:rgba(7,9,10,.66); }
-.btn.ghost{
-  background:transparent; color:var(--muted);
-  border:1px solid var(--line); font-weight:400;
-}
-.btn.ghost:hover{ color:var(--lime); border-color:rgba(198,242,78,.4); box-shadow:none; background:rgba(198,242,78,.05); }
+.mat-params dt{ font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--dim); }
+.mat-params dd{ margin:5px 0 0; font-size:16px; color:var(--lime); font-variant-numeric:tabular-nums; }
+.mat-hint{ font-size:12px; color:var(--dim); letter-spacing:.06em; margin:0; }
 
 /* ══ WORK ════════════════════════════════════════════════════════════════ */
 
 .work-filters{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:26px; }
 .chip{
-  font-family:var(--mono); font-size:10.5px; letter-spacing:.12em;
-  padding:7px 13px; border-radius:20px; cursor:pointer;
+  font-family:var(--mono); font-size:12px; letter-spacing:.1em;
+  padding:9px 15px; border-radius:20px; cursor:pointer;
   background:transparent; border:1px solid var(--line); color:var(--dim);
   transition:all .28s var(--ease);
 }
@@ -665,7 +617,7 @@ html.scrolled .scroll-cue{ opacity:0; pointer-events:none; }
 
 .card-top{ display:flex; align-items:center; gap:10px; margin-bottom:14px; }
 .card-name{
-  font-family:var(--mono); font-size:15px; font-weight:500; color:var(--chalk);
+  font-family:var(--mono); font-size:17.5px; font-weight:500; color:var(--chalk);
   letter-spacing:-.01em; margin:0;
 }
 .card-name::before{ content:""; color:var(--dim); }
@@ -676,21 +628,21 @@ html.scrolled .scroll-cue{ opacity:0; pointer-events:none; }
 }
 .card:hover .card-arrow{ transform:translate(3px,-3px); color:var(--lime); }
 
-.card-desc{ margin:0 0 auto; color:var(--muted); font-size:14px; line-height:1.55; }
+.card-desc{ margin:0 0 auto; color:var(--muted); font-size:15.5px; line-height:1.6; }
 
 .card-tags{
   list-style:none; display:flex; flex-wrap:wrap; gap:5px; margin:18px 0 0; padding:0;
 }
 .card-tags li{
-  font-family:var(--mono); font-size:9.5px; letter-spacing:.08em;
-  padding:3px 7px; border-radius:4px; background:var(--pill); color:var(--dim);
+  font-family:var(--mono); font-size:11px; letter-spacing:.06em;
+  padding:4px 8px; border-radius:4px; background:var(--pill); color:var(--dim);
   border:1px solid var(--line-2);
 }
 
 .card-stats{
   display:flex; align-items:center; gap:14px; margin-top:16px;
   padding-top:14px; border-top:1px solid var(--line-2);
-  font-family:var(--mono); font-size:10.5px; color:var(--dim);
+  font-family:var(--mono); font-size:12px; color:var(--dim);
 }
 .card-stats b{ color:var(--ash); font-weight:400; font-variant-numeric:tabular-nums; }
 .card-stats .lang{ display:flex; align-items:center; gap:6px; margin-left:auto; }
@@ -725,15 +677,15 @@ html.scrolled .scroll-cue{ opacity:0; pointer-events:none; }
 .numbers .n em{ font-style:normal; font-size:.45em; color:var(--muted); margin-left:.25em; letter-spacing:0; }
 .numbers .l{
   display:block; margin-top:9px;
-  font-family:var(--mono); font-size:10px; letter-spacing:.14em; text-transform:uppercase;
+  font-family:var(--mono); font-size:11.5px; letter-spacing:.12em; text-transform:uppercase;
   color:var(--dim);
 }
-.numbers-note{ font-size:11.5px; color:var(--dim); max-width:62ch; line-height:1.9; margin:0; }
+.numbers-note{ font-size:13px; color:var(--dim); max-width:62ch; line-height:1.9; margin:0; }
 .numbers-note b{ color:var(--ash); font-weight:400; }
 
 /* ══ CONTACT ═════════════════════════════════════════════════════════════ */
 
-.sec-contact{ min-height:100svh; }
+.sec-contact{ padding-bottom:clamp(80px,10vh,140px); }
 .contact-h{
   margin:0 0 clamp(36px,7vh,72px);
   font-family:var(--display); font-stretch:108%;
@@ -759,14 +711,14 @@ html.scrolled .scroll-cue{ opacity:0; pointer-events:none; }
 .l-i{ color:var(--dim); display:flex; transition:color .3s; }
 .links a:hover .l-i{ color:var(--lime); }
 .l-t{ display:grid; gap:2px; }
-.l-t b{ font-size:clamp(17px,1.9vw,25px); font-weight:500; letter-spacing:-.02em; }
-.l-t em{ font-style:normal; font-family:var(--mono); font-size:10.5px; letter-spacing:.1em; color:var(--dim); }
+.l-t b{ font-size:clamp(19px,2vw,27px); font-weight:500; letter-spacing:-.02em; }
+.l-t em{ font-style:normal; font-family:var(--mono); font-size:12px; letter-spacing:.08em; color:var(--dim); }
 .l-a{ margin-left:auto; color:var(--dim); font-size:17px; transition:transform .4s var(--ease-out), color .3s; }
 .links a:hover .l-a{ transform:translate(4px,-4px); color:var(--lime); }
 
 .foot{
   display:flex; flex-wrap:wrap; gap:10px; align-items:center;
-  font-size:10.5px; letter-spacing:.06em; color:var(--dim);
+  font-size:12px; letter-spacing:.06em; color:var(--dim);
   padding-top:22px; border-top:1px solid var(--line-2);
 }
 .foot .sep{ opacity:.4; }
@@ -855,17 +807,11 @@ body.cur-drag .c-lbl{ opacity:1; }
       rgba(7,9,10,.55) 0%, rgba(7,9,10,.86) 28%, rgba(7,9,10,.90) 100%) !important;
   }
 
-  /* A 22px-tall slider is a 22px touch target. Pointer-coarse wants 44. */
-  .slider input[type=range]{ height:44px; }
-  .slider input[type=range]::-webkit-slider-thumb{ width:18px; height:18px; margin-top:-8px; }
-  .slider input[type=range]::-moz-range-thumb{ width:18px; height:18px; }
-  .chip{ padding:10px 15px; }
+  .chip{ padding:11px 16px; }
   .mat-list button{ padding:16px 4px; }
   #nav nav a:not(.cta){ display:none; }
   #hud{ display:none; }
-  .sec{ min-height:auto; padding:clamp(80px,12vh,120px) 0; }
-  .sec-hero{ min-height:100svh; }
-  .sec-contact{ min-height:auto; }
+  .sec{ padding:clamp(86px,11vh,132px) 0; }
 }
 
 @media (prefers-reduced-motion:reduce){

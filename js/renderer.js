@@ -2,12 +2,11 @@
    renderer.js — the frame.
 
    raymarch ─┬─► scene HDR ──┐
-             └─► ray dist ───┤
-   particles ────────────────┼─► composite ─► TAA ─► bloom chain ─► final
-   cloth ────────────────────┘                        └─► streak ──┘
+             └─► ray dist ───┼─► composite ─► TAA ─► bloom chain ─► final
+   particles ────────────────┘                        └─► streak ──┘
 
-   Two float ping-pongs feed it: a quarter of a million particles and a
-   16 384-node cloth, both solved on the GPU before any of the above runs.
+   A quarter of a million particles are solved on the GPU before any of the
+   above runs, in one fullscreen pass with two colour attachments.
    ══════════════════════════════════════════════════════════════════════════ */
 
 import {
@@ -17,9 +16,6 @@ import {
 
 import { RAYMARCH_FRAG } from './shaders/raymarch.js';
 import { PARTICLE_SIM_FRAG, PARTICLE_VERT, PARTICLE_FRAG } from './shaders/particles.js';
-import {
-  CLOTH_INTEGRATE_FRAG, CLOTH_RELAX_FRAG, CLOTH_VERT, CLOTH_FRAG,
-} from './shaders/cloth.js';
 import {
   COMPOSITE_FRAG, TAA_FRAG, BLOOM_PREFILTER_FRAG, BLOOM_DOWN_FRAG,
   BLOOM_UP_FRAG, STREAK_FRAG, FINAL_FRAG,
@@ -32,10 +28,10 @@ import {
 /* ── quality tiers ─────────────────────────────────────────────────────── */
 
 export const TIERS = {
-  ultra:  { name: 'ultra',  steps: 128, transSteps: 44, reflSteps: 48, shadowSteps: 32, reflect: 1, sim: 512, cloth: 128, taa: 1, mips: 6, scale: 1.00, minScale: 0.60 },
-  high:   { name: 'high',   steps: 100, transSteps: 32, reflSteps: 40, shadowSteps: 28, reflect: 1, sim: 384, cloth: 128, taa: 1, mips: 6, scale: 0.90, minScale: 0.54 },
-  medium: { name: 'medium', steps:  74, transSteps: 20, reflSteps: 32, shadowSteps: 24, reflect: 1, sim: 256, cloth:  96, taa: 1, mips: 5, scale: 0.78, minScale: 0.48 },
-  low:    { name: 'low',    steps:  50, transSteps: 12, reflSteps: 20, shadowSteps: 14, reflect: 0, sim: 176, cloth:  72, taa: 0, mips: 4, scale: 0.60, minScale: 0.40 },
+  ultra:  { name: 'ultra',  steps: 128, transSteps: 44, reflSteps: 48, shadowSteps: 32, reflect: 1, sim: 512, taa: 1, mips: 6, scale: 1.00, minScale: 0.60 },
+  high:   { name: 'high',   steps: 100, transSteps: 32, reflSteps: 40, shadowSteps: 28, reflect: 1, sim: 384, taa: 1, mips: 6, scale: 0.90, minScale: 0.54 },
+  medium: { name: 'medium', steps:  74, transSteps: 20, reflSteps: 32, shadowSteps: 24, reflect: 1, sim: 256, taa: 1, mips: 5, scale: 0.78, minScale: 0.48 },
+  low:    { name: 'low',    steps:  50, transSteps: 12, reflSteps: 20, shadowSteps: 14, reflect: 0, sim: 176, taa: 0, mips: 4, scale: 0.60, minScale: 0.40 },
 };
 
 /* An upper bound on internal pixels, independent of the tier.
@@ -44,7 +40,10 @@ export const TIERS = {
    already the CSS size times the device pixel ratio, so "ultra at 100%" on a
    4K panel asks for fourteen million pixels of raymarching. This clamps the
    product rather than the factor. */
-export const MAX_INTERNAL_PIXELS = 2_400_000;
+export const MAX_INTERNAL_PIXELS = 2_000_000;
+
+/* Cheapest to dearest. The adaptive controller walks this. */
+export const TIER_ORDER = ['low', 'medium', 'high', 'ultra'];
 
 export class Renderer {
   constructor(canvas, onLog = () => {}) {
@@ -55,7 +54,21 @@ export class Renderer {
     this.gl = gl;
     this.caps = caps;
 
-    this.tier = TIERS[this.detectTier()];
+    /* Detection gives a CEILING, not a starting point.
+
+       Guessing a tier from core count and a renderer string and then opening
+       at it means the very first frame — the one that also pays for every
+       shader's first execution and every pipeline object the driver has to
+       build — is the heaviest frame the machine will ever draw. Getting that
+       guess wrong on unfamiliar hardware is what makes a tab stop responding.
+
+       So everyone starts at the smallest tier and the adaptive controller in
+       main.js promotes, one step at a time, only after the machine has held a
+       comfortable frame time for two solid seconds at full scale. A fast
+       machine reaches ultra within a few seconds and nobody ever sees a
+       first frame it could not afford. */
+    this.ceiling = this.detectTier();
+    this.tier = TIERS.low;
     this.renderScale = this.tier.scale;
     this.dprCap = 2.0;
 
@@ -78,8 +91,6 @@ export class Renderer {
     this.resize(true);
     onLog('seeding particles');
     this.initParticles();
-    onLog('weaving cloth');
-    this.initCloth();
     onLog('drawing the wordmark');
     this.printTex = this.makePrintTexture();
     this.noiseTex = this.makeNoiseTexture();
@@ -115,13 +126,23 @@ export class Renderer {
     return 'medium';
   }
 
+  /* One step toward the ceiling, or one step back. Returns the new name if
+     it actually moved, so the caller can reset its counters. */
+  stepTier(dir) {
+    const i = TIER_ORDER.indexOf(this.tier.name);
+    const capped = TIER_ORDER.indexOf(this.ceiling);
+    const next = Math.max(0, Math.min(dir > 0 ? capped : TIER_ORDER.length - 1, i + dir));
+    if (next === i) return null;
+    this.setTier(TIER_ORDER[next]);
+    return this.tier.name;
+  }
+
   setTier(name) {
     if (!TIERS[name] || this.tier.name === name) return;
     const old = this.tier;
     this.tier = TIERS[name];
     this.renderScale = this.tier.scale;
     if (old.sim !== this.tier.sim) { this.particles?.dispose(); this.initParticles(); }
-    if (old.cloth !== this.tier.cloth) { this.disposeCloth(); this.initCloth(); }
     this.resize(true);
   }
 
@@ -138,9 +159,6 @@ export class Renderer {
     this.pRaymarch  = mk(RAYMARCH_FRAG, 'raymarch');
     this.pPartSim   = mk(PARTICLE_SIM_FRAG, 'particle.sim');
     this.pPartDraw  = new Program(gl, PARTICLE_VERT, PARTICLE_FRAG, 'particle.draw');
-    this.pClothInt  = mk(CLOTH_INTEGRATE_FRAG, 'cloth.integrate');
-    this.pClothRel  = mk(CLOTH_RELAX_FRAG, 'cloth.relax');
-    this.pClothDraw = new Program(gl, CLOTH_VERT, CLOTH_FRAG, 'cloth.draw');
     this.pComposite = mk(COMPOSITE_FRAG, 'composite');
     this.pTaa       = mk(TAA_FRAG, 'taa');
     this.pPrefilter = mk(BLOOM_PREFILTER_FRAG, 'bloom.prefilter');
@@ -150,8 +168,7 @@ export class Renderer {
     this.pFinal     = mk(FINAL_FRAG, 'final');
 
     this.programs = [
-      this.pRaymarch, this.pPartSim, this.pPartDraw, this.pClothInt,
-      this.pClothRel, this.pClothDraw, this.pComposite, this.pTaa,
+      this.pRaymarch, this.pPartSim, this.pPartDraw, this.pComposite, this.pTaa,
       this.pPrefilter, this.pDown, this.pUp, this.pStreak, this.pFinal,
     ];
   }
@@ -207,8 +224,8 @@ export class Renderer {
       return new Target(gl, ww, hh, opts);
     };
 
-    // scene: HDR colour + ray distance, sharing one depth buffer so the
-    // cloth can be occluded by a surface that exists only as a distance field
+    // scene: HDR colour + the ray distance, which the particle pass reads to
+    // fade sprites out as they approach the surface behind them
     this.tScene = this.tScene
       ? (this.tScene.resize(w, h), this.tScene)
       : new Target(gl, w, h, { formats: [HDR, FMT.R32F], depth: true, label: 'scene' });
@@ -246,7 +263,6 @@ export class Renderer {
     if (this.ppTaa) b += targetBytes(this.ppTaa.a) + targetBytes(this.ppTaa.b);
     this.bloom?.forEach((t) => { b += targetBytes(t); });
     if (this.particles) b += targetBytes(this.particles.a) + targetBytes(this.particles.b);
-    if (this.cloth) b += targetBytes(this.cloth.a) + targetBytes(this.cloth.b);
     return b;
   }
 
@@ -288,83 +304,6 @@ export class Renderer {
     gl.bindTexture(gl.TEXTURE_2D, null);
 
     this.particleVao = this.particleVao || gl.createVertexArray();
-  }
-
-  /* ── cloth ─────────────────────────────────────────────────────────── */
-
-  initCloth() {
-    const gl = this.gl;
-    const N = this.tier.cloth;
-    this.clothN = N;
-
-    // Offset to camera right rather than dead centre. Hung directly behind
-    // the sculpture the cloth still collides correctly, but every interesting
-    // part of it — the drape, the printed wordmark — ends up hidden behind
-    // the thing it is colliding with.
-    // In front of the sculpture (+z is toward the camera), and clear of it at
-    // rest. The wind then presses it back onto the sculpture, so the collision
-    // is something you watch happen rather than something already resolved.
-    this.clothOrigin = [0.78, -1.45, 0.85];
-    this.clothSize = [1.95, 2.35];
-
-    this.cloth = new PingPong(gl, N, N, {
-      formats: [FMT.RGBA32F, FMT.RGBA32F],
-      filter: gl.NEAREST,
-      label: 'cloth.state',
-    });
-
-    this.resetCloth();
-
-    // index buffer for the triangle grid
-    const quads = (N - 1) * (N - 1);
-    const idx = new Uint16Array(quads * 6);
-    let o = 0;
-    for (let y = 0; y < N - 1; y++) {
-      for (let x = 0; x < N - 1; x++) {
-        const i0 = y * N + x, i1 = i0 + 1, i2 = i0 + N, i3 = i2 + 1;
-        idx[o++] = i0; idx[o++] = i2; idx[o++] = i1;
-        idx[o++] = i1; idx[o++] = i2; idx[o++] = i3;
-      }
-    }
-    this.clothIndexCount = idx.length;
-
-    this.clothVao = this.clothVao || gl.createVertexArray();
-    gl.bindVertexArray(this.clothVao);
-    this.clothIbo = this.clothIbo || gl.createBuffer();
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.clothIbo);
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, idx, gl.STATIC_DRAW);
-    gl.bindVertexArray(null);
-  }
-
-  resetCloth() {
-    const gl = this.gl;
-    const N = this.clothN;
-    const data = new Float32Array(N * N * 4);
-    const [ox, oy, oz] = this.clothOrigin;
-    const [sw, sh] = this.clothSize;
-    for (let y = 0; y < N; y++) {
-      for (let x = 0; x < N; x++) {
-        const i = (y * N + x) * 4;
-        const u = x / (N - 1), v = y / (N - 1);
-        data[i + 0] = ox + (u - 0.5) * sw;
-        data[i + 1] = oy + v * sh;
-        data[i + 2] = oz;
-        data[i + 3] = 1;
-      }
-    }
-    for (const t of [this.cloth.a, this.cloth.b]) {
-      for (const tex of t.textures) {
-        gl.bindTexture(gl.TEXTURE_2D, tex);
-        gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, N, N, gl.RGBA, gl.FLOAT, data);
-      }
-    }
-    gl.bindTexture(gl.TEXTURE_2D, null);
-    this.clothPrevDt = 1 / 60;
-  }
-
-  disposeCloth() {
-    this.cloth?.dispose();
-    this.cloth = null;
   }
 
   /* A 64^3 lattice of random bytes, sampled with hardware trilinear filtering
@@ -416,10 +355,8 @@ export class Renderer {
     x.textBaseline = 'middle';
 
     /* Fit the wordmark to the full width rather than picking a point size.
-       Whatever the cloth is draped over will hide part of it, so the print
-       has to be big enough that the visible part still reads — and the
-       repeated strips above and below guarantee something legible survives
-       wherever the drape happens to fall. */
+       Fitted to the full width rather than set at a chosen point size, so it
+       stays crisp whatever the texture resolution ends up being. */
     const fit = (text, targetW, weight, family) => {
       let size = S * 0.5;
       x.font = `${weight} ${size}px ${family}`;
@@ -530,47 +467,7 @@ export class Renderer {
       this.particles.swap();
     }
 
-    /* ── 2. cloth solver ─────────────────────────────────────────────── */
-    if (p.clothOn > 0.001) {
-      const sub = clamp(dt, 1 / 240, 1 / 45);
-      {
-        const src = this.cloth.read, dst = this.cloth.write;
-        dst.bind(false);
-        const s = this.pClothInt.use();
-        s.tex('uCur', src.textures[0]).tex('uPrev', src.textures[1]);
-        s.setAll({
-          uN: [this.clothN, this.clothN],
-          uOrigin: this.clothOrigin, uSize: this.clothSize,
-          uDt: sub, uPrevDt: this.clothPrevDt, uTime: this.simTime,
-          uGravity: p.cGravity, uWind: p.cWind, uDamp: p.cDamp,
-          uPinned: p.cPinned,
-          uGrabPos: p.grabPos, uGrabIdx: p.grabIdx, uGrabActive: p.grabActive,
-        });
-        draw();
-        this.cloth.swap();
-        this.clothPrevDt = sub;
-      }
-
-      const iters = Math.round(p.cIters);
-      for (let i = 0; i < iters; i++) {
-        const src = this.cloth.read, dst = this.cloth.write;
-        dst.bind(false);
-        const s = this.pClothRel.use();
-        s.tex('uCur', src.textures[0]).tex('uPrev', src.textures[1])
-         .tex('uNoise', this.noiseTex, gl.TEXTURE_3D);
-        s.setAll({
-          uN: [this.clothN, this.clothN],
-          uOrigin: this.clothOrigin, uSize: this.clothSize,
-          uStiff: p.cStiff, uPinned: p.cPinned, uTime: this.simTime,
-          uShape: p.shape, uDetail: p.detail, uScale: p.scale,
-          uFloorY: -1.62, uFriction: 0.24,
-        });
-        draw();
-        this.cloth.swap();
-      }
-    }
-
-    /* ── 3. raymarch ─────────────────────────────────────────────────── */
+    /* ── 2. raymarch ─────────────────────────────────────────────────── */
     this.tScene.bind(true, 0, 0, 0, 1);
     gl.enable(gl.DEPTH_TEST);
     gl.depthMask(true);
@@ -596,28 +493,10 @@ export class Renderer {
       draw();
     }
 
-    /* ── 4. cloth raster, into the same target ───────────────────────── */
-    if (p.clothOn > 0.001) {
-      gl.depthFunc(gl.LEQUAL);
-      gl.disable(gl.CULL_FACE);
-      const s = this.pClothDraw.use();
-      s.tex('uCur', this.cloth.read.textures[0]).tex('uPrint', this.printTex);
-      s.setAll({
-        uN: [this.clothN, this.clothN],
-        uOrigin: this.clothOrigin, uSize: this.clothSize,
-        uViewProj: this.viewProj, uCamPos: this.camPos,
-        uRimBoost: p.rimBoost, uExposure: p.sceneExposure, uFade: p.clothOn,
-      });
-      gl.bindVertexArray(this.clothVao);
-      gl.drawElements(gl.TRIANGLES, this.clothIndexCount, gl.UNSIGNED_SHORT, 0);
-      gl.bindVertexArray(null);
-      this.drawCalls++;
-    }
-
     gl.disable(gl.DEPTH_TEST);
     gl.depthMask(false);
 
-    /* ── 5. particles, additive, soft against the scene ──────────────── */
+    /* ── 3. particles, additive, soft against the scene ──────────────── */
     this.tParticles.bind(true, 0, 0, 0, 1);
     if (p.pGain > 0.001) {
       additive(gl, true);
@@ -648,7 +527,7 @@ export class Renderer {
       additive(gl, false);
     }
 
-    /* ── 6. composite ────────────────────────────────────────────────── */
+    /* ── 4. composite ────────────────────────────────────────────────── */
     this.tComposite.bind(false);
     {
       const s = this.pComposite.use();
@@ -657,7 +536,7 @@ export class Renderer {
       draw();
     }
 
-    /* ── 7. TAA ──────────────────────────────────────────────────────── */
+    /* ── 5. TAA ──────────────────────────────────────────────────────── */
     let lit = this.tComposite.tex;
     if (this.tier.taa && p.taa !== 0) {
       const dst = this.ppTaa.write;
@@ -680,7 +559,7 @@ export class Renderer {
       this.taaReset = 0;
     }
 
-    /* ── 8. bloom ────────────────────────────────────────────────────── */
+    /* ── 6. bloom ────────────────────────────────────────────────────── */
     if (this.bloom.length) {
       this.bloom[0].bind(false);
       {
@@ -716,7 +595,7 @@ export class Renderer {
       }
     }
 
-    /* ── 9. anamorphic streak ────────────────────────────────────────── */
+    /* ── 7. anamorphic streak ────────────────────────────────────────── */
     if (this.bloom.length && p.streak > 0.001) {
       const smallest = this.bloom[this.bloom.length - 1];
       this.tStreakA.bind(false);
@@ -735,7 +614,7 @@ export class Renderer {
       }
     }
 
-    /* ── 10. final ───────────────────────────────────────────────────── */
+    /* ── 8. final ───────────────────────────────────────────────────── */
     toScreen(gl, this.canvas.width, this.canvas.height);
     {
       const s = this.pFinal.use();
@@ -778,7 +657,6 @@ export class Renderer {
         this.buildPrograms();
         this.resize(true);
         this.initParticles();
-        this.initCloth();
         this.printTex = this.makePrintTexture();
         this.lost = false;
       } catch (err) {

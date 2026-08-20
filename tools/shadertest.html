@@ -15,7 +15,6 @@
 import { Program, FS_VERT } from '../js/gl.js';
 import { RAYMARCH_FRAG } from '../js/shaders/raymarch.js';
 import { PARTICLE_SIM_FRAG, PARTICLE_VERT, PARTICLE_FRAG } from '../js/shaders/particles.js';
-import { CLOTH_INTEGRATE_FRAG, CLOTH_RELAX_FRAG, CLOTH_VERT, CLOTH_FRAG } from '../js/shaders/cloth.js';
 import {
   COMPOSITE_FRAG, TAA_FRAG, BLOOM_PREFILTER_FRAG, BLOOM_DOWN_FRAG,
   BLOOM_UP_FRAG, STREAK_FRAG, FINAL_FRAG,
@@ -25,9 +24,6 @@ const PROGRAMS = [
   ['raymarch',        FS_VERT,        RAYMARCH_FRAG],
   ['particle.sim',    FS_VERT,        PARTICLE_SIM_FRAG],
   ['particle.draw',   PARTICLE_VERT,  PARTICLE_FRAG],
-  ['cloth.integrate', FS_VERT,        CLOTH_INTEGRATE_FRAG],
-  ['cloth.relax',     FS_VERT,        CLOTH_RELAX_FRAG],
-  ['cloth.draw',      CLOTH_VERT,     CLOTH_FRAG],
   ['composite',       FS_VERT,        COMPOSITE_FRAG],
   ['taa',             FS_VERT,        TAA_FRAG],
   ['bloom.prefilter', FS_VERT,        BLOOM_PREFILTER_FRAG],

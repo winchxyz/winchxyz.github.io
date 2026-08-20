@@ -61,7 +61,6 @@
   <div class="hud-row"><span class="k">frame</span><span class="v"><b id="hud-fps">—</b> fps · <b id="hud-ms">—</b> ms</span></div>
   <div class="hud-row"><span class="k">internal</span><span class="v" id="hud-res">—</span></div>
   <div class="hud-row"><span class="k">particles</span><span class="v" id="hud-parts">—</span></div>
-  <div class="hud-row"><span class="k">cloth</span><span class="v" id="hud-cloth">—</span></div>
   <div class="hud-row"><span class="k">passes</span><span class="v" id="hud-passes">—</span></div>
   <div class="hud-graph"><canvas id="hud-graph" width="220" height="34"></canvas></div>
   <div class="hud-row hud-foot"><span class="k">quality</span><span class="v" id="hud-tier">—</span></div>
@@ -80,7 +79,6 @@
   <nav aria-label="Sections">
     <a href="#whoami" data-magnetic>whoami</a>
     <a href="#materials" data-magnetic>materials</a>
-    <a href="#physics" data-magnetic>physics</a>
     <a href="#work" data-magnetic>work</a>
     <a href="#contact" class="cta" data-magnetic>contact</a>
   </nav>
@@ -189,31 +187,9 @@
 </section>
 
 <!-- ── 03 · PHYSICS ──────────────────────────────────────────────────────── -->
-<section class="sec sec-physics" id="physics" data-scene="physics" data-label="03 / physics">
-  <div class="wrap">
-    <header class="sec-head">
-      <h2 class="h-mono" data-reveal><span class="prompt">$</span> physics</h2>
-      <p class="sec-sub" data-reveal data-reveal-delay="1">
-        A <b>128 × 128</b> Verlet cloth solved entirely in fragment shaders — sixteen
-        thousand particles, structural, shear and bend constraints relaxed eight times
-        a frame with Jacobi iteration, colliding against the signed distance field of
-        the sculpture behind it. <b>Grab it and throw it.</b>
-      </p>
-    </header>
-
-    <div class="phys-panel" data-reveal data-reveal-delay="2">
-      <div class="sliders" id="sliders"></div>
-      <div class="phys-side">
-        <div class="phys-readout mono" id="phys-readout"></div>
-        <button type="button" class="btn" data-action="reset-cloth"><span>reset</span> <kbd>R</kbd></button>
-        <button type="button" class="btn ghost" data-action="tear-cloth"><span>cut it loose</span></button>
-      </div>
-    </div>
-  </div>
-</section>
 
 <!-- ── 04 · WORK ─────────────────────────────────────────────────────────── -->
-<section class="sec sec-work" id="work" data-scene="work" data-label="04 / work">
+<section class="sec sec-work" id="work" data-scene="work" data-label="03 / work">
   <div class="wrap">
     <header class="sec-head">
       <h2 class="h-mono" data-reveal><span class="prompt">$</span> ls ~/projects</h2>
@@ -235,7 +211,7 @@
 </section>
 
 <!-- ── 05 · NUMBERS ──────────────────────────────────────────────────────── -->
-<section class="sec sec-numbers" id="numbers" data-scene="numbers" data-label="05 / the numbers">
+<section class="sec sec-numbers" id="numbers" data-scene="numbers" data-label="04 / the numbers">
   <div class="wrap">
     <header class="sec-head">
       <h2 class="h-mono" data-reveal><span class="prompt">$</span> cat NUMBERS</h2>
@@ -253,7 +229,7 @@
 </section>
 
 <!-- ── 06 · CONTACT ──────────────────────────────────────────────────────── -->
-<section class="sec sec-contact" id="contact" data-scene="contact" data-label="06 / contact">
+<section class="sec sec-contact" id="contact" data-scene="contact" data-label="05 / contact">
   <div class="wrap">
     <h2 class="contact-h" data-reveal>
       Different problems.<br /><span class="accent">Same habits.</span>

@@ -82,7 +82,7 @@ html{
 body{
   margin:0;
   font-family:var(--sans);
-  font-size:clamp(15px,.55vw + 13px,17.5px);
+  font-size:clamp(16px,.5vw + 14px,18.5px);
   line-height:1.6;
   color:var(--bone);
   background:var(--ink);
@@ -290,7 +290,7 @@ html.nav-hide #nav{ transform:translateY(-100%); }
 
 #nav nav{ display:flex; align-items:center; gap:clamp(14px,2vw,30px); }
 #nav nav a{
-  font-family:var(--mono); font-size:11.5px; letter-spacing:.1em;
+  font-family:var(--mono); font-size:13px; letter-spacing:.08em;
   color:var(--muted); position:relative; padding:6px 0;
   transition:color .28s var(--ease);
 }
@@ -339,7 +339,7 @@ html.nav-hide #nav{ transform:translateY(-100%); }
 #rail li.is-on::before{ background:var(--lime); width:5px; height:5px; box-shadow:0 0 8px var(--lime); }
 #rail li span{
   position:absolute; left:16px; white-space:nowrap;
-  font-family:var(--mono); font-size:9.5px; letter-spacing:.12em; text-transform:uppercase;
+  font-family:var(--mono); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase;
   color:var(--dim); opacity:0; transform:translateX(-4px);
   transition:all .3s var(--ease); pointer-events:none;
 }
@@ -351,13 +351,22 @@ html.nav-hide #nav{ transform:translateY(-100%); }
 
 main{ position:relative; z-index:10; }
 
+/* Content-height sections, not a stack of full screens.
+
+   Every section used to be min-height:100svh with its content vertically
+   centred, so a short section carried most of a screenful of empty space
+   above and below it, and scrolling felt like paging through slides rather
+   than reading a page. Only the hero is a full screen now; the rest are as
+   tall as their content, with padding doing the separating. */
 .sec{
   position:relative;
-  padding:clamp(96px,14vh,190px) 0;
+  padding:clamp(112px,15vh,208px) 0;
+}
+.sec-hero{
+  padding-top:0;
   min-height:100svh;
   display:flex; align-items:center;
 }
-.sec-hero{ padding-top:0; }
 .wrap{ width:100%; max-width:var(--maxw); margin:0 auto; padding:0 var(--gut); }
 
 /* A soft scrim so type stays readable wherever the 3D happens to be bright. */
@@ -372,7 +381,7 @@ main{ position:relative; z-index:10; }
 .sec::after{
   content:attr(data-label);
   position:absolute; top:clamp(40px,8vh,90px); right:var(--gut);
-  font-family:var(--mono); font-size:10px; letter-spacing:.2em; text-transform:uppercase;
+  font-family:var(--mono); font-size:11px; letter-spacing:.18em; text-transform:uppercase;
   color:var(--dim); opacity:.65; pointer-events:none;
 }
 @media (max-width:700px){ .sec::after{ display:none; } }
@@ -380,20 +389,19 @@ main{ position:relative; z-index:10; }
 /* ══ REVEAL ══════════════════════════════════════════════════════════════ */
 
 [data-reveal]{
-  opacity:0; transform:translateY(22px);
-  transition:opacity .9s var(--ease-out), transform .9s var(--ease-out);
-  transition-delay:calc(var(--d,0) * 90ms);
+  opacity:0; transform:translateY(14px);
+  transition:opacity .58s var(--ease-out), transform .58s var(--ease-out);
+  transition-delay:calc(var(--d,0) * 42ms);
 }
 [data-reveal].in{ opacity:1; transform:none; }
 html[data-nojs] [data-reveal]{ opacity:1; transform:none; }
 
 /* ══ HERO ════════════════════════════════════════════════════════════════ */
 
-.sec-hero{ min-height:100svh; }
 
 .eyebrow{
   display:flex; align-items:center; gap:10px; margin:0 0 clamp(18px,3vh,34px);
-  font-family:var(--mono); font-size:11px; letter-spacing:.22em; text-transform:uppercase;
+  font-family:var(--mono); font-size:12.5px; letter-spacing:.2em; text-transform:uppercase;
   color:var(--muted);
 }
 .eyebrow .tick{
@@ -413,12 +421,19 @@ html[data-nojs] [data-reveal]{ opacity:1; transform:none; }
      large size, not to compensate for the face. */
   letter-spacing:-.012em;
   color:var(--chalk);
-  display:flex;
+  /* NOT display:flex.
+
+     Each letter is its own span so the hover can cascade across them, and as
+     flex items the browser lays every one out as an independent box — which
+     means no kerning is applied between them at all. On a face with real
+     kerning pairs that reads as subtly, unplaceably wrong: the gaps come out
+     mechanically equal instead of optically equal. Inline layout shapes the
+     whole word as text, which is what it is. */
+  display:block;
+  white-space:nowrap;
   text-shadow:0 0 90px rgba(7,9,10,.75);
 }
 .wordmark .letter{
-  display:inline-block;
-  will-change:transform;
   transition:color .5s var(--ease);
 }
 .wordmark:hover .letter{ color:var(--lime); transition-delay:calc(var(--i,0)*40ms); }
@@ -431,7 +446,7 @@ html[data-nojs] [data-reveal]{ opacity:1; transform:none; }
 
 .rotator{
   margin:clamp(14px,2vh,20px) 0 0;
-  font-size:clamp(12px,1.15vw,14.5px); color:var(--muted);
+  font-size:clamp(13.5px,1.2vw,16px); color:var(--muted);
   min-height:1.6em; letter-spacing:0;
 }
 .rotator .caret{ color:var(--lime); }
@@ -441,7 +456,7 @@ html[data-nojs] [data-reveal]{ opacity:1; transform:none; }
 .hero-meta{
   display:flex; flex-wrap:wrap; gap:clamp(12px,2vw,26px); align-items:center;
   margin:clamp(28px,5vh,54px) 0 0;
-  font-size:11.5px; color:var(--dim); letter-spacing:.06em;
+  font-size:13px; color:var(--dim); letter-spacing:.06em;
 }
 .hero-meta b{ color:var(--bone); font-weight:500; font-variant-numeric:tabular-nums; }
 .hero-meta .live{ display:inline-flex; align-items:center; gap:6px; color:var(--dim); }
@@ -453,7 +468,7 @@ html[data-nojs] [data-reveal]{ opacity:1; transform:none; }
 .scroll-cue{
   position:absolute; left:50%; bottom:26px; transform:translateX(-50%);
   display:grid; justify-items:center; gap:8px;
-  font-size:9.5px; letter-spacing:.24em; text-transform:uppercase; color:var(--dim);
+  font-size:11px; letter-spacing:.2em; text-transform:uppercase; color:var(--dim);
   transition:color .3s, opacity .5s;
 }
 .scroll-cue:hover{ color:var(--lime); }
@@ -463,7 +478,7 @@ html.scrolled .scroll-cue{ opacity:0; pointer-events:none; }
 
 .hero-footnote{
   position:absolute; left:var(--gut); bottom:26px;
-  font-size:10.5px; color:var(--dim); letter-spacing:.05em; margin:0;
+  font-size:12px; color:var(--dim); letter-spacing:.05em; margin:0;
   max-width:min(46ch,60vw);
 }
 @media (max-width:820px){ .hero-footnote{ display:none; } }
@@ -473,13 +488,13 @@ html.scrolled .scroll-cue{ opacity:0; pointer-events:none; }
 .h-mono{
   margin:0 0 clamp(20px,3vh,32px);
   font-family:var(--mono); font-weight:500;
-  font-size:clamp(15px,1.5vw,19px); letter-spacing:.02em;
+  font-size:clamp(17px,1.6vw,21px); letter-spacing:.02em;
   color:var(--bone);
 }
 .h-mono .prompt{ color:var(--lime); margin-right:.6em; }
 
 .sec-head{ max-width:70ch; margin-bottom:clamp(34px,6vh,64px); }
-.sec-sub{ margin:0; color:var(--muted); font-size:clamp(14.5px,1.05vw,17px); max-width:62ch; }
+.sec-sub{ margin:0; color:var(--muted); font-size:clamp(16px,1.05vw,18.5px); max-width:60ch; }
 .sec-sub b{ color:var(--bone); font-weight:500; }
 
 .lede{
@@ -522,12 +537,12 @@ html.scrolled .scroll-cue{ opacity:0; pointer-events:none; }
 .codeblock-bar span{ width:8px; height:8px; border-radius:50%; background:var(--line); }
 .codeblock-bar span:first-child{ background:rgba(198,242,78,.5); }
 .codeblock-bar em{
-  margin-left:auto; font-style:normal; font-size:10px;
-  letter-spacing:.14em; color:var(--dim); text-transform:uppercase;
+  margin-left:auto; font-style:normal; font-size:11px;
+  letter-spacing:.12em; color:var(--dim); text-transform:uppercase;
 }
 .codeblock pre{
   margin:0; padding:18px 16px; overflow-x:auto;
-  font-size:clamp(11px,.85vw,12.8px); line-height:1.85; color:var(--muted);
+  font-size:clamp(12.5px,.9vw,14.5px); line-height:1.85; color:var(--muted);
 }
 .codeblock code{ color:inherit; font-size:inherit; }
 .y-k{ color:var(--ash); }
@@ -550,12 +565,12 @@ html.scrolled .scroll-cue{ opacity:0; pointer-events:none; }
 .mat-list button{
   width:100%; display:flex; align-items:center; gap:12px;
   padding:13px 4px; background:none; border:0; cursor:pointer;
-  font-family:var(--mono); font-size:12px; letter-spacing:.04em;
+  font-family:var(--mono); font-size:14px; letter-spacing:.03em;
   color:var(--muted); text-align:left;
   transition:color .28s var(--ease), padding-left .3s var(--ease);
 }
 .mat-list button:hover{ color:var(--bone); padding-left:9px; }
-.mat-list button .num{ color:var(--dim); font-size:10px; min-width:1.4em; }
+.mat-list button .num{ color:var(--dim); font-size:11.5px; min-width:1.6em; }
 .mat-list button .sw{
   width:16px; height:16px; border-radius:50%; margin-left:auto; flex:none;
   border:1px solid var(--line); transition:transform .3s var(--ease), box-shadow .3s;
@@ -574,86 +589,23 @@ html.scrolled .scroll-cue{ opacity:0; pointer-events:none; }
   font-size:clamp(25px,3.1vw,42px); font-weight:660;
   letter-spacing:-.014em; color:var(--chalk); line-height:1.08;
 }
-.mat-desc{ margin:0 0 24px; color:var(--muted); max-width:48ch; font-size:15px; }
+.mat-desc{ margin:0 0 24px; color:var(--muted); max-width:46ch; font-size:16.5px; }
 .mat-params{
   display:grid; grid-template-columns:repeat(auto-fit,minmax(118px,1fr));
   gap:1px; margin:0 0 22px; max-width:620px;
   background:var(--line-2); border:1px solid var(--line-2);
 }
 .mat-params div{ background:var(--ink); padding:11px 12px; }
-.mat-params dt{ font-size:9.5px; letter-spacing:.16em; text-transform:uppercase; color:var(--dim); }
-.mat-params dd{ margin:4px 0 0; font-size:14px; color:var(--lime); font-variant-numeric:tabular-nums; }
-.mat-hint{ font-size:10.5px; color:var(--dim); letter-spacing:.06em; margin:0; }
-
-/* ══ PHYSICS ═════════════════════════════════════════════════════════════ */
-
-.phys-panel{
-  display:grid; grid-template-columns:1fr minmax(190px,240px);
-  gap:clamp(22px,4vw,56px); align-items:start;
-  max-width:920px;
-}
-@media (max-width:820px){ .phys-panel{ grid-template-columns:1fr; } }
-
-.sliders{ display:grid; gap:16px; }
-.slider{ display:grid; gap:7px; }
-.slider-top{
-  display:flex; justify-content:space-between; align-items:baseline;
-  font-family:var(--mono); font-size:10.5px; letter-spacing:.14em; text-transform:uppercase;
-  color:var(--dim);
-}
-.slider-top b{ color:var(--lime); font-weight:500; letter-spacing:0; font-variant-numeric:tabular-nums; text-transform:none; }
-.slider input[type=range]{
-  -webkit-appearance:none; appearance:none; width:100%; height:22px;
-  background:transparent; cursor:pointer; margin:0;
-}
-.slider input[type=range]::-webkit-slider-runnable-track{
-  height:2px; border-radius:2px;
-  background:linear-gradient(90deg,var(--lime) var(--p,50%), rgba(233,237,227,.12) var(--p,50%));
-}
-.slider input[type=range]::-moz-range-track{ height:2px; border-radius:2px; background:rgba(233,237,227,.12); }
-.slider input[type=range]::-moz-range-progress{ height:2px; border-radius:2px; background:var(--lime); }
-.slider input[type=range]::-webkit-slider-thumb{
-  -webkit-appearance:none; appearance:none; width:12px; height:12px; margin-top:-5px;
-  border-radius:50%; background:var(--lime); border:0;
-  box-shadow:0 0 0 3px rgba(7,9,10,.9), 0 0 14px rgba(198,242,78,.7);
-  transition:transform .18s var(--ease);
-}
-.slider input[type=range]:hover::-webkit-slider-thumb{ transform:scale(1.28); }
-.slider input[type=range]::-moz-range-thumb{
-  width:12px; height:12px; border-radius:50%; background:var(--lime); border:0;
-  box-shadow:0 0 0 3px rgba(7,9,10,.9), 0 0 14px rgba(198,242,78,.7);
-}
-
-.phys-side{ display:grid; gap:11px; }
-.phys-readout{
-  font-size:10.5px; line-height:1.85; color:var(--dim);
-  padding:13px 14px; border:1px solid var(--line-2); border-radius:10px;
-  background:rgba(16,20,14,.4);
-}
-.phys-readout b{ color:var(--ash); font-weight:400; float:right; font-variant-numeric:tabular-nums; }
-
-.btn{
-  display:flex; align-items:center; justify-content:space-between; gap:10px;
-  font-family:var(--mono); font-size:11.5px; letter-spacing:.08em;
-  padding:11px 14px; border-radius:9px; cursor:pointer;
-  background:var(--lime); color:var(--ink); border:0; font-weight:700;
-  transition:transform .25s var(--ease), box-shadow .25s var(--ease), background .25s;
-}
-.btn:hover{ background:var(--lime-lt); box-shadow:0 10px 32px -12px rgba(198,242,78,.8); }
-.btn:active{ transform:translateY(1px); }
-.btn kbd{ background:rgba(7,9,10,.16); border-color:rgba(7,9,10,.2); color:rgba(7,9,10,.66); }
-.btn.ghost{
-  background:transparent; color:var(--muted);
-  border:1px solid var(--line); font-weight:400;
-}
-.btn.ghost:hover{ color:var(--lime); border-color:rgba(198,242,78,.4); box-shadow:none; background:rgba(198,242,78,.05); }
+.mat-params dt{ font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--dim); }
+.mat-params dd{ margin:5px 0 0; font-size:16px; color:var(--lime); font-variant-numeric:tabular-nums; }
+.mat-hint{ font-size:12px; color:var(--dim); letter-spacing:.06em; margin:0; }
 
 /* ══ WORK ════════════════════════════════════════════════════════════════ */
 
 .work-filters{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:26px; }
 .chip{
-  font-family:var(--mono); font-size:10.5px; letter-spacing:.12em;
-  padding:7px 13px; border-radius:20px; cursor:pointer;
+  font-family:var(--mono); font-size:12px; letter-spacing:.1em;
+  padding:9px 15px; border-radius:20px; cursor:pointer;
   background:transparent; border:1px solid var(--line); color:var(--dim);
   transition:all .28s var(--ease);
 }
@@ -685,7 +637,7 @@ html.scrolled .scroll-cue{ opacity:0; pointer-events:none; }
 
 .card-top{ display:flex; align-items:center; gap:10px; margin-bottom:14px; }
 .card-name{
-  font-family:var(--mono); font-size:15px; font-weight:500; color:var(--chalk);
+  font-family:var(--mono); font-size:17.5px; font-weight:500; color:var(--chalk);
   letter-spacing:-.01em; margin:0;
 }
 .card-name::before{ content:""; color:var(--dim); }
@@ -696,21 +648,21 @@ html.scrolled .scroll-cue{ opacity:0; pointer-events:none; }
 }
 .card:hover .card-arrow{ transform:translate(3px,-3px); color:var(--lime); }
 
-.card-desc{ margin:0 0 auto; color:var(--muted); font-size:14px; line-height:1.55; }
+.card-desc{ margin:0 0 auto; color:var(--muted); font-size:15.5px; line-height:1.6; }
 
 .card-tags{
   list-style:none; display:flex; flex-wrap:wrap; gap:5px; margin:18px 0 0; padding:0;
 }
 .card-tags li{
-  font-family:var(--mono); font-size:9.5px; letter-spacing:.08em;
-  padding:3px 7px; border-radius:4px; background:var(--pill); color:var(--dim);
+  font-family:var(--mono); font-size:11px; letter-spacing:.06em;
+  padding:4px 8px; border-radius:4px; background:var(--pill); color:var(--dim);
   border:1px solid var(--line-2);
 }
 
 .card-stats{
   display:flex; align-items:center; gap:14px; margin-top:16px;
   padding-top:14px; border-top:1px solid var(--line-2);
-  font-family:var(--mono); font-size:10.5px; color:var(--dim);
+  font-family:var(--mono); font-size:12px; color:var(--dim);
 }
 .card-stats b{ color:var(--ash); font-weight:400; font-variant-numeric:tabular-nums; }
 .card-stats .lang{ display:flex; align-items:center; gap:6px; margin-left:auto; }
@@ -745,15 +697,15 @@ html.scrolled .scroll-cue{ opacity:0; pointer-events:none; }
 .numbers .n em{ font-style:normal; font-size:.45em; color:var(--muted); margin-left:.25em; letter-spacing:0; }
 .numbers .l{
   display:block; margin-top:9px;
-  font-family:var(--mono); font-size:10px; letter-spacing:.14em; text-transform:uppercase;
+  font-family:var(--mono); font-size:11.5px; letter-spacing:.12em; text-transform:uppercase;
   color:var(--dim);
 }
-.numbers-note{ font-size:11.5px; color:var(--dim); max-width:62ch; line-height:1.9; margin:0; }
+.numbers-note{ font-size:13px; color:var(--dim); max-width:62ch; line-height:1.9; margin:0; }
 .numbers-note b{ color:var(--ash); font-weight:400; }
 
 /* ══ CONTACT ═════════════════════════════════════════════════════════════ */
 
-.sec-contact{ min-height:100svh; }
+.sec-contact{ padding-bottom:clamp(80px,10vh,140px); }
 .contact-h{
   margin:0 0 clamp(36px,7vh,72px);
   font-family:var(--display); font-stretch:108%;
@@ -779,14 +731,14 @@ html.scrolled .scroll-cue{ opacity:0; pointer-events:none; }
 .l-i{ color:var(--dim); display:flex; transition:color .3s; }
 .links a:hover .l-i{ color:var(--lime); }
 .l-t{ display:grid; gap:2px; }
-.l-t b{ font-size:clamp(17px,1.9vw,25px); font-weight:500; letter-spacing:-.02em; }
-.l-t em{ font-style:normal; font-family:var(--mono); font-size:10.5px; letter-spacing:.1em; color:var(--dim); }
+.l-t b{ font-size:clamp(19px,2vw,27px); font-weight:500; letter-spacing:-.02em; }
+.l-t em{ font-style:normal; font-family:var(--mono); font-size:12px; letter-spacing:.08em; color:var(--dim); }
 .l-a{ margin-left:auto; color:var(--dim); font-size:17px; transition:transform .4s var(--ease-out), color .3s; }
 .links a:hover .l-a{ transform:translate(4px,-4px); color:var(--lime); }
 
 .foot{
   display:flex; flex-wrap:wrap; gap:10px; align-items:center;
-  font-size:10.5px; letter-spacing:.06em; color:var(--dim);
+  font-size:12px; letter-spacing:.06em; color:var(--dim);
   padding-top:22px; border-top:1px solid var(--line-2);
 }
 .foot .sep{ opacity:.4; }
@@ -875,17 +827,11 @@ body.cur-drag .c-lbl{ opacity:1; }
       rgba(7,9,10,.55) 0%, rgba(7,9,10,.86) 28%, rgba(7,9,10,.90) 100%) !important;
   }
 
-  /* A 22px-tall slider is a 22px touch target. Pointer-coarse wants 44. */
-  .slider input[type=range]{ height:44px; }
-  .slider input[type=range]::-webkit-slider-thumb{ width:18px; height:18px; margin-top:-8px; }
-  .slider input[type=range]::-moz-range-thumb{ width:18px; height:18px; }
-  .chip{ padding:10px 15px; }
+  .chip{ padding:11px 16px; }
   .mat-list button{ padding:16px 4px; }
   #nav nav a:not(.cta){ display:none; }
   #hud{ display:none; }
-  .sec{ min-height:auto; padding:clamp(80px,12vh,120px) 0; }
-  .sec-hero{ min-height:100svh; }
-  .sec-contact{ min-height:auto; }
+  .sec{ padding:clamp(86px,11vh,132px) 0; }
 }
 
 @media (prefers-reduced-motion:reduce){
@@ -938,7 +884,6 @@ body.cur-drag .c-lbl{ opacity:1; }
   <div class="hud-row"><span class="k">frame</span><span class="v"><b id="hud-fps">—</b> fps · <b id="hud-ms">—</b> ms</span></div>
   <div class="hud-row"><span class="k">internal</span><span class="v" id="hud-res">—</span></div>
   <div class="hud-row"><span class="k">particles</span><span class="v" id="hud-parts">—</span></div>
-  <div class="hud-row"><span class="k">cloth</span><span class="v" id="hud-cloth">—</span></div>
   <div class="hud-row"><span class="k">passes</span><span class="v" id="hud-passes">—</span></div>
   <div class="hud-graph"><canvas id="hud-graph" width="220" height="34"></canvas></div>
   <div class="hud-row hud-foot"><span class="k">quality</span><span class="v" id="hud-tier">—</span></div>
@@ -957,7 +902,6 @@ body.cur-drag .c-lbl{ opacity:1; }
   <nav aria-label="Sections">
     <a href="#whoami" data-magnetic>whoami</a>
     <a href="#materials" data-magnetic>materials</a>
-    <a href="#physics" data-magnetic>physics</a>
     <a href="#work" data-magnetic>work</a>
     <a href="#contact" class="cta" data-magnetic>contact</a>
   </nav>
@@ -1066,31 +1010,9 @@ body.cur-drag .c-lbl{ opacity:1; }
 </section>
 
 <!-- ── 03 · PHYSICS ──────────────────────────────────────────────────────── -->
-<section class="sec sec-physics" id="physics" data-scene="physics" data-label="03 / physics">
-  <div class="wrap">
-    <header class="sec-head">
-      <h2 class="h-mono" data-reveal><span class="prompt">$</span> physics</h2>
-      <p class="sec-sub" data-reveal data-reveal-delay="1">
-        A <b>128 × 128</b> Verlet cloth solved entirely in fragment shaders — sixteen
-        thousand particles, structural, shear and bend constraints relaxed eight times
-        a frame with Jacobi iteration, colliding against the signed distance field of
-        the sculpture behind it. <b>Grab it and throw it.</b>
-      </p>
-    </header>
-
-    <div class="phys-panel" data-reveal data-reveal-delay="2">
-      <div class="sliders" id="sliders"></div>
-      <div class="phys-side">
-        <div class="phys-readout mono" id="phys-readout"></div>
-        <button type="button" class="btn" data-action="reset-cloth"><span>reset</span> <kbd>R</kbd></button>
-        <button type="button" class="btn ghost" data-action="tear-cloth"><span>cut it loose</span></button>
-      </div>
-    </div>
-  </div>
-</section>
 
 <!-- ── 04 · WORK ─────────────────────────────────────────────────────────── -->
-<section class="sec sec-work" id="work" data-scene="work" data-label="04 / work">
+<section class="sec sec-work" id="work" data-scene="work" data-label="03 / work">
   <div class="wrap">
     <header class="sec-head">
       <h2 class="h-mono" data-reveal><span class="prompt">$</span> ls ~/projects</h2>
@@ -1112,7 +1034,7 @@ body.cur-drag .c-lbl{ opacity:1; }
 </section>
 
 <!-- ── 05 · NUMBERS ──────────────────────────────────────────────────────── -->
-<section class="sec sec-numbers" id="numbers" data-scene="numbers" data-label="05 / the numbers">
+<section class="sec sec-numbers" id="numbers" data-scene="numbers" data-label="04 / the numbers">
   <div class="wrap">
     <header class="sec-head">
       <h2 class="h-mono" data-reveal><span class="prompt">$</span> cat NUMBERS</h2>
@@ -1130,7 +1052,7 @@ body.cur-drag .c-lbl{ opacity:1; }
 </section>
 
 <!-- ── 06 · CONTACT ──────────────────────────────────────────────────────── -->
-<section class="sec sec-contact" id="contact" data-scene="contact" data-label="06 / contact">
+<section class="sec sec-contact" id="contact" data-scene="contact" data-label="05 / contact">
   <div class="wrap">
     <h2 class="contact-h" data-reveal>
       Different problems.<br /><span class="accent">Same habits.</span>
@@ -3023,382 +2945,6 @@ void main(){
 }
 `;
 
-/* ── js/shaders/cloth.js ─────────────────────────────────────── */
-/* ══════════════════════════════════════════════════════════════════════════
-   cloth.js — a Verlet cloth solved in fragment shaders.
-
-   State is two RGBA32F attachments on one target: the current positions and
-   the previous ones. Verlet needs nothing else — velocity is implicit in the
-   difference between them, which is also why constraints can be applied by
-   simply moving a point: the correction becomes an impulse for free.
-
-   Constraints are relaxed with Jacobi rather than Gauss-Seidel, because a
-   fragment shader cannot see the corrections its neighbours are making in
-   the same pass. Jacobi converges more slowly for it, so the stiffness is
-   over-relaxed to compensate — see OMEGA below.
-   ══════════════════════════════════════════════════════════════════════════ */
-
-
-
-const CLOTH_COMMON = `
-uniform vec2  uN;          // grid resolution
-uniform vec3  uOrigin;     // bottom-centre of the rest plane
-uniform vec2  uSize;       // width, height in world units
-
-vec3 restPos(ivec2 tc){
-  vec2 uv = vec2(tc) / (uN - 1.0);
-  return uOrigin + vec3((uv.x - 0.5) * uSize.x, uv.y * uSize.y, 0.0);
-}
-
-bool inGrid(ivec2 c){
-  return c.x >= 0 && c.y >= 0 && c.x < int(uN.x) && c.y < int(uN.y);
-}
-`;
-
-/* ── integrate ─────────────────────────────────────────────────────────── */
-
-const CLOTH_INTEGRATE_FRAG = HEAD + HASH + NOISE + CLOTH_COMMON + `
-
-in vec2 vUv;
-
-layout(location = 0) out vec4 oCur;
-layout(location = 1) out vec4 oPrev;
-
-uniform sampler2D uCur;
-uniform sampler2D uPrev;
-
-uniform float uDt;
-uniform float uPrevDt;
-uniform float uTime;
-uniform float uGravity;
-uniform float uWind;
-uniform float uDamp;
-uniform float uPinned;      // 1 = top row held, 0 = cut loose
-
-uniform vec3  uGrabPos;
-uniform vec2  uGrabIdx;
-uniform float uGrabActive;
-
-vec3 fetchC(ivec2 c){
-  c = clamp(c, ivec2(0), ivec2(uN) - 1);
-  return texelFetch(uCur, c, 0).xyz;
-}
-
-void main(){
-  ivec2 tc = ivec2(gl_FragCoord.xy);
-
-  vec3 cur  = texelFetch(uCur,  tc, 0).xyz;
-  vec3 prev = texelFetch(uPrev, tc, 0).xyz;
-
-  bool pinned = (uPinned > 0.5) && (tc.y == int(uN.y) - 1) && (tc.x % 6 == 0 || tc.x == int(uN.x) - 1);
-
-  if (pinned){
-    vec3 r = restPos(tc);
-    oCur  = vec4(r, 1.0);
-    oPrev = vec4(r, 1.0);
-    return;
-  }
-
-  // face normal from the four neighbours, for the wind term
-  vec3 pL = fetchC(tc + ivec2(-1, 0));
-  vec3 pR = fetchC(tc + ivec2( 1, 0));
-  vec3 pD = fetchC(tc + ivec2( 0,-1));
-  vec3 pU = fetchC(tc + ivec2( 0, 1));
-  vec3 n  = normalize(cross(pR - pL, pU - pD) + vec3(0.0, 0.0, 1e-5));
-
-  vec3 acc = vec3(0.0, -uGravity, 0.0);
-
-  // Aerodynamic pressure, not a uniform push: the force is along the face
-  // normal, scaled by how square-on the face is to the wind. That is what
-  // makes a cloth billow and luff instead of sliding sideways as one sheet.
-  vec3 windDir = normalize(vec3(-0.30, 0.05, -1.0));   // presses it back onto the sculpture
-  vec3 gust = curlNoise(cur * 1.1 + vec3(0.0, 0.0, uTime * 0.55)) * 0.55;
-  vec3 w = (windDir + gust) * uWind;
-  acc += n * dot(n, w) * 2.4;
-  acc += w * 0.22;
-
-  // Time-corrected Verlet. The (dt/prevDt) factor is what keeps the sim from
-  // gaining or losing energy when the frame time changes — without it,
-  // one dropped frame permanently speeds the cloth up.
-  float r = (uPrevDt > 1e-5) ? (uDt / uPrevDt) : 1.0;
-  r = clamp(r, 0.6, 1.4);
-
-  vec3 vel = (cur - prev) * r * uDamp;
-  vec3 next = cur + vel + acc * uDt * uDt;
-
-  if (uGrabActive > 0.5){
-    float dGrab = distance(vec2(tc), uGrabIdx);
-    float k = exp(-dGrab * dGrab / 12.0);
-    next = mix(next, uGrabPos, clamp(k, 0.0, 0.92));
-  }
-
-  oCur  = vec4(next, 1.0);
-  oPrev = vec4(cur,  1.0);
-}
-`;
-
-/* ── constraints ───────────────────────────────────────────────────────── */
-
-/* Chunk order matters: GLSL has no forward declarations, so SDF must come
-   after the HASH and NOISE it calls into. */
-const CLOTH_RELAX_FRAG = HEAD + HASH + NOISE + SDF + CLOTH_COMMON + `
-
-in vec2 vUv;
-
-layout(location = 0) out vec4 oCur;
-layout(location = 1) out vec4 oPrev;
-
-uniform sampler2D uCur;
-uniform sampler2D uPrev;
-
-uniform float uStiff;
-uniform float uPinned;
-uniform float uTime;
-uniform float uShape;
-uniform float uDetail;
-uniform float uScale;
-uniform float uFloorY;
-uniform float uFriction;
-
-// Jacobi cannot see its neighbours' corrections, so it under-relaxes badly
-// compared with Gauss-Seidel at the same stiffness — cloth that should be
-// canvas ends up behaving like a knitted jumper. Over-relaxing by this
-// factor buys most of it back. Above about 1.9 it rings.
-const float OMEGA = 1.72;
-
-float sdfAt(vec3 p){ return sculpture(p / uScale, uTime, uShape, uDetail) * uScale; }
-
-vec3 sdfGrad(vec3 p){
-  const vec2 k = vec2(1.0, -1.0);
-  const float e = 0.012;
-  return normalize(
-    k.xyy * sdfAt(p + k.xyy * e) +
-    k.yyx * sdfAt(p + k.yyx * e) +
-    k.yxy * sdfAt(p + k.yxy * e) +
-    k.xxx * sdfAt(p + k.xxx * e));
-}
-
-void accumulate(inout vec3 corr, inout float wsum, vec3 p, ivec2 c, float rest, float w){
-  if (!inGrid(c)) return;
-  vec3 q = texelFetch(uCur, c, 0).xyz;
-  vec3 d = q - p;
-  float l = length(d);
-  if (l < 1e-7) return;
-  corr += d * (1.0 - rest / l) * 0.5 * w;
-  wsum += w;
-}
-
-void main(){
-  ivec2 tc = ivec2(gl_FragCoord.xy);
-
-  vec3 p    = texelFetch(uCur,  tc, 0).xyz;
-  vec3 prev = texelFetch(uPrev, tc, 0).xyz;
-
-  bool pinned = (uPinned > 0.5) && (tc.y == int(uN.y) - 1) && (tc.x % 6 == 0 || tc.x == int(uN.x) - 1);
-  if (pinned){
-    vec3 r = restPos(tc);
-    oCur = vec4(r, 1.0);
-    oPrev = vec4(r, 1.0);
-    return;
-  }
-
-  vec2 cell = uSize / (uN - 1.0);
-  float rS  = (cell.x + cell.y) * 0.5;
-
-  vec3 corr = vec3(0.0);
-  float wsum = 0.0;
-
-  // structural — the weave itself
-  accumulate(corr, wsum, p, tc + ivec2( 1, 0), cell.x, 1.0);
-  accumulate(corr, wsum, p, tc + ivec2(-1, 0), cell.x, 1.0);
-  accumulate(corr, wsum, p, tc + ivec2( 0, 1), cell.y, 1.0);
-  accumulate(corr, wsum, p, tc + ivec2( 0,-1), cell.y, 1.0);
-
-  // shear — resists the weave collapsing into a rhombus
-  float dg = length(cell);
-  accumulate(corr, wsum, p, tc + ivec2( 1, 1), dg, 0.55);
-  accumulate(corr, wsum, p, tc + ivec2(-1, 1), dg, 0.55);
-  accumulate(corr, wsum, p, tc + ivec2( 1,-1), dg, 0.55);
-  accumulate(corr, wsum, p, tc + ivec2(-1,-1), dg, 0.55);
-
-  // bend — two cells out; this is what stops paper-thin creasing
-  accumulate(corr, wsum, p, tc + ivec2( 2, 0), cell.x * 2.0, 0.18);
-  accumulate(corr, wsum, p, tc + ivec2(-2, 0), cell.x * 2.0, 0.18);
-  accumulate(corr, wsum, p, tc + ivec2( 0, 2), cell.y * 2.0, 0.18);
-  accumulate(corr, wsum, p, tc + ivec2( 0,-2), cell.y * 2.0, 0.18);
-
-  if (wsum > 0.0) p += corr / wsum * OMEGA * uStiff;
-
-  // ── collisions ─────────────────────────────────────────────────────────
-  // Moving the point without moving prev is what gives the collision its
-  // impulse — the implicit Verlet velocity changes by exactly the push-out.
-  // Dragging prev partway along with it is friction.
-  float d = sdfAt(p);
-  float thick = 0.028;
-  if (d < thick){
-    vec3 n = sdfGrad(p);
-    vec3 push = n * (thick - d);
-    p += push;
-    vec3 vel = p - prev;
-    vec3 vn = n * dot(n, vel);
-    vec3 vt = vel - vn;
-    prev = p - (vt * (1.0 - uFriction) + vn * 0.0);
-  }
-
-  if (p.y < uFloorY + 0.012){
-    float pen = (uFloorY + 0.012) - p.y;
-    p.y += pen;
-    vec3 vel = p - prev;
-    vec3 vt = vec3(vel.x, 0.0, vel.z);
-    prev = p - vt * (1.0 - uFriction * 1.4);
-  }
-
-  oCur  = vec4(p, 1.0);
-  oPrev = vec4(prev, 1.0);
-}
-`;
-
-/* ── render ────────────────────────────────────────────────────────────── */
-
-const CLOTH_VERT = HEAD + CLOTH_COMMON + `
-uniform sampler2D uCur;
-uniform mat4  uViewProj;
-uniform vec3  uCamPos;
-
-out vec3 vPos;
-out vec3 vNrm;
-out vec3 vTan;
-out vec2 vUv2;
-out float vDist;
-
-vec3 fetchC(ivec2 c){
-  c = clamp(c, ivec2(0), ivec2(uN) - 1);
-  return texelFetch(uCur, c, 0).xyz;
-}
-
-void main(){
-  int w = int(uN.x);
-  ivec2 tc = ivec2(gl_VertexID % w, gl_VertexID / w);
-
-  vec3 p = fetchC(tc);
-
-  vec3 pL = fetchC(tc + ivec2(-1, 0));
-  vec3 pR = fetchC(tc + ivec2( 1, 0));
-  vec3 pD = fetchC(tc + ivec2( 0,-1));
-  vec3 pU = fetchC(tc + ivec2( 0, 1));
-
-  vec3 n = cross(pR - pL, pU - pD);
-  float nl = length(n);
-  vNrm = nl > 1e-7 ? n / nl : vec3(0.0, 0.0, 1.0);
-  vTan = normalize(pR - pL + vec3(1e-6, 0.0, 0.0));
-
-  vPos  = p;
-  vUv2  = vec2(tc) / (uN - 1.0);
-  vDist = distance(p, uCamPos);
-
-  gl_Position = uViewProj * vec4(p, 1.0);
-}
-`;
-
-const CLOTH_FRAG = HEAD + HASH + NOISE + PBR + COLOR + `
-in vec3 vPos;
-in vec3 vNrm;
-in vec3 vTan;
-in vec2 vUv2;
-in float vDist;
-
-layout(location = 0) out vec4 oColor;
-layout(location = 1) out vec4 oDist;
-
-uniform sampler2D uPrint;     // the wordmark, drawn to a 2D canvas at load
-uniform vec3  uCamPos;
-uniform float uRimBoost;
-uniform float uExposure;
-uniform float uFade;
-
-void main(){
-  // Two-sided: a cloth has a back, and lighting it with the front face's
-  // normal is what makes the classic black-underside look.
-  vec3 n = normalize(vNrm);
-  if (!gl_FrontFacing) n = -n;
-
-  vec3 v = normalize(uCamPos - vPos);
-
-  // ── procedural weave ───────────────────────────────────────────────────
-  // A plain over-under weave in the normal, at a frequency high enough that
-  // it reads as fibre rather than as a pattern.
-  vec2 wv = vUv2 * 620.0;
-  float warp = sin(wv.x * TAU);
-  float weft = sin(wv.y * TAU);
-  float threads = warp * weft;
-  vec3 T = normalize(vTan - n * dot(n, vTan));
-  vec3 B = normalize(cross(n, T));
-  n = normalize(n + (T * warp * 0.055 + B * weft * 0.055));
-
-  float lint = fbm(vec3(vUv2 * 90.0, 3.1), 2);
-
-  // ── albedo ─────────────────────────────────────────────────────────────
-  float print = texture(uPrint, vec2(vUv2.x, 1.0 - vUv2.y)).r;
-  // Real canvas has an albedo around 0.2-0.4. The first pass at this used
-  // 0.05, which is closer to charcoal than to cloth, and no amount of light
-  // rescues a surface that absorbs 95% of what hits it.
-  // Canvas sits around 0.2-0.4 albedo. Dropping it to 0.09 to make the chalk
-  // print pop made the fabric itself too dark to show a fold, which is the
-  // one thing this section is for.
-  vec3 cloth = mix(vec3(0.175, 0.188, 0.162), vec3(0.235, 0.250, 0.215), lint);
-  // Chalk, not lime. The accent was the obvious choice and it was wrong: the
-  // rim light on this cloth IS lime, so lime ink on grey canvas renders as
-  // lime on lime and the wordmark disappears into its own lighting.
-  vec3 ink   = vec3(0.86, 0.90, 0.82);
-  vec3 albedo = mix(cloth, ink, print);
-
-  float rough = mix(0.86, 0.55, print) - threads * 0.05;
-  rough = clamp(rough, 0.2, 1.0);
-
-  float NoV = clamp(dot(n, v), 1e-4, 1.0);
-  vec3 col = vec3(0.0);
-
-  vec3 lights[3];
-  lights[0] = normalize(L_KEY);
-  lights[1] = normalize(L_FILL);
-  lights[2] = normalize(L_RIM);
-  vec3 cols[3];
-  cols[0] = C_KEY; cols[1] = C_FILL; cols[2] = C_RIM * (1.0 + uRimBoost);
-
-  for (int i = 0; i < 3; i++){
-    vec3 l = lights[i];
-    vec3 h = normalize(v + l);
-    float NoL = clamp(dot(n, l), 0.0, 1.0);
-    float NoH = clamp(dot(n, h), 0.0, 1.0);
-
-    // Wrapped diffuse standing in for the light that gets through the weave.
-    float wrapped = clamp((dot(n, l) + 0.4) / 1.4, 0.0, 1.0);
-    col += albedo * INV_PI * wrapped * cols[i];
-
-    // Charlie sheen — the reason velvet and canvas glow at the edges.
-    float Ds = D_Charlie(NoH, rough);
-    float Vs = V_Ashikhmin(NoV, NoL);
-    col += Ds * Vs * 0.45 * cols[i] * NoL;
-  }
-
-  // transmission: a backlit cloth is lit from behind, not black
-  float back = clamp(dot(-n, normalize(L_KEY)), 0.0, 1.0);
-  col += albedo * pow(back, 2.5) * C_KEY * 0.30;
-
-  col += albedo * envColor(n, 0.95, uRimBoost) * 0.55;
-  vec2 ab = envBRDFApprox(NoV, rough);
-  col += envColor(reflect(-v, n), rough, uRimBoost) * (0.04 * ab.x + ab.y) * 0.7;
-
-  float fog = 1.0 - exp(-max(vDist - 3.0, 0.0) * 0.035);
-  col = mix(col, vec3(0.011, 0.013, 0.015), clamp(fog, 0.0, 0.9));
-
-  col *= uExposure * uFade;
-
-  oColor = vec4(col, 1.0);
-  oDist  = vec4(vDist, 0.0, 0.0, 1.0);
-}
-`;
-
 /* ── js/shaders/post.js ──────────────────────────────────────── */
 /* ══════════════════════════════════════════════════════════════════════════
    post.js — everything that happens after the scene exists.
@@ -3977,14 +3523,12 @@ function fmtShort(n) {
    renderer.js — the frame.
 
    raymarch ─┬─► scene HDR ──┐
-             └─► ray dist ───┤
-   particles ────────────────┼─► composite ─► TAA ─► bloom chain ─► final
-   cloth ────────────────────┘                        └─► streak ──┘
+             └─► ray dist ───┼─► composite ─► TAA ─► bloom chain ─► final
+   particles ────────────────┘                        └─► streak ──┘
 
-   Two float ping-pongs feed it: a quarter of a million particles and a
-   16 384-node cloth, both solved on the GPU before any of the above runs.
+   A quarter of a million particles are solved on the GPU before any of the
+   above runs, in one fullscreen pass with two colour attachments.
    ══════════════════════════════════════════════════════════════════════════ */
-
 
 
 
@@ -3997,10 +3541,10 @@ function fmtShort(n) {
 /* ── quality tiers ─────────────────────────────────────────────────────── */
 
 const TIERS = {
-  ultra:  { name: 'ultra',  steps: 128, transSteps: 44, reflSteps: 48, shadowSteps: 32, reflect: 1, sim: 512, cloth: 128, taa: 1, mips: 6, scale: 1.00, minScale: 0.60 },
-  high:   { name: 'high',   steps: 100, transSteps: 32, reflSteps: 40, shadowSteps: 28, reflect: 1, sim: 384, cloth: 128, taa: 1, mips: 6, scale: 0.90, minScale: 0.54 },
-  medium: { name: 'medium', steps:  74, transSteps: 20, reflSteps: 32, shadowSteps: 24, reflect: 1, sim: 256, cloth:  96, taa: 1, mips: 5, scale: 0.78, minScale: 0.48 },
-  low:    { name: 'low',    steps:  50, transSteps: 12, reflSteps: 20, shadowSteps: 14, reflect: 0, sim: 176, cloth:  72, taa: 0, mips: 4, scale: 0.60, minScale: 0.40 },
+  ultra:  { name: 'ultra',  steps: 128, transSteps: 44, reflSteps: 48, shadowSteps: 32, reflect: 1, sim: 512, taa: 1, mips: 6, scale: 1.00, minScale: 0.60 },
+  high:   { name: 'high',   steps: 100, transSteps: 32, reflSteps: 40, shadowSteps: 28, reflect: 1, sim: 384, taa: 1, mips: 6, scale: 0.90, minScale: 0.54 },
+  medium: { name: 'medium', steps:  74, transSteps: 20, reflSteps: 32, shadowSteps: 24, reflect: 1, sim: 256, taa: 1, mips: 5, scale: 0.78, minScale: 0.48 },
+  low:    { name: 'low',    steps:  50, transSteps: 12, reflSteps: 20, shadowSteps: 14, reflect: 0, sim: 176, taa: 0, mips: 4, scale: 0.60, minScale: 0.40 },
 };
 
 /* An upper bound on internal pixels, independent of the tier.
@@ -4009,7 +3553,10 @@ const TIERS = {
    already the CSS size times the device pixel ratio, so "ultra at 100%" on a
    4K panel asks for fourteen million pixels of raymarching. This clamps the
    product rather than the factor. */
-const MAX_INTERNAL_PIXELS = 2_400_000;
+const MAX_INTERNAL_PIXELS = 2_000_000;
+
+/* Cheapest to dearest. The adaptive controller walks this. */
+const TIER_ORDER = ['low', 'medium', 'high', 'ultra'];
 
 class Renderer {
   constructor(canvas, onLog = () => {}) {
@@ -4020,7 +3567,21 @@ class Renderer {
     this.gl = gl;
     this.caps = caps;
 
-    this.tier = TIERS[this.detectTier()];
+    /* Detection gives a CEILING, not a starting point.
+
+       Guessing a tier from core count and a renderer string and then opening
+       at it means the very first frame — the one that also pays for every
+       shader's first execution and every pipeline object the driver has to
+       build — is the heaviest frame the machine will ever draw. Getting that
+       guess wrong on unfamiliar hardware is what makes a tab stop responding.
+
+       So everyone starts at the smallest tier and the adaptive controller in
+       main.js promotes, one step at a time, only after the machine has held a
+       comfortable frame time for two solid seconds at full scale. A fast
+       machine reaches ultra within a few seconds and nobody ever sees a
+       first frame it could not afford. */
+    this.ceiling = this.detectTier();
+    this.tier = TIERS.low;
     this.renderScale = this.tier.scale;
     this.dprCap = 2.0;
 
@@ -4043,8 +3604,6 @@ class Renderer {
     this.resize(true);
     onLog('seeding particles');
     this.initParticles();
-    onLog('weaving cloth');
-    this.initCloth();
     onLog('drawing the wordmark');
     this.printTex = this.makePrintTexture();
     this.noiseTex = this.makeNoiseTexture();
@@ -4080,13 +3639,23 @@ class Renderer {
     return 'medium';
   }
 
+  /* One step toward the ceiling, or one step back. Returns the new name if
+     it actually moved, so the caller can reset its counters. */
+  stepTier(dir) {
+    const i = TIER_ORDER.indexOf(this.tier.name);
+    const capped = TIER_ORDER.indexOf(this.ceiling);
+    const next = Math.max(0, Math.min(dir > 0 ? capped : TIER_ORDER.length - 1, i + dir));
+    if (next === i) return null;
+    this.setTier(TIER_ORDER[next]);
+    return this.tier.name;
+  }
+
   setTier(name) {
     if (!TIERS[name] || this.tier.name === name) return;
     const old = this.tier;
     this.tier = TIERS[name];
     this.renderScale = this.tier.scale;
     if (old.sim !== this.tier.sim) { this.particles?.dispose(); this.initParticles(); }
-    if (old.cloth !== this.tier.cloth) { this.disposeCloth(); this.initCloth(); }
     this.resize(true);
   }
 
@@ -4103,9 +3672,6 @@ class Renderer {
     this.pRaymarch  = mk(RAYMARCH_FRAG, 'raymarch');
     this.pPartSim   = mk(PARTICLE_SIM_FRAG, 'particle.sim');
     this.pPartDraw  = new Program(gl, PARTICLE_VERT, PARTICLE_FRAG, 'particle.draw');
-    this.pClothInt  = mk(CLOTH_INTEGRATE_FRAG, 'cloth.integrate');
-    this.pClothRel  = mk(CLOTH_RELAX_FRAG, 'cloth.relax');
-    this.pClothDraw = new Program(gl, CLOTH_VERT, CLOTH_FRAG, 'cloth.draw');
     this.pComposite = mk(COMPOSITE_FRAG, 'composite');
     this.pTaa       = mk(TAA_FRAG, 'taa');
     this.pPrefilter = mk(BLOOM_PREFILTER_FRAG, 'bloom.prefilter');
@@ -4115,8 +3681,7 @@ class Renderer {
     this.pFinal     = mk(FINAL_FRAG, 'final');
 
     this.programs = [
-      this.pRaymarch, this.pPartSim, this.pPartDraw, this.pClothInt,
-      this.pClothRel, this.pClothDraw, this.pComposite, this.pTaa,
+      this.pRaymarch, this.pPartSim, this.pPartDraw, this.pComposite, this.pTaa,
       this.pPrefilter, this.pDown, this.pUp, this.pStreak, this.pFinal,
     ];
   }
@@ -4172,8 +3737,8 @@ class Renderer {
       return new Target(gl, ww, hh, opts);
     };
 
-    // scene: HDR colour + ray distance, sharing one depth buffer so the
-    // cloth can be occluded by a surface that exists only as a distance field
+    // scene: HDR colour + the ray distance, which the particle pass reads to
+    // fade sprites out as they approach the surface behind them
     this.tScene = this.tScene
       ? (this.tScene.resize(w, h), this.tScene)
       : new Target(gl, w, h, { formats: [HDR, FMT.R32F], depth: true, label: 'scene' });
@@ -4211,7 +3776,6 @@ class Renderer {
     if (this.ppTaa) b += targetBytes(this.ppTaa.a) + targetBytes(this.ppTaa.b);
     this.bloom?.forEach((t) => { b += targetBytes(t); });
     if (this.particles) b += targetBytes(this.particles.a) + targetBytes(this.particles.b);
-    if (this.cloth) b += targetBytes(this.cloth.a) + targetBytes(this.cloth.b);
     return b;
   }
 
@@ -4253,83 +3817,6 @@ class Renderer {
     gl.bindTexture(gl.TEXTURE_2D, null);
 
     this.particleVao = this.particleVao || gl.createVertexArray();
-  }
-
-  /* ── cloth ─────────────────────────────────────────────────────────── */
-
-  initCloth() {
-    const gl = this.gl;
-    const N = this.tier.cloth;
-    this.clothN = N;
-
-    // Offset to camera right rather than dead centre. Hung directly behind
-    // the sculpture the cloth still collides correctly, but every interesting
-    // part of it — the drape, the printed wordmark — ends up hidden behind
-    // the thing it is colliding with.
-    // In front of the sculpture (+z is toward the camera), and clear of it at
-    // rest. The wind then presses it back onto the sculpture, so the collision
-    // is something you watch happen rather than something already resolved.
-    this.clothOrigin = [0.78, -1.45, 0.85];
-    this.clothSize = [1.95, 2.35];
-
-    this.cloth = new PingPong(gl, N, N, {
-      formats: [FMT.RGBA32F, FMT.RGBA32F],
-      filter: gl.NEAREST,
-      label: 'cloth.state',
-    });
-
-    this.resetCloth();
-
-    // index buffer for the triangle grid
-    const quads = (N - 1) * (N - 1);
-    const idx = new Uint16Array(quads * 6);
-    let o = 0;
-    for (let y = 0; y < N - 1; y++) {
-      for (let x = 0; x < N - 1; x++) {
-        const i0 = y * N + x, i1 = i0 + 1, i2 = i0 + N, i3 = i2 + 1;
-        idx[o++] = i0; idx[o++] = i2; idx[o++] = i1;
-        idx[o++] = i1; idx[o++] = i2; idx[o++] = i3;
-      }
-    }
-    this.clothIndexCount = idx.length;
-
-    this.clothVao = this.clothVao || gl.createVertexArray();
-    gl.bindVertexArray(this.clothVao);
-    this.clothIbo = this.clothIbo || gl.createBuffer();
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.clothIbo);
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, idx, gl.STATIC_DRAW);
-    gl.bindVertexArray(null);
-  }
-
-  resetCloth() {
-    const gl = this.gl;
-    const N = this.clothN;
-    const data = new Float32Array(N * N * 4);
-    const [ox, oy, oz] = this.clothOrigin;
-    const [sw, sh] = this.clothSize;
-    for (let y = 0; y < N; y++) {
-      for (let x = 0; x < N; x++) {
-        const i = (y * N + x) * 4;
-        const u = x / (N - 1), v = y / (N - 1);
-        data[i + 0] = ox + (u - 0.5) * sw;
-        data[i + 1] = oy + v * sh;
-        data[i + 2] = oz;
-        data[i + 3] = 1;
-      }
-    }
-    for (const t of [this.cloth.a, this.cloth.b]) {
-      for (const tex of t.textures) {
-        gl.bindTexture(gl.TEXTURE_2D, tex);
-        gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, N, N, gl.RGBA, gl.FLOAT, data);
-      }
-    }
-    gl.bindTexture(gl.TEXTURE_2D, null);
-    this.clothPrevDt = 1 / 60;
-  }
-
-  disposeCloth() {
-    this.cloth?.dispose();
-    this.cloth = null;
   }
 
   /* A 64^3 lattice of random bytes, sampled with hardware trilinear filtering
@@ -4381,10 +3868,8 @@ class Renderer {
     x.textBaseline = 'middle';
 
     /* Fit the wordmark to the full width rather than picking a point size.
-       Whatever the cloth is draped over will hide part of it, so the print
-       has to be big enough that the visible part still reads — and the
-       repeated strips above and below guarantee something legible survives
-       wherever the drape happens to fall. */
+       Fitted to the full width rather than set at a chosen point size, so it
+       stays crisp whatever the texture resolution ends up being. */
     const fit = (text, targetW, weight, family) => {
       let size = S * 0.5;
       x.font = `${weight} ${size}px ${family}`;
@@ -4495,47 +3980,7 @@ class Renderer {
       this.particles.swap();
     }
 
-    /* ── 2. cloth solver ─────────────────────────────────────────────── */
-    if (p.clothOn > 0.001) {
-      const sub = clamp(dt, 1 / 240, 1 / 45);
-      {
-        const src = this.cloth.read, dst = this.cloth.write;
-        dst.bind(false);
-        const s = this.pClothInt.use();
-        s.tex('uCur', src.textures[0]).tex('uPrev', src.textures[1]);
-        s.setAll({
-          uN: [this.clothN, this.clothN],
-          uOrigin: this.clothOrigin, uSize: this.clothSize,
-          uDt: sub, uPrevDt: this.clothPrevDt, uTime: this.simTime,
-          uGravity: p.cGravity, uWind: p.cWind, uDamp: p.cDamp,
-          uPinned: p.cPinned,
-          uGrabPos: p.grabPos, uGrabIdx: p.grabIdx, uGrabActive: p.grabActive,
-        });
-        draw();
-        this.cloth.swap();
-        this.clothPrevDt = sub;
-      }
-
-      const iters = Math.round(p.cIters);
-      for (let i = 0; i < iters; i++) {
-        const src = this.cloth.read, dst = this.cloth.write;
-        dst.bind(false);
-        const s = this.pClothRel.use();
-        s.tex('uCur', src.textures[0]).tex('uPrev', src.textures[1])
-         .tex('uNoise', this.noiseTex, gl.TEXTURE_3D);
-        s.setAll({
-          uN: [this.clothN, this.clothN],
-          uOrigin: this.clothOrigin, uSize: this.clothSize,
-          uStiff: p.cStiff, uPinned: p.cPinned, uTime: this.simTime,
-          uShape: p.shape, uDetail: p.detail, uScale: p.scale,
-          uFloorY: -1.62, uFriction: 0.24,
-        });
-        draw();
-        this.cloth.swap();
-      }
-    }
-
-    /* ── 3. raymarch ─────────────────────────────────────────────────── */
+    /* ── 2. raymarch ─────────────────────────────────────────────────── */
     this.tScene.bind(true, 0, 0, 0, 1);
     gl.enable(gl.DEPTH_TEST);
     gl.depthMask(true);
@@ -4561,28 +4006,10 @@ class Renderer {
       draw();
     }
 
-    /* ── 4. cloth raster, into the same target ───────────────────────── */
-    if (p.clothOn > 0.001) {
-      gl.depthFunc(gl.LEQUAL);
-      gl.disable(gl.CULL_FACE);
-      const s = this.pClothDraw.use();
-      s.tex('uCur', this.cloth.read.textures[0]).tex('uPrint', this.printTex);
-      s.setAll({
-        uN: [this.clothN, this.clothN],
-        uOrigin: this.clothOrigin, uSize: this.clothSize,
-        uViewProj: this.viewProj, uCamPos: this.camPos,
-        uRimBoost: p.rimBoost, uExposure: p.sceneExposure, uFade: p.clothOn,
-      });
-      gl.bindVertexArray(this.clothVao);
-      gl.drawElements(gl.TRIANGLES, this.clothIndexCount, gl.UNSIGNED_SHORT, 0);
-      gl.bindVertexArray(null);
-      this.drawCalls++;
-    }
-
     gl.disable(gl.DEPTH_TEST);
     gl.depthMask(false);
 
-    /* ── 5. particles, additive, soft against the scene ──────────────── */
+    /* ── 3. particles, additive, soft against the scene ──────────────── */
     this.tParticles.bind(true, 0, 0, 0, 1);
     if (p.pGain > 0.001) {
       additive(gl, true);
@@ -4613,7 +4040,7 @@ class Renderer {
       additive(gl, false);
     }
 
-    /* ── 6. composite ────────────────────────────────────────────────── */
+    /* ── 4. composite ────────────────────────────────────────────────── */
     this.tComposite.bind(false);
     {
       const s = this.pComposite.use();
@@ -4622,7 +4049,7 @@ class Renderer {
       draw();
     }
 
-    /* ── 7. TAA ──────────────────────────────────────────────────────── */
+    /* ── 5. TAA ──────────────────────────────────────────────────────── */
     let lit = this.tComposite.tex;
     if (this.tier.taa && p.taa !== 0) {
       const dst = this.ppTaa.write;
@@ -4645,7 +4072,7 @@ class Renderer {
       this.taaReset = 0;
     }
 
-    /* ── 8. bloom ────────────────────────────────────────────────────── */
+    /* ── 6. bloom ────────────────────────────────────────────────────── */
     if (this.bloom.length) {
       this.bloom[0].bind(false);
       {
@@ -4681,7 +4108,7 @@ class Renderer {
       }
     }
 
-    /* ── 9. anamorphic streak ────────────────────────────────────────── */
+    /* ── 7. anamorphic streak ────────────────────────────────────────── */
     if (this.bloom.length && p.streak > 0.001) {
       const smallest = this.bloom[this.bloom.length - 1];
       this.tStreakA.bind(false);
@@ -4700,7 +4127,7 @@ class Renderer {
       }
     }
 
-    /* ── 10. final ───────────────────────────────────────────────────── */
+    /* ── 8. final ───────────────────────────────────────────────────── */
     toScreen(gl, this.canvas.width, this.canvas.height);
     {
       const s = this.pFinal.use();
@@ -4743,7 +4170,6 @@ class Renderer {
         this.buildPrograms();
         this.resize(true);
         this.initParticles();
-        this.initCloth();
         this.printTex = this.makePrintTexture();
         this.lost = false;
       } catch (err) {
@@ -4807,7 +4233,7 @@ const REPOS = [
   {
     name: 'winchxyz.github.io',
     group: 'graphics',
-    desc: 'This page. A portfolio that renders itself on the GPU — one WebGL2 context, four thousand lines of hand-written GLSL, and nothing else at all.',
+    desc: 'This page. A portfolio that renders itself on the GPU — one WebGL2 context, a few thousand lines of hand-written GLSL, and nothing else at all.',
     lang: 'JavaScript',
     stars: 0, forks: 0,
     tags: ['WebGL2', 'GLSL', 'raymarching', 'zero-deps'],
@@ -4998,26 +4424,14 @@ const MATERIALS = [
   },
 ];
 
-/* ── physics sliders ───────────────────────────────────────────────────── */
-
-const SLIDERS = [
-  { id: 'wind',    label: 'wind',        min: 0,   max: 3.0,  step: 0.01, val: 1.45, fmt: (v) => v.toFixed(2) + ' m/s' },
-  { id: 'gravity', label: 'gravity',     min: 0,   max: 24,   step: 0.1,  val: 9.81, fmt: (v) => v.toFixed(2) + ' m/s²' },
-  { id: 'stiff',   label: 'stiffness',   min: 0.1, max: 1.0,  step: 0.01, val: 0.72, fmt: (v) => v.toFixed(2) },
-  { id: 'damp',    label: 'damping',     min: 0.8, max: 1.0,  step: 0.002, val: 0.986, fmt: (v) => v.toFixed(3) },
-  { id: 'iters',   label: 'relaxations', min: 1,   max: 16,   step: 1,    val: 8,    fmt: (v) => v.toFixed(0) + ' / frame' },
-];
-
 /* ── keyboard ──────────────────────────────────────────────────────────── */
 
 const SHORTCUTS = [
   ['1 – 7',  'material preset'],
   ['drag',   'orbit the sculpture'],
-  ['grab',   'pull the cloth around'],
   ['P',      'photo mode — UI off, 2× render scale'],
   ['Enter',  'save a PNG'],
   ['G',      'performance readout'],
-  ['R',      'reset the cloth'],
   ['M',      'calm mode — halve the motion'],
   ['?',      'this list'],
 ];
@@ -5084,56 +4498,42 @@ const K = [
     pivot: [0, 0, 0], radius: R_BOUND,
     shape: 0.00, detail: 1.00, scale: 1.00, rimBoost: 0.0, sceneExposure: 1.0,
     pGain: 1.00, pCurl: 1.15, pAttract: 0.85, pTangent: 0.85, pSpin: 0.30, pSize: 1.6, pDamp: 0.55, pLife: 0.13,
-    clothOn: 0.0, bloom: 0.85, streak: 0.30, ca: 0.55, vignette: 0.72, grain: 0.030,
+    bloom: 0.85, streak: 0.30, ca: 0.55, vignette: 0.72, grain: 0.030,
   },
   { /* 01 whoami */
     yaw: -0.60, pitch: 0.17, fov: 39, fill: 0.66, fillW: 0.38, fx: 0.80, fy: 0.52,
     pivot: [0, 0, 0], radius: R_BOUND,
     shape: 0.85, detail: 0.75, scale: 0.98, rimBoost: 0.25, sceneExposure: 0.98,
     pGain: 0.62, pCurl: 0.85, pAttract: 1.15, pTangent: 0.95, pSpin: 0.20, pSize: 1.3, pDamp: 0.70, pLife: 0.11,
-    clothOn: 0.0, bloom: 0.72, streak: 0.22, ca: 0.45, vignette: 0.80, grain: 0.030,
+    bloom: 0.72, streak: 0.22, ca: 0.45, vignette: 0.80, grain: 0.030,
   },
   { /* 02 materials */
     yaw: -0.52, pitch: 0.08, fov: 38, fill: 0.52, fillW: 0.30, fx: 0.97, fy: 0.50,
     pivot: [0, 0, 0], radius: R_BOUND,
     shape: 0.06, detail: 0.55, scale: 1.06, rimBoost: 0.55, sceneExposure: 1.05,
     pGain: 0.30, pCurl: 0.55, pAttract: 1.35, pTangent: 1.00, pSpin: 0.12, pSize: 1.0, pDamp: 0.85, pLife: 0.09,
-    clothOn: 0.0, bloom: 0.95, streak: 0.42, ca: 0.60, vignette: 0.78, grain: 0.026,
+    bloom: 0.95, streak: 0.42, ca: 0.60, vignette: 0.78, grain: 0.026,
   },
-  { /* 03 physics — the cloth is the subject here, not the sculpture.
-
-       The sculpture used to sit at full size in front of the cloth, which
-       hid the one thing this section exists to show. It is now small and
-       BEHIND the cloth, so what you see is fabric deforming around a shape
-       you can only make out through it — which is the demonstration. */
-    // A three-quarter view, not head-on: folds and the bulge where the cloth
-    // meets the sculpture read in silhouette, and face-on they do not.
-    yaw: -0.30, pitch: 0.15, fov: 46, fill: 0.62, fillW: 0.35, fx: 0.86, fy: 0.50,
-    pivot: [0.35, -0.32, 0.42], radius: 2.6,
-    shape: 1.00, detail: 0.60, scale: 0.85, rimBoost: 0.30, sceneExposure: 0.95,
-    pGain: 0.22, pCurl: 0.70, pAttract: 0.60, pTangent: 0.60, pSpin: 0.10, pSize: 1.0, pDamp: 0.80, pLife: 0.10,
-    clothOn: 1.0, bloom: 0.70, streak: 0.18, ca: 0.40, vignette: 0.74, grain: 0.030,
-  },
-  { /* 04 work — the grid owns the page, so the sculpture sits high and small */
+  { /* 03 work — the grid owns the page, so the sculpture sits high and small */
     yaw: -0.68, pitch: 0.40, fov: 35, fill: 0.46, fillW: 0.28, fx: 0.74, fy: 0.24,
     pivot: [0, 0, 0], radius: R_BOUND,
     shape: 2.00, detail: 0.45, scale: 1.00, rimBoost: 0.15, sceneExposure: 0.92,
     pGain: 0.48, pCurl: 0.95, pAttract: 0.95, pTangent: 0.80, pSpin: 0.26, pSize: 1.2, pDamp: 0.65, pLife: 0.12,
-    clothOn: 0.0, bloom: 0.62, streak: 0.20, ca: 0.42, vignette: 0.86, grain: 0.032,
+    bloom: 0.62, streak: 0.20, ca: 0.42, vignette: 0.86, grain: 0.032,
   },
-  { /* 05 numbers */
+  { /* 04 numbers */
     yaw: -0.36, pitch: 0.50, fov: 37, fill: 0.54, fillW: 0.32, fx: 0.72, fy: 0.36,
     pivot: [0, 0, 0], radius: R_BOUND,
     shape: 2.55, detail: 0.50, scale: 0.96, rimBoost: 0.45, sceneExposure: 0.98,
     pGain: 0.78, pCurl: 1.20, pAttract: 1.05, pTangent: 0.90, pSpin: 0.34, pSize: 1.4, pDamp: 0.60, pLife: 0.14,
-    clothOn: 0.0, bloom: 0.78, streak: 0.30, ca: 0.50, vignette: 0.82, grain: 0.030,
+    bloom: 0.78, streak: 0.30, ca: 0.50, vignette: 0.82, grain: 0.030,
   },
-  { /* 06 contact */
+  { /* 05 contact */
     yaw: -0.26, pitch: 0.05, fov: 46, fill: 0.66, fillW: 0.38, fx: 0.80, fy: 0.52,
     pivot: [0, 0, 0], radius: R_BOUND,
     shape: 3.00, detail: 0.55, scale: 1.02, rimBoost: 1.05, sceneExposure: 1.08,
     pGain: 1.25, pCurl: 1.45, pAttract: 1.25, pTangent: 0.95, pSpin: 0.44, pSize: 1.8, pDamp: 0.50, pLife: 0.16,
-    clothOn: 0.0, bloom: 1.05, streak: 0.55, ca: 0.70, vignette: 0.66, grain: 0.028,
+    bloom: 1.05, streak: 0.55, ca: 0.70, vignette: 0.66, grain: 0.028,
   },
 ];
 
@@ -5169,8 +4569,6 @@ class Director {
     // user orbit, layered on top of the keyframe direction
     this.orbit = { yaw: 0, pitch: 0, vy: 0, vp: 0 };
 
-    this.cloth = { wind: 1.45, gravity: 9.81, stiff: 0.72, damp: 0.986, iters: 8, pinned: 1 };
-    this.grab = { active: 0, pos: [0, 0, 0], idx: [0, 0] };
 
     this.out = {};
   }
@@ -5372,16 +4770,6 @@ class Director {
     o.mouseRd = ray.rd;
     o.mouseForce = this.mouseForce;
 
-    o.clothOn = c.clothOn;
-    o.cWind = this.cloth.wind;
-    o.cGravity = this.cloth.gravity;
-    o.cStiff = this.cloth.stiff;
-    o.cDamp = this.cloth.damp;
-    o.cIters = this.cloth.iters;
-    o.cPinned = this.cloth.pinned;
-    o.grabActive = this.grab.active;
-    o.grabPos = this.grab.pos;
-    o.grabIdx = this.grab.idx;
 
     o.bloom = c.bloom;
     o.bloomThreshold = 1.05;
@@ -5437,7 +4825,6 @@ class UI {
     this.reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     this.onMaterial = () => {};
-    this.onSlider = () => {};
     this.onAction = () => {};
   }
 
@@ -5445,7 +4832,6 @@ class UI {
 
   build() {
     this.buildMaterials();
-    this.buildSliders();
     this.buildWork();
     this.buildRail();
     this.buildShortcuts();
@@ -5503,34 +4889,6 @@ class UI {
     });
 
     if (!silent) this.onMaterial(i);
-  }
-
-  buildSliders() {
-    const host = $('#sliders');
-    this.sliderValues = {};
-    SLIDERS.forEach((s) => {
-      this.sliderValues[s.id] = s.val;
-      const wrap = el('div', 'slider');
-      const top = el('div', 'slider-top', `<span>${s.label}</span><b data-v="${s.id}">${s.fmt(s.val)}</b>`);
-      const input = el('input');
-      input.type = 'range';
-      input.min = s.min; input.max = s.max; input.step = s.step; input.value = s.val;
-      input.setAttribute('aria-label', s.label);
-      const paint = () => {
-        const p = ((input.value - s.min) / (s.max - s.min)) * 100;
-        input.style.setProperty('--p', p + '%');
-      };
-      paint();
-      input.addEventListener('input', () => {
-        const v = parseFloat(input.value);
-        this.sliderValues[s.id] = v;
-        $(`[data-v="${s.id}"]`).textContent = s.fmt(v);
-        paint();
-        this.onSlider(s.id, v);
-      });
-      wrap.append(top, input);
-      host.appendChild(wrap);
-    });
   }
 
   buildWork() {
@@ -5770,7 +5128,6 @@ class UI {
     $('#hud-ms').textContent = ms.toFixed(1);
     $('#hud-res').textContent = `${renderer.iw}×${renderer.ih} · ${(renderer.renderScale * 100).toFixed(0)}%`;
     $('#hud-parts').textContent = fmt(renderer.particleCount);
-    $('#hud-cloth').textContent = `${renderer.clothN}² · ${fmt(renderer.clothN * renderer.clothN * 12)} links`;
     $('#hud-passes').textContent = `${renderer.drawCalls} draws · ${(renderer.vramBytes() / 1048576).toFixed(0)} MB`;
     $('#hud-tier').textContent = renderer.tier.name;
 
@@ -5800,22 +5157,6 @@ class UI {
   /* The physics readout. This element existed in the markup from the start
      and nothing ever wrote to it, so it rendered as an empty bordered box —
      which reads as a loading state that never finishes. */
-  updatePhysReadout(renderer, director) {
-    const el2 = $('#phys-readout');
-    if (!el2 || !renderer) return;
-    const nodes = renderer.clothN * renderer.clothN;
-    const iters = Math.round(director.cloth.iters);
-    const rows = [
-      ['nodes', fmt(nodes)],
-      ['constraints', fmt(nodes * 12)],
-      ['solves / frame', fmt(nodes * 12 * iters)],
-      ['integrator', 'Verlet'],
-      ['relaxation', 'Jacobi ω 1.72'],
-      ['collision', 'SDF + floor'],
-    ];
-    const next = rows.map(([k, v]) => `<div>${k} <b>${v}</b></div>`).join('');
-    if (el2.innerHTML !== next) el2.innerHTML = next;
-  }
 
   /* ── toast ─────────────────────────────────────────────────────────── */
 
@@ -5906,10 +5247,8 @@ class UI {
 
 
 
-
 const GLSL_LINES = [
   RAYMARCH_FRAG, PARTICLE_SIM_FRAG, PARTICLE_VERT, PARTICLE_FRAG,
-  CLOTH_INTEGRATE_FRAG, CLOTH_RELAX_FRAG, CLOTH_VERT, CLOTH_FRAG,
   COMPOSITE_FRAG, TAA_FRAG, BLOOM_PREFILTER_FRAG, BLOOM_DOWN_FRAG,
   BLOOM_UP_FRAG, STREAK_FRAG, FINAL_FRAG,
 ].reduce((n, s) => n + s.split('\n').filter((l) => l.trim()).length, 0);
@@ -5965,7 +5304,7 @@ async function boot() {
   setBootAttempts(failed + 1);
 
   // The wordmark is drawn into a texture with fillText, so the font has to
-  // exist first — otherwise the cloth ends up printed in Times New Roman.
+  // exist first — otherwise the wordmark texture is set in Times New Roman.
   try {
     await Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 2500))]);
   } catch { /* no font loading API — the fallback stack is fine */ }
@@ -5988,11 +5327,11 @@ async function boot() {
     renderer.setTier(forced);
     ui.boot(`forced tier: ${forced}`, 0.6);
   } else if (failed > 0) {
-    const step = ['low', 'medium', 'high', 'ultra'];
-    const now = step.indexOf(renderer.tier.name);
-    const down = step[Math.max(0, now - failed)];
-    renderer.setTier(down);
-    ui.boot(`previous load did not finish — using ${down}`, 0.6);
+    // A load that never finished lowers the ceiling, not the starting tier —
+    // everyone already starts at the bottom.
+    const i = TIER_ORDER.indexOf(renderer.ceiling);
+    renderer.ceiling = TIER_ORDER[Math.max(0, i - failed)];
+    ui.boot(`previous load did not finish — capped at ${renderer.ceiling}`, 0.6);
   }
 
   // The driver is compiling on its own threads right now; this loop just
@@ -6006,7 +5345,6 @@ async function boot() {
   wireInput();
   wireKeys();
   populateNumbers();
-  ui.updatePhysReadout(renderer, director);
 
   // Render a couple of frames before revealing anything, so the first thing
   // anyone sees is a finished image rather than a compile hitch.
@@ -6076,16 +5414,14 @@ function failGracefully(err) {
 
 function populateNumbers() {
   if (!renderer) return;
-  const nodes = renderer.clothN * renderer.clothN;
-  const links = nodes * 12;
   ui.buildNumbers([
     [fmt(renderer.particleCount), '', 'particles, solved on the gpu'],
-    [fmt(nodes), '', 'cloth nodes, verlet integrated'],
-    [fmt(links * Math.round(director.cloth.iters)), '', 'constraint solves per frame'],
+    [String(renderer.programs.length), '', 'shader programs, linked at load'],
     [fmt(GLSL_LINES), '', 'lines of glsl, hand written'],
     [String(renderer.drawCalls), '', 'draw calls per frame'],
     [`${renderer.iw}×${renderer.ih}`, '', 'internal render resolution'],
     [(renderer.vramBytes() / 1048576).toFixed(0), 'MB', 'render targets in vram'],
+    [String(MATERIALS.length), '', 'materials, none of them textured'],
     ['0', '', 'dependencies · asset files · build steps'],
   ]);
 }
@@ -6097,9 +5433,7 @@ function wireInput() {
   const orbit = director.orbit;   // the director owns it; drag just adds velocity
 
   let dragging = false;
-  let mode = null;          // 'orbit' | 'cloth'
   let lastX = 0, lastY = 0;
-  let grabDist = 3;
 
   const norm = (e) => [(e.clientX / innerWidth) * 2 - 1, -((e.clientY / innerHeight) * 2 - 1)];
 
@@ -6109,18 +5443,10 @@ function wireInput() {
     director.mouse.y = ny;
     director.mouse.inside = true;
 
-    if (dragging && mode === 'orbit') {
+    if (dragging) {
       orbit.vy += (e.clientX - lastX) * 0.0045;
       orbit.vp += (e.clientY - lastY) * 0.0035;
       lastX = e.clientX; lastY = e.clientY;
-    }
-    if (dragging && mode === 'cloth' && renderer) {
-      const r = renderer.mouseRay(nx, ny);
-      director.grab.pos = [
-        r.ro[0] + r.rd[0] * grabDist,
-        r.ro[1] + r.rd[1] * grabDist,
-        r.ro[2] + r.rd[2] * grabDist,
-      ];
     }
   }, { passive: true });
 
@@ -6130,41 +5456,13 @@ function wireInput() {
     dragging = true;
     director.mouse.down = true;
     lastX = e.clientX; lastY = e.clientY;
-
-    const inPhysics = ui.section === 3;
-    if (inPhysics && renderer) {
-      mode = 'cloth';
-      const [nx, ny] = norm(e);
-      const r = renderer.mouseRay(nx, ny);
-      // Intersect the mouse ray with the plane the cloth hangs in, then hold
-      // the grabbed point at that distance for the rest of the drag — the
-      // usual "drag parallel to the screen" behaviour.
-      const planeZ = renderer.clothOrigin[2];
-      const t = Math.abs(r.rd[2]) > 1e-4 ? (planeZ - r.ro[2]) / r.rd[2] : 3;
-      grabDist = clamp(t, 1.2, 9);
-      const hit = [r.ro[0] + r.rd[0] * grabDist, r.ro[1] + r.rd[1] * grabDist, r.ro[2] + r.rd[2] * grabDist];
-
-      const [ox, oy] = renderer.clothOrigin;
-      const [sw, sh] = renderer.clothSize;
-      const u = clamp((hit[0] - ox) / sw + 0.5, 0, 1);
-      const v = clamp((hit[1] - oy) / sh, 0, 1);
-      director.grab.idx = [u * (renderer.clothN - 1), v * (renderer.clothN - 1)];
-      director.grab.pos = hit;
-      director.grab.active = 1;
-      document.body.classList.add('cur-drag');
-      ui.setCursorLabel('pulling');
-    } else {
-      mode = 'orbit';
-      document.body.classList.add('cur-drag');
-      ui.setCursorLabel('orbit');
-    }
+    document.body.classList.add('cur-drag');
+    ui.setCursorLabel('orbit');
   });
 
   const end = () => {
     dragging = false;
-    mode = null;
     director.mouse.down = false;
-    director.grab.active = 0;
     document.body.classList.remove('cur-drag');
   };
   addEventListener('pointerup', end);
@@ -6188,31 +5486,15 @@ function wireInput() {
     ui.flash(`material <b>${String(i + 1).padStart(2, '0')}</b> · ${MATERIALS[i].name.toLowerCase()}`);
   };
 
-  ui.onSlider = (id, v) => {
-    if (id === 'wind') director.cloth.wind = v;
-    if (id === 'gravity') director.cloth.gravity = v;
-    if (id === 'stiff') director.cloth.stiff = v;
-    if (id === 'damp') director.cloth.damp = v;
-    if (id === 'iters') { director.cloth.iters = v; populateNumbers(); }
-    ui.updatePhysReadout(renderer, director);
-  };
-
-  $$('[data-action="reset-cloth"]').forEach((b) => b.addEventListener('click', () => {
-    renderer?.resetCloth();
-    director.cloth.pinned = 1;
-    ui.flash('cloth reset');
-  }));
-  $$('[data-action="tear-cloth"]').forEach((b) => b.addEventListener('click', () => {
-    director.cloth.pinned = director.cloth.pinned > 0.5 ? 0 : 1;
-    ui.flash(director.cloth.pinned > 0.5 ? 'pinned' : 'cut loose');
-  }));
-
-  addEventListener('resize', () => { ui.measure(); renderer?.resize(); renderer?.markCameraCut(); }, { passive: true });
+  addEventListener('resize', () => {
+    ui.measure(); renderer?.resize(); renderer?.markCameraCut();
+    // a different monitor can mean a different refresh rate
+    refreshMs = 999; resetHeadroom();
+  }, { passive: true });
 
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden) last = performance.now();
   });
-
 }
 
 function wireKeys() {
@@ -6234,7 +5516,6 @@ function wireKeys() {
         break;
       }
       case 'g': ui.flash(ui.toggleHud() ? 'readout on' : 'readout off'); break;
-      case 'r': renderer?.resetCloth(); ui.flash('cloth reset'); break;
       case 'm': {
         director.calm = !director.calm;
         ui.flash(director.calm ? 'calm mode' : 'calm mode off');
@@ -6263,20 +5544,79 @@ function wireKeys() {
 /* ── adaptive resolution ─────────────────────────────────────────────────
    Hysteresis, a dead band, and a cooldown. Without all three it oscillates
    between two scales at exactly the frequency that is most visible. */
+/* ── how much headroom is there? ──────────────────────────────────────────
+   Not milliseconds. Rendering is locked to the display, so the frame delta
+   sits at the refresh interval — 16.7 ms on a 60 Hz panel — whether the GPU
+   finished in two milliseconds or in sixteen. A threshold like "under 11 ms
+   means promote" can therefore never be true, and the first version of this
+   controller would have sat at the lowest tier forever on any machine.
+
+   What vsync does reveal is MISSED frames. Take the fastest frame observed as
+   the refresh interval, then count how often the delta runs long. A drop rate
+   near zero means real headroom; a high one means the machine is struggling
+   no matter what the average says. */
+const DROP_WIN = 120;
+const dropWin = new Uint8Array(DROP_WIN);
+let dropIdx = 0, dropSum = 0, refreshMs = 999;
+
+function noteFrame(rawMs) {
+  if (rawMs > 5 && rawMs < 40) refreshMs = Math.min(refreshMs, rawMs);
+  const bad = rawMs > refreshMs * 1.55 ? 1 : 0;
+  dropSum -= dropWin[dropIdx];
+  dropWin[dropIdx] = bad;
+  dropSum += bad;
+  dropIdx = (dropIdx + 1) % DROP_WIN;
+}
+const dropRate = () => dropSum / DROP_WIN;
+function resetHeadroom() { dropWin.fill(0); dropSum = 0; dropIdx = 0; }
+
+let comfy = 0;      // consecutive frames with real headroom, at full scale
+let strained = 0;   // consecutive frames struggling at the smallest scale
+
 function adapt(dt) {
   if (director.photo) return;
   scaleCooldown -= 1;
   if (scaleCooldown > 0) return;
 
   const t = renderer.tier;
-  if (msAvg > 22 && renderer.renderScale > t.minScale) {
+  const atTop = renderer.renderScale >= t.scale - 1e-3;
+  const atBottom = renderer.renderScale <= t.minScale + 1e-3;
+  const drops = dropRate();
+
+  // resolution first — it is free to change and invisible at these steps
+  if (drops > 0.12 && !atBottom) {
     renderer.renderScale = Math.max(t.minScale, renderer.renderScale - 0.07);
     renderer.resize(true); renderer.markCameraCut();
-    scaleCooldown = 60;
-  } else if (msAvg < 12.5 && renderer.renderScale < t.scale) {
+    scaleCooldown = 60; comfy = 0; strained = 0; resetHeadroom();
+    return;
+  }
+  if (drops < 0.02 && !atTop) {
     renderer.renderScale = Math.min(t.scale, renderer.renderScale + 0.05);
     renderer.resize(true); renderer.markCameraCut();
-    scaleCooldown = 90;
+    scaleCooldown = 90; comfy = 0; resetHeadroom();
+    return;
+  }
+
+  /* Then the tier. Promotion needs two seconds of genuine headroom at full
+     scale, not one lucky frame — stepping up costs a reallocation and a
+     bigger particle buffer, and thrashing between tiers is worse than
+     sitting one below the best one. */
+  if (atTop && drops < 0.02) {
+    strained = 0;
+    if (++comfy > 120) {
+      comfy = 0;
+      const now = renderer.stepTier(+1);
+      if (now) { scaleCooldown = 150; resetHeadroom(); }
+    }
+  } else if (atBottom && drops > 0.30) {
+    comfy = 0;
+    if (++strained > 90) {
+      strained = 0;
+      const now = renderer.stepTier(-1);
+      if (now) { scaleCooldown = 180; resetHeadroom(); }
+    }
+  } else {
+    comfy = 0; strained = 0;
   }
 }
 
@@ -6307,12 +5647,13 @@ function loop(now) {
   renderer.render(p, dt);
 
   const ms = performance.now() - now;
+  noteFrame(raw * 1000);
   msAvg = damp(msAvg, Math.max(ms, raw * 1000), 3.0, dt);
   fpsAvg = damp(fpsAvg, 1 / Math.max(raw, 1e-4), 2.0, dt);
   adapt(dt);
   ui.updateHud(renderer, msAvg, fpsAvg);
 
-  if (renderer.frame % 90 === 0) { populateNumbers(); ui.updatePhysReadout(renderer, director); }
+  if (renderer.frame % 90 === 0) populateNumbers();
 }
 
 /* ── go ────────────────────────────────────────────────────────────────── */

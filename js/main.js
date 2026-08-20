@@ -2,7 +2,7 @@
    main.js — boot, input, and the loop.
    ══════════════════════════════════════════════════════════════════════════ */
 
-import { Renderer, TIERS } from './renderer.js';
+import { Renderer, TIERS, TIER_ORDER } from './renderer.js';
 import { Director } from './director.js';
 import { UI, $, $$ } from './ui.js';
 import { clamp, damp, fmt } from './math.js';
@@ -10,12 +10,10 @@ import { MATERIALS } from './content.js';
 
 import { RAYMARCH_FRAG } from './shaders/raymarch.js';
 import { PARTICLE_SIM_FRAG, PARTICLE_VERT, PARTICLE_FRAG } from './shaders/particles.js';
-import { CLOTH_INTEGRATE_FRAG, CLOTH_RELAX_FRAG, CLOTH_VERT, CLOTH_FRAG } from './shaders/cloth.js';
 import { COMPOSITE_FRAG, TAA_FRAG, BLOOM_PREFILTER_FRAG, BLOOM_DOWN_FRAG, BLOOM_UP_FRAG, STREAK_FRAG, FINAL_FRAG } from './shaders/post.js';
 
 const GLSL_LINES = [
   RAYMARCH_FRAG, PARTICLE_SIM_FRAG, PARTICLE_VERT, PARTICLE_FRAG,
-  CLOTH_INTEGRATE_FRAG, CLOTH_RELAX_FRAG, CLOTH_VERT, CLOTH_FRAG,
   COMPOSITE_FRAG, TAA_FRAG, BLOOM_PREFILTER_FRAG, BLOOM_DOWN_FRAG,
   BLOOM_UP_FRAG, STREAK_FRAG, FINAL_FRAG,
 ].reduce((n, s) => n + s.split('\n').filter((l) => l.trim()).length, 0);
@@ -71,7 +69,7 @@ async function boot() {
   setBootAttempts(failed + 1);
 
   // The wordmark is drawn into a texture with fillText, so the font has to
-  // exist first — otherwise the cloth ends up printed in Times New Roman.
+  // exist first — otherwise the wordmark texture is set in Times New Roman.
   try {
     await Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 2500))]);
   } catch { /* no font loading API — the fallback stack is fine */ }
@@ -94,11 +92,11 @@ async function boot() {
     renderer.setTier(forced);
     ui.boot(`forced tier: ${forced}`, 0.6);
   } else if (failed > 0) {
-    const step = ['low', 'medium', 'high', 'ultra'];
-    const now = step.indexOf(renderer.tier.name);
-    const down = step[Math.max(0, now - failed)];
-    renderer.setTier(down);
-    ui.boot(`previous load did not finish — using ${down}`, 0.6);
+    // A load that never finished lowers the ceiling, not the starting tier —
+    // everyone already starts at the bottom.
+    const i = TIER_ORDER.indexOf(renderer.ceiling);
+    renderer.ceiling = TIER_ORDER[Math.max(0, i - failed)];
+    ui.boot(`previous load did not finish — capped at ${renderer.ceiling}`, 0.6);
   }
 
   // The driver is compiling on its own threads right now; this loop just
@@ -112,7 +110,6 @@ async function boot() {
   wireInput();
   wireKeys();
   populateNumbers();
-  ui.updatePhysReadout(renderer, director);
 
   // Render a couple of frames before revealing anything, so the first thing
   // anyone sees is a finished image rather than a compile hitch.
@@ -182,16 +179,14 @@ function failGracefully(err) {
 
 function populateNumbers() {
   if (!renderer) return;
-  const nodes = renderer.clothN * renderer.clothN;
-  const links = nodes * 12;
   ui.buildNumbers([
     [fmt(renderer.particleCount), '', 'particles, solved on the gpu'],
-    [fmt(nodes), '', 'cloth nodes, verlet integrated'],
-    [fmt(links * Math.round(director.cloth.iters)), '', 'constraint solves per frame'],
+    [String(renderer.programs.length), '', 'shader programs, linked at load'],
     [fmt(GLSL_LINES), '', 'lines of glsl, hand written'],
     [String(renderer.drawCalls), '', 'draw calls per frame'],
     [`${renderer.iw}×${renderer.ih}`, '', 'internal render resolution'],
     [(renderer.vramBytes() / 1048576).toFixed(0), 'MB', 'render targets in vram'],
+    [String(MATERIALS.length), '', 'materials, none of them textured'],
     ['0', '', 'dependencies · asset files · build steps'],
   ]);
 }
@@ -203,9 +198,7 @@ function wireInput() {
   const orbit = director.orbit;   // the director owns it; drag just adds velocity
 
   let dragging = false;
-  let mode = null;          // 'orbit' | 'cloth'
   let lastX = 0, lastY = 0;
-  let grabDist = 3;
 
   const norm = (e) => [(e.clientX / innerWidth) * 2 - 1, -((e.clientY / innerHeight) * 2 - 1)];
 
@@ -215,18 +208,10 @@ function wireInput() {
     director.mouse.y = ny;
     director.mouse.inside = true;
 
-    if (dragging && mode === 'orbit') {
+    if (dragging) {
       orbit.vy += (e.clientX - lastX) * 0.0045;
       orbit.vp += (e.clientY - lastY) * 0.0035;
       lastX = e.clientX; lastY = e.clientY;
-    }
-    if (dragging && mode === 'cloth' && renderer) {
-      const r = renderer.mouseRay(nx, ny);
-      director.grab.pos = [
-        r.ro[0] + r.rd[0] * grabDist,
-        r.ro[1] + r.rd[1] * grabDist,
-        r.ro[2] + r.rd[2] * grabDist,
-      ];
     }
   }, { passive: true });
 
@@ -236,41 +221,13 @@ function wireInput() {
     dragging = true;
     director.mouse.down = true;
     lastX = e.clientX; lastY = e.clientY;
-
-    const inPhysics = ui.section === 3;
-    if (inPhysics && renderer) {
-      mode = 'cloth';
-      const [nx, ny] = norm(e);
-      const r = renderer.mouseRay(nx, ny);
-      // Intersect the mouse ray with the plane the cloth hangs in, then hold
-      // the grabbed point at that distance for the rest of the drag — the
-      // usual "drag parallel to the screen" behaviour.
-      const planeZ = renderer.clothOrigin[2];
-      const t = Math.abs(r.rd[2]) > 1e-4 ? (planeZ - r.ro[2]) / r.rd[2] : 3;
-      grabDist = clamp(t, 1.2, 9);
-      const hit = [r.ro[0] + r.rd[0] * grabDist, r.ro[1] + r.rd[1] * grabDist, r.ro[2] + r.rd[2] * grabDist];
-
-      const [ox, oy] = renderer.clothOrigin;
-      const [sw, sh] = renderer.clothSize;
-      const u = clamp((hit[0] - ox) / sw + 0.5, 0, 1);
-      const v = clamp((hit[1] - oy) / sh, 0, 1);
-      director.grab.idx = [u * (renderer.clothN - 1), v * (renderer.clothN - 1)];
-      director.grab.pos = hit;
-      director.grab.active = 1;
-      document.body.classList.add('cur-drag');
-      ui.setCursorLabel('pulling');
-    } else {
-      mode = 'orbit';
-      document.body.classList.add('cur-drag');
-      ui.setCursorLabel('orbit');
-    }
+    document.body.classList.add('cur-drag');
+    ui.setCursorLabel('orbit');
   });
 
   const end = () => {
     dragging = false;
-    mode = null;
     director.mouse.down = false;
-    director.grab.active = 0;
     document.body.classList.remove('cur-drag');
   };
   addEventListener('pointerup', end);
@@ -294,31 +251,15 @@ function wireInput() {
     ui.flash(`material <b>${String(i + 1).padStart(2, '0')}</b> · ${MATERIALS[i].name.toLowerCase()}`);
   };
 
-  ui.onSlider = (id, v) => {
-    if (id === 'wind') director.cloth.wind = v;
-    if (id === 'gravity') director.cloth.gravity = v;
-    if (id === 'stiff') director.cloth.stiff = v;
-    if (id === 'damp') director.cloth.damp = v;
-    if (id === 'iters') { director.cloth.iters = v; populateNumbers(); }
-    ui.updatePhysReadout(renderer, director);
-  };
-
-  $$('[data-action="reset-cloth"]').forEach((b) => b.addEventListener('click', () => {
-    renderer?.resetCloth();
-    director.cloth.pinned = 1;
-    ui.flash('cloth reset');
-  }));
-  $$('[data-action="tear-cloth"]').forEach((b) => b.addEventListener('click', () => {
-    director.cloth.pinned = director.cloth.pinned > 0.5 ? 0 : 1;
-    ui.flash(director.cloth.pinned > 0.5 ? 'pinned' : 'cut loose');
-  }));
-
-  addEventListener('resize', () => { ui.measure(); renderer?.resize(); renderer?.markCameraCut(); }, { passive: true });
+  addEventListener('resize', () => {
+    ui.measure(); renderer?.resize(); renderer?.markCameraCut();
+    // a different monitor can mean a different refresh rate
+    refreshMs = 999; resetHeadroom();
+  }, { passive: true });
 
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden) last = performance.now();
   });
-
 }
 
 function wireKeys() {
@@ -340,7 +281,6 @@ function wireKeys() {
         break;
       }
       case 'g': ui.flash(ui.toggleHud() ? 'readout on' : 'readout off'); break;
-      case 'r': renderer?.resetCloth(); ui.flash('cloth reset'); break;
       case 'm': {
         director.calm = !director.calm;
         ui.flash(director.calm ? 'calm mode' : 'calm mode off');
@@ -369,20 +309,79 @@ function wireKeys() {
 /* ── adaptive resolution ─────────────────────────────────────────────────
    Hysteresis, a dead band, and a cooldown. Without all three it oscillates
    between two scales at exactly the frequency that is most visible. */
+/* ── how much headroom is there? ──────────────────────────────────────────
+   Not milliseconds. Rendering is locked to the display, so the frame delta
+   sits at the refresh interval — 16.7 ms on a 60 Hz panel — whether the GPU
+   finished in two milliseconds or in sixteen. A threshold like "under 11 ms
+   means promote" can therefore never be true, and the first version of this
+   controller would have sat at the lowest tier forever on any machine.
+
+   What vsync does reveal is MISSED frames. Take the fastest frame observed as
+   the refresh interval, then count how often the delta runs long. A drop rate
+   near zero means real headroom; a high one means the machine is struggling
+   no matter what the average says. */
+const DROP_WIN = 120;
+const dropWin = new Uint8Array(DROP_WIN);
+let dropIdx = 0, dropSum = 0, refreshMs = 999;
+
+function noteFrame(rawMs) {
+  if (rawMs > 5 && rawMs < 40) refreshMs = Math.min(refreshMs, rawMs);
+  const bad = rawMs > refreshMs * 1.55 ? 1 : 0;
+  dropSum -= dropWin[dropIdx];
+  dropWin[dropIdx] = bad;
+  dropSum += bad;
+  dropIdx = (dropIdx + 1) % DROP_WIN;
+}
+const dropRate = () => dropSum / DROP_WIN;
+function resetHeadroom() { dropWin.fill(0); dropSum = 0; dropIdx = 0; }
+
+let comfy = 0;      // consecutive frames with real headroom, at full scale
+let strained = 0;   // consecutive frames struggling at the smallest scale
+
 function adapt(dt) {
   if (director.photo) return;
   scaleCooldown -= 1;
   if (scaleCooldown > 0) return;
 
   const t = renderer.tier;
-  if (msAvg > 22 && renderer.renderScale > t.minScale) {
+  const atTop = renderer.renderScale >= t.scale - 1e-3;
+  const atBottom = renderer.renderScale <= t.minScale + 1e-3;
+  const drops = dropRate();
+
+  // resolution first — it is free to change and invisible at these steps
+  if (drops > 0.12 && !atBottom) {
     renderer.renderScale = Math.max(t.minScale, renderer.renderScale - 0.07);
     renderer.resize(true); renderer.markCameraCut();
-    scaleCooldown = 60;
-  } else if (msAvg < 12.5 && renderer.renderScale < t.scale) {
+    scaleCooldown = 60; comfy = 0; strained = 0; resetHeadroom();
+    return;
+  }
+  if (drops < 0.02 && !atTop) {
     renderer.renderScale = Math.min(t.scale, renderer.renderScale + 0.05);
     renderer.resize(true); renderer.markCameraCut();
-    scaleCooldown = 90;
+    scaleCooldown = 90; comfy = 0; resetHeadroom();
+    return;
+  }
+
+  /* Then the tier. Promotion needs two seconds of genuine headroom at full
+     scale, not one lucky frame — stepping up costs a reallocation and a
+     bigger particle buffer, and thrashing between tiers is worse than
+     sitting one below the best one. */
+  if (atTop && drops < 0.02) {
+    strained = 0;
+    if (++comfy > 120) {
+      comfy = 0;
+      const now = renderer.stepTier(+1);
+      if (now) { scaleCooldown = 150; resetHeadroom(); }
+    }
+  } else if (atBottom && drops > 0.30) {
+    comfy = 0;
+    if (++strained > 90) {
+      strained = 0;
+      const now = renderer.stepTier(-1);
+      if (now) { scaleCooldown = 180; resetHeadroom(); }
+    }
+  } else {
+    comfy = 0; strained = 0;
   }
 }
 
@@ -413,12 +412,13 @@ function loop(now) {
   renderer.render(p, dt);
 
   const ms = performance.now() - now;
+  noteFrame(raw * 1000);
   msAvg = damp(msAvg, Math.max(ms, raw * 1000), 3.0, dt);
   fpsAvg = damp(fpsAvg, 1 / Math.max(raw, 1e-4), 2.0, dt);
   adapt(dt);
   ui.updateHud(renderer, msAvg, fpsAvg);
 
-  if (renderer.frame % 90 === 0) { populateNumbers(); ui.updatePhysReadout(renderer, director); }
+  if (renderer.frame % 90 === 0) populateNumbers();
 }
 
 /* ── go ────────────────────────────────────────────────────────────────── */

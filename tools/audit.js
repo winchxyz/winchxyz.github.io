@@ -143,6 +143,29 @@ export function run() {
   return out;
 }
 
+/* Every distinct text style on the page, with its computed size, so type
+   can be argued about with numbers instead of adjectives. */
+export function type() {
+  const seen = new Map();
+  for (const el of document.querySelectorAll('body *')) {
+    if (isOverlay(el) || !isTextLeaf(el)) continue;
+    const r = el.getBoundingClientRect();
+    if (!visible(el, r)) continue;
+    const cs = getComputedStyle(el);
+    const key = `${el.tagName.toLowerCase()}.${(typeof el.className === 'string' ? el.className : '').trim().split(/\s+/)[0] || '-'}`;
+    if (seen.has(key)) return_or_skip: { continue; }
+    seen.set(key, {
+      px: +parseFloat(cs.fontSize).toFixed(1),
+      weight: cs.fontWeight,
+      lh: +parseFloat(cs.lineHeight).toFixed(1),
+      sample: (el.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 28),
+    });
+  }
+  return [...seen.entries()]
+    .map(([k, v]) => ({ sel: k, ...v }))
+    .sort((a, b) => a.px - b.px);
+}
+
 /* Walk every section first, so anything gated on scrolling into view has
    actually been laid out before it is measured. */
 export async function sweep() {
@@ -154,4 +177,15 @@ export async function sweep() {
   scrollTo({ top: 0, behavior: 'auto' });
   await new Promise((r) => setTimeout(r, 260));
   return run();
+}
+
+export async function sweepType() {
+  const secs = [...document.querySelectorAll('.sec')];
+  const all = new Map();
+  for (const s of secs) {
+    scrollTo({ top: s.offsetTop, behavior: 'auto' });
+    await new Promise((r) => setTimeout(r, 200));
+    for (const t of type()) if (!all.has(t.sel)) all.set(t.sel, t);
+  }
+  return [...all.values()].sort((a, b) => a.px - b.px);
 }

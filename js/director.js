@@ -59,56 +59,42 @@ const K = [
     pivot: [0, 0, 0], radius: R_BOUND,
     shape: 0.00, detail: 1.00, scale: 1.00, rimBoost: 0.0, sceneExposure: 1.0,
     pGain: 1.00, pCurl: 1.15, pAttract: 0.85, pTangent: 0.85, pSpin: 0.30, pSize: 1.6, pDamp: 0.55, pLife: 0.13,
-    clothOn: 0.0, bloom: 0.85, streak: 0.30, ca: 0.55, vignette: 0.72, grain: 0.030,
+    bloom: 0.85, streak: 0.30, ca: 0.55, vignette: 0.72, grain: 0.030,
   },
   { /* 01 whoami */
     yaw: -0.60, pitch: 0.17, fov: 39, fill: 0.66, fillW: 0.38, fx: 0.80, fy: 0.52,
     pivot: [0, 0, 0], radius: R_BOUND,
     shape: 0.85, detail: 0.75, scale: 0.98, rimBoost: 0.25, sceneExposure: 0.98,
     pGain: 0.62, pCurl: 0.85, pAttract: 1.15, pTangent: 0.95, pSpin: 0.20, pSize: 1.3, pDamp: 0.70, pLife: 0.11,
-    clothOn: 0.0, bloom: 0.72, streak: 0.22, ca: 0.45, vignette: 0.80, grain: 0.030,
+    bloom: 0.72, streak: 0.22, ca: 0.45, vignette: 0.80, grain: 0.030,
   },
   { /* 02 materials */
     yaw: -0.52, pitch: 0.08, fov: 38, fill: 0.52, fillW: 0.30, fx: 0.97, fy: 0.50,
     pivot: [0, 0, 0], radius: R_BOUND,
     shape: 0.06, detail: 0.55, scale: 1.06, rimBoost: 0.55, sceneExposure: 1.05,
     pGain: 0.30, pCurl: 0.55, pAttract: 1.35, pTangent: 1.00, pSpin: 0.12, pSize: 1.0, pDamp: 0.85, pLife: 0.09,
-    clothOn: 0.0, bloom: 0.95, streak: 0.42, ca: 0.60, vignette: 0.78, grain: 0.026,
+    bloom: 0.95, streak: 0.42, ca: 0.60, vignette: 0.78, grain: 0.026,
   },
-  { /* 03 physics — the cloth is the subject here, not the sculpture.
-
-       The sculpture used to sit at full size in front of the cloth, which
-       hid the one thing this section exists to show. It is now small and
-       BEHIND the cloth, so what you see is fabric deforming around a shape
-       you can only make out through it — which is the demonstration. */
-    // A three-quarter view, not head-on: folds and the bulge where the cloth
-    // meets the sculpture read in silhouette, and face-on they do not.
-    yaw: -0.30, pitch: 0.15, fov: 46, fill: 0.62, fillW: 0.35, fx: 0.86, fy: 0.50,
-    pivot: [0.35, -0.32, 0.42], radius: 2.6,
-    shape: 1.00, detail: 0.60, scale: 0.85, rimBoost: 0.30, sceneExposure: 0.95,
-    pGain: 0.22, pCurl: 0.70, pAttract: 0.60, pTangent: 0.60, pSpin: 0.10, pSize: 1.0, pDamp: 0.80, pLife: 0.10,
-    clothOn: 1.0, bloom: 0.70, streak: 0.18, ca: 0.40, vignette: 0.74, grain: 0.030,
-  },
-  { /* 04 work — the grid owns the page, so the sculpture sits high and small */
+  { /* 03 work — the grid owns the page, so the sculpture sits high and small */
     yaw: -0.68, pitch: 0.40, fov: 35, fill: 0.46, fillW: 0.28, fx: 0.74, fy: 0.24,
     pivot: [0, 0, 0], radius: R_BOUND,
     shape: 2.00, detail: 0.45, scale: 1.00, rimBoost: 0.15, sceneExposure: 0.92,
     pGain: 0.48, pCurl: 0.95, pAttract: 0.95, pTangent: 0.80, pSpin: 0.26, pSize: 1.2, pDamp: 0.65, pLife: 0.12,
-    clothOn: 0.0, bloom: 0.62, streak: 0.20, ca: 0.42, vignette: 0.86, grain: 0.032,
+    bloom: 0.62, streak: 0.20, ca: 0.42, vignette: 0.86, grain: 0.032,
   },
-  { /* 05 numbers */
+  { /* 04 numbers */
     yaw: -0.36, pitch: 0.50, fov: 37, fill: 0.54, fillW: 0.32, fx: 0.72, fy: 0.36,
     pivot: [0, 0, 0], radius: R_BOUND,
     shape: 2.55, detail: 0.50, scale: 0.96, rimBoost: 0.45, sceneExposure: 0.98,
     pGain: 0.78, pCurl: 1.20, pAttract: 1.05, pTangent: 0.90, pSpin: 0.34, pSize: 1.4, pDamp: 0.60, pLife: 0.14,
-    clothOn: 0.0, bloom: 0.78, streak: 0.30, ca: 0.50, vignette: 0.82, grain: 0.030,
+    bloom: 0.78, streak: 0.30, ca: 0.50, vignette: 0.82, grain: 0.030,
   },
-  { /* 06 contact */
+  { /* 05 contact */
     yaw: -0.26, pitch: 0.05, fov: 46, fill: 0.66, fillW: 0.38, fx: 0.80, fy: 0.52,
     pivot: [0, 0, 0], radius: R_BOUND,
     shape: 3.00, detail: 0.55, scale: 1.02, rimBoost: 1.05, sceneExposure: 1.08,
     pGain: 1.25, pCurl: 1.45, pAttract: 1.25, pTangent: 0.95, pSpin: 0.44, pSize: 1.8, pDamp: 0.50, pLife: 0.16,
-    clothOn: 0.0, bloom: 1.05, streak: 0.55, ca: 0.70, vignette: 0.66, grain: 0.028,
+    bloom: 1.05, streak: 0.55, ca: 0.70, vignette: 0.66, grain: 0.028,
   },
 ];
 
@@ -144,8 +130,6 @@ export class Director {
     // user orbit, layered on top of the keyframe direction
     this.orbit = { yaw: 0, pitch: 0, vy: 0, vp: 0 };
 
-    this.cloth = { wind: 1.45, gravity: 9.81, stiff: 0.72, damp: 0.986, iters: 8, pinned: 1 };
-    this.grab = { active: 0, pos: [0, 0, 0], idx: [0, 0] };
 
     this.out = {};
   }
@@ -347,16 +331,6 @@ export class Director {
     o.mouseRd = ray.rd;
     o.mouseForce = this.mouseForce;
 
-    o.clothOn = c.clothOn;
-    o.cWind = this.cloth.wind;
-    o.cGravity = this.cloth.gravity;
-    o.cStiff = this.cloth.stiff;
-    o.cDamp = this.cloth.damp;
-    o.cIters = this.cloth.iters;
-    o.cPinned = this.cloth.pinned;
-    o.grabActive = this.grab.active;
-    o.grabPos = this.grab.pos;
-    o.grabIdx = this.grab.idx;
 
     o.bloom = c.bloom;
     o.bloomThreshold = 1.05;
