@@ -23,6 +23,14 @@
 
   --mono: "JetBrains Mono", ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
   --sans: "Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, system-ui, sans-serif;
+  /* A display face with a real width axis.
+
+     The wordmark was set in Inter Tight, which is — as the name says — the
+     narrow cut of Inter. At 300px that reads as cramped however the tracking
+     is adjusted, because it is the letterforms themselves that are narrow,
+     not the space between them. Archivo carries a wdth axis, so the display
+     role can be genuinely wide rather than merely loosely spaced. */
+  --display: "Archivo", "Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
 
   --gut: clamp(20px, 5vw, 76px);
   --maxw: 1320px;
@@ -374,12 +382,18 @@ html[data-nojs] [data-reveal]{ opacity:1; transform:none; }
 }
 
 .wordmark{
-  margin:0; font-weight:800;
-  font-size:clamp(76px, 20.5vw, 300px);
-  line-height:.8; letter-spacing:-.055em;
+  margin:0;
+  font-family:var(--display);
+  font-weight:780;
+  font-stretch:116%;            /* Archivo's wdth axis; ignored by the fallback */
+  font-size:clamp(72px, 18vw, 286px);
+  line-height:.86;
+  /* -0.055em was clamping five already-narrow letters together. With wider
+     letterforms the tracking only needs to take the optical slack out of a
+     large size, not to compensate for the face. */
+  letter-spacing:-.012em;
   color:var(--chalk);
   display:flex;
-  mix-blend-mode:normal;
   text-shadow:0 0 90px rgba(7,9,10,.75);
 }
 .wordmark .letter{
@@ -449,8 +463,9 @@ html.scrolled .scroll-cue{ opacity:0; pointer-events:none; }
 .sec-sub b{ color:var(--bone); font-weight:500; }
 
 .lede{
-  font-size:clamp(21px,2.1vw,30px); font-weight:300; line-height:1.34;
-  letter-spacing:-.02em; color:var(--chalk); margin:0 0 26px; max-width:22ch;
+  font-family:var(--display); font-stretch:104%;
+  font-size:clamp(21px,2.05vw,29px); font-weight:400; line-height:1.32;
+  letter-spacing:-.014em; color:var(--chalk); margin:0 0 26px; max-width:24ch;
 }
 
 .grid-2{ display:grid; grid-template-columns:1fr 1fr; gap:clamp(28px,5vw,80px); align-items:start; }
@@ -534,8 +549,10 @@ html.scrolled .scroll-cue{ opacity:0; pointer-events:none; }
    trailing cell and pushed the copy under the sculpture. */
 .mat-detail{ min-height:220px; max-width:620px; }
 .mat-name{
-  margin:0 0 10px; font-size:clamp(26px,3.4vw,46px); font-weight:600;
-  letter-spacing:-.03em; color:var(--chalk); line-height:1.05;
+  margin:0 0 10px;
+  font-family:var(--display); font-stretch:106%;
+  font-size:clamp(25px,3.1vw,42px); font-weight:660;
+  letter-spacing:-.014em; color:var(--chalk); line-height:1.08;
 }
 .mat-desc{ margin:0 0 24px; color:var(--muted); max-width:48ch; font-size:15px; }
 .mat-params{
@@ -688,17 +705,23 @@ html.scrolled .scroll-cue{ opacity:0; pointer-events:none; }
 
 /* ══ NUMBERS ═════════════════════════════════════════════════════════════ */
 
+/* 240px, not 190px. "1,572,864" set at 42px is about 200px wide and the cell
+   content box was 144px, so the longest figures in this grid were overflowing
+   by up to 50px — which the layout audit caught and no screenshot did. */
 .numbers{
   list-style:none; margin:0 0 26px; padding:0;
-  display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));
   gap:1px; background:var(--line-2); border:1px solid var(--line-2);
 }
 .numbers li{ background:var(--ink); padding:clamp(18px,2vw,26px); }
 .numbers .n{
-  display:block; font-size:clamp(26px,3.2vw,42px); font-weight:600;
-  letter-spacing:-.035em; color:var(--lime); line-height:1;
+  display:block;
+  font-family:var(--display); font-stretch:100%;
+  font-size:clamp(21px,2.15vw,32px); font-weight:640;
+  letter-spacing:-.02em; color:var(--lime); line-height:1.05;
   font-variant-numeric:tabular-nums;
 }
+.numbers li{ min-width:0; }
 .numbers .n em{ font-style:normal; font-size:.45em; color:var(--muted); margin-left:.25em; letter-spacing:0; }
 .numbers .l{
   display:block; margin-top:9px;
@@ -713,8 +736,9 @@ html.scrolled .scroll-cue{ opacity:0; pointer-events:none; }
 .sec-contact{ min-height:100svh; }
 .contact-h{
   margin:0 0 clamp(36px,7vh,72px);
-  font-size:clamp(38px,7.4vw,110px); font-weight:700; line-height:.94;
-  letter-spacing:-.045em; color:var(--chalk);
+  font-family:var(--display); font-stretch:108%;
+  font-size:clamp(36px,6.6vw,98px); font-weight:720; line-height:.98;
+  letter-spacing:-.018em; color:var(--chalk);
 }
 
 .links{ list-style:none; margin:0 0 clamp(46px,9vh,90px); padding:0; border-top:1px solid var(--line-2); }
@@ -806,6 +830,18 @@ body.cur-drag .c-lbl{ opacity:1; }
 #flash b{ color:var(--lime); font-weight:500; }
 
 /* ══ RESPONSIVE / MOTION ═════════════════════════════════════════════════ */
+
+/* On a phone, wrap the code rather than hiding half of it behind a
+   horizontal scroller nobody discovers. The yaml loses its column alignment,
+   which is a smaller loss than half the content being unreachable. */
+@media (max-width:640px){
+  .codeblock pre{
+    white-space:pre-wrap;
+    overflow-wrap:anywhere;
+    font-size:11px;
+    line-height:1.75;
+  }
+}
 
 @media (max-width:760px){
   :root{ --nav-h:58px; }

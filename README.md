@@ -46,7 +46,7 @@ pixel of it walks the field until it hits the surface. It writes its own
 `gl_FragDepth`, which is how the cloth and the particles can be occluded by a
 shape that does not exist as triangles.
 
-**Seven materials, no textures.** GGX with height-correlated Smith visibility,
+**Seven materials, no textures.** The page opens on the cast crystal. GGX with height-correlated Smith visibility,
 anisotropic GGX with a tangent frame built from a procedural direction field
 (a distance field has no UVs), thin-film interference for the anodised
 titanium, three-ray dispersion for the glass, a Charlie sheen lobe for the
@@ -195,6 +195,32 @@ by sniffing the user agent, then adapts to the measured frame time with
 hysteresis and a cooldown. If a load starts and never finishes, the next one
 comes back a tier quieter — a page too heavy for an unfamiliar driver is
 otherwise unrecoverable, because reloading does exactly the same thing again.
+
+### A layout auditor, because screenshots only catch what you look at
+
+`tools/audit.js` runs inside the page and measures the three things that
+actually go wrong in a layout: content wider than the box holding it, anything
+reaching past the viewport edge, and two pieces of text sitting on top of each
+other. The harness loads it over http and sweeps every section:
+
+```bash
+GPU=1 VIEW=390x844 MOBILE=1 PROBE='(async()=>JSON.stringify(await import("/tools/audit.js").then(m=>m.sweep())))()' node tools/gputest.mjs shot out.png
+```
+
+It found the numbers grid overflowing its cells by up to 50px at 1366 — a
+figure like `1,572,864` set at 42px is about 200px wide and the cell's content
+box was 144px. No screenshot had shown it, because the digits simply ran under
+the neighbouring cell and looked plausible.
+
+One thing it has to get right to be useful: overlap is measured per **line
+box**, not per element. `getBoundingClientRect()` on an inline span that wraps
+returns the union of its line boxes — a rectangle covering everything between
+the two lines, including its neighbours' text — so comparing those unions
+reports every wrapped inline as fully overlapping its siblings.
+`getClientRects()` gives the real boxes.
+
+Currently clean at 2560×1440, 1920×1080, 1366×768, 768×1024, 390×844 and
+360×740.
 
 ### Composition is specified on the screen, not in the world
 

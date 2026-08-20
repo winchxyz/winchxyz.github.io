@@ -12,6 +12,12 @@ export const GH_USER = 'winchxyz';
 
 export const SNAPSHOT_DATE = '2026-08-20';
 
+/* Which preset the page opens on. Index into MATERIALS — 6 is the cast
+   crystal, which shows the dielectric solver, the dispersion and the
+   refracted floor all at once, so the first thing anyone sees is the part
+   that is hardest to fake. */
+export const DEFAULT_MATERIAL = 6;
+
 /* ── typing line under the wordmark ────────────────────────────────────── */
 
 export const ROTATOR = [

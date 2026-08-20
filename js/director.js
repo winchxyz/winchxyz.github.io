@@ -24,7 +24,7 @@
    ══════════════════════════════════════════════════════════════════════════ */
 
 import { damp, clamp, lerp, smoothstep } from './math.js';
-import { MATERIALS } from './content.js';
+import { MATERIALS, DEFAULT_MATERIAL } from './content.js';
 
 /* Bounding radius of every form the sculpture takes. Must match R_BOUND in
    the raymarch shader, or the framing solve and the marcher disagree. */
@@ -37,8 +37,8 @@ const R_BOUND = 1.62;
    type, which is the opposite of what a background is for. Orbit speed is
    halved; the curl flow is toned down less, because that one contributes
    shape as much as speed. */
-const SPIN_SCALE = 0.42;
-const CURL_SCALE = 0.62;
+const SPIN_SCALE = 0.18;
+const CURL_SCALE = 0.34;
 
 /* ── keyframes ─────────────────────────────────────────────────────────────
    yaw / pitch  direction from the subject to the camera, radians
@@ -55,7 +55,7 @@ const CURL_SCALE = 0.62;
 
 const K = [
   { /* 00 hero */
-    yaw: -0.03, pitch: 0.06, fov: 42, fill: 0.58, fillW: 0.34, fx: 0.88, fy: 0.46,
+    yaw: -0.03, pitch: 0.06, fov: 42, fill: 0.50, fillW: 0.30, fx: 1.06, fy: 0.44,
     pivot: [0, 0, 0], radius: R_BOUND,
     shape: 0.00, detail: 1.00, scale: 1.00, rimBoost: 0.0, sceneExposure: 1.0,
     pGain: 1.00, pCurl: 1.15, pAttract: 0.85, pTangent: 0.85, pSpin: 0.30, pSize: 1.6, pDamp: 0.55, pLife: 0.13,
@@ -129,7 +129,7 @@ export class Director {
   constructor() {
     this.section = 0;
     this.local = 0;
-    this.materialIndex = 0;
+    this.materialIndex = DEFAULT_MATERIAL;
     this.calm = false;
     this.photo = false;
 
@@ -238,7 +238,22 @@ export class Director {
 
     // where on screen, in NDC
     const col = contentColumn(vw);
-    const screenX = (col.left + col.width * fx) / vw;
+    let screenX = (col.left + col.width * fx) / vw;
+
+    /* Keep the subject inside the frame, whatever fx asked for.
+
+       fx is a fraction of the CONTENT COLUMN, and on a narrow window the
+       column is most of the viewport — so an fx past 1.0, which sits neatly
+       just outside the column on a wide screen, lands half off the edge on a
+       smaller one. Clamping against the subject's own projected radius makes
+       "just outside the column" mean that at every width, and makes clipping
+       impossible at any aspect ratio rather than merely unlikely at the ones
+       that happened to get tested. */
+    const rFrac = R / (2.0 * d * aspect * tanV);   // half-width, as a fraction of the viewport
+    const margin = 0.012;
+    const lo = margin + rFrac, hi = 1 - margin - rFrac;
+    screenX = lo > hi ? 0.5 : clamp(screenX, lo, hi);
+
     const ndcX = screenX * 2 - 1;
     const ndcY = (1 - fy) * 2 - 1;
 

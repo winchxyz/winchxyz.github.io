@@ -16,7 +16,7 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:ital,wght@0,300..900;1,400&family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&family=Inter+Tight:ital,wght@0,300..900;1,400&family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet" />
 <style>
 /* ══════════════════════════════════════════════════════════════════════════
    winch — main.css
@@ -43,6 +43,14 @@
 
   --mono: "JetBrains Mono", ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
   --sans: "Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, system-ui, sans-serif;
+  /* A display face with a real width axis.
+
+     The wordmark was set in Inter Tight, which is — as the name says — the
+     narrow cut of Inter. At 300px that reads as cramped however the tracking
+     is adjusted, because it is the letterforms themselves that are narrow,
+     not the space between them. Archivo carries a wdth axis, so the display
+     role can be genuinely wide rather than merely loosely spaced. */
+  --display: "Archivo", "Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
 
   --gut: clamp(20px, 5vw, 76px);
   --maxw: 1320px;
@@ -394,12 +402,18 @@ html[data-nojs] [data-reveal]{ opacity:1; transform:none; }
 }
 
 .wordmark{
-  margin:0; font-weight:800;
-  font-size:clamp(76px, 20.5vw, 300px);
-  line-height:.8; letter-spacing:-.055em;
+  margin:0;
+  font-family:var(--display);
+  font-weight:780;
+  font-stretch:116%;            /* Archivo's wdth axis; ignored by the fallback */
+  font-size:clamp(72px, 18vw, 286px);
+  line-height:.86;
+  /* -0.055em was clamping five already-narrow letters together. With wider
+     letterforms the tracking only needs to take the optical slack out of a
+     large size, not to compensate for the face. */
+  letter-spacing:-.012em;
   color:var(--chalk);
   display:flex;
-  mix-blend-mode:normal;
   text-shadow:0 0 90px rgba(7,9,10,.75);
 }
 .wordmark .letter{
@@ -469,8 +483,9 @@ html.scrolled .scroll-cue{ opacity:0; pointer-events:none; }
 .sec-sub b{ color:var(--bone); font-weight:500; }
 
 .lede{
-  font-size:clamp(21px,2.1vw,30px); font-weight:300; line-height:1.34;
-  letter-spacing:-.02em; color:var(--chalk); margin:0 0 26px; max-width:22ch;
+  font-family:var(--display); font-stretch:104%;
+  font-size:clamp(21px,2.05vw,29px); font-weight:400; line-height:1.32;
+  letter-spacing:-.014em; color:var(--chalk); margin:0 0 26px; max-width:24ch;
 }
 
 .grid-2{ display:grid; grid-template-columns:1fr 1fr; gap:clamp(28px,5vw,80px); align-items:start; }
@@ -554,8 +569,10 @@ html.scrolled .scroll-cue{ opacity:0; pointer-events:none; }
    trailing cell and pushed the copy under the sculpture. */
 .mat-detail{ min-height:220px; max-width:620px; }
 .mat-name{
-  margin:0 0 10px; font-size:clamp(26px,3.4vw,46px); font-weight:600;
-  letter-spacing:-.03em; color:var(--chalk); line-height:1.05;
+  margin:0 0 10px;
+  font-family:var(--display); font-stretch:106%;
+  font-size:clamp(25px,3.1vw,42px); font-weight:660;
+  letter-spacing:-.014em; color:var(--chalk); line-height:1.08;
 }
 .mat-desc{ margin:0 0 24px; color:var(--muted); max-width:48ch; font-size:15px; }
 .mat-params{
@@ -708,17 +725,23 @@ html.scrolled .scroll-cue{ opacity:0; pointer-events:none; }
 
 /* ══ NUMBERS ═════════════════════════════════════════════════════════════ */
 
+/* 240px, not 190px. "1,572,864" set at 42px is about 200px wide and the cell
+   content box was 144px, so the longest figures in this grid were overflowing
+   by up to 50px — which the layout audit caught and no screenshot did. */
 .numbers{
   list-style:none; margin:0 0 26px; padding:0;
-  display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));
   gap:1px; background:var(--line-2); border:1px solid var(--line-2);
 }
 .numbers li{ background:var(--ink); padding:clamp(18px,2vw,26px); }
 .numbers .n{
-  display:block; font-size:clamp(26px,3.2vw,42px); font-weight:600;
-  letter-spacing:-.035em; color:var(--lime); line-height:1;
+  display:block;
+  font-family:var(--display); font-stretch:100%;
+  font-size:clamp(21px,2.15vw,32px); font-weight:640;
+  letter-spacing:-.02em; color:var(--lime); line-height:1.05;
   font-variant-numeric:tabular-nums;
 }
+.numbers li{ min-width:0; }
 .numbers .n em{ font-style:normal; font-size:.45em; color:var(--muted); margin-left:.25em; letter-spacing:0; }
 .numbers .l{
   display:block; margin-top:9px;
@@ -733,8 +756,9 @@ html.scrolled .scroll-cue{ opacity:0; pointer-events:none; }
 .sec-contact{ min-height:100svh; }
 .contact-h{
   margin:0 0 clamp(36px,7vh,72px);
-  font-size:clamp(38px,7.4vw,110px); font-weight:700; line-height:.94;
-  letter-spacing:-.045em; color:var(--chalk);
+  font-family:var(--display); font-stretch:108%;
+  font-size:clamp(36px,6.6vw,98px); font-weight:720; line-height:.98;
+  letter-spacing:-.018em; color:var(--chalk);
 }
 
 .links{ list-style:none; margin:0 0 clamp(46px,9vh,90px); padding:0; border-top:1px solid var(--line-2); }
@@ -826,6 +850,18 @@ body.cur-drag .c-lbl{ opacity:1; }
 #flash b{ color:var(--lime); font-weight:500; }
 
 /* ══ RESPONSIVE / MOTION ═════════════════════════════════════════════════ */
+
+/* On a phone, wrap the code rather than hiding half of it behind a
+   horizontal scroller nobody discovers. The yaml loses its column alignment,
+   which is a smaller loss than half the content being unreachable. */
+@media (max-width:640px){
+  .codeblock pre{
+    white-space:pre-wrap;
+    overflow-wrap:anywhere;
+    font-size:11px;
+    line-height:1.75;
+  }
+}
 
 @media (max-width:760px){
   :root{ --nav-h:58px; }
@@ -1804,7 +1840,7 @@ float formLiquid(vec3 p, float t, float detail){
 
   if (d > AMP * 2.0) return d - AMP * detail;
 
-  vec3 q = p * 1.5 + vec3(0.0, t * 0.055, t * 0.025);
+  vec3 q = p * 1.5 + vec3(0.0, t * 0.026, t * 0.012);
   float n = tnoise(q) + 0.45 * tnoise(q * 2.03 + 7.31);   // mean ~0.725
   return d + (n - 0.725) * K * detail;
 }
@@ -1812,7 +1848,7 @@ float formLiquid(vec3 p, float t, float detail){
 // 1 — a gyroid lattice carved out of a hollow shell
 float formLattice(vec3 p, float t){
   vec3 q = p * 3.3;
-  q.xz = rot2(t * 0.034) * q.xz;
+  q.xz = rot2(t * 0.016) * q.xz;
   // |grad(dot(sin q, cos q.zxy))| is bounded by 2*sqrt(3); dividing by the
   // domain scale times three keeps the field an under-estimate, which is the
   // only thing sphere tracing actually requires.
@@ -1825,7 +1861,7 @@ float formLattice(vec3 p, float t){
 // 2 — a rounded box frame, slowly turning
 float formFrame(vec3 p, float t){
   vec3 q = p;
-  q.xz = rot2(t * 0.048) * q.xz;
+  q.xz = rot2(t * 0.022) * q.xz;
   q.xy = rot2(0.62) * q.xy;
   return sdBoxFrame(q, vec3(0.80), 0.06) - 0.035;
 }
@@ -1833,7 +1869,7 @@ float formFrame(vec3 p, float t){
 // 3 — a rectangular torus given three half-turns of twist
 float formRing(vec3 p, float t){
   vec3 q = p;
-  q.xz = rot2(t * 0.060) * q.xz;
+  q.xz = rot2(t * 0.028) * q.xz;
   float a = atan(q.z, q.x);
   vec2 pl = vec2(length(q.xz) - 0.82, q.y);
   pl = rot2(a * 1.5) * pl;
@@ -2552,15 +2588,49 @@ vec3 exitPoint(vec3 ro, vec3 rd, out bool ok){
   return ro + rd * t;
 }
 
+/* A cheap floor sample, for rays that are not primary.
+
+   Without this the glass only ever refracts the sky — and the sky below the
+   horizon is nearly black, so a clear dielectric came out looking like dark
+   chrome. Letting the refracted ray find the floor grid gives it something
+   with structure to bend, which is the cue that reads as glass rather than
+   as a dark blob. No shadows and no reflections: it is seen through two
+   refractions and a Beer-Lambert term, and none of that would survive. */
+vec3 floorCheap(vec3 ro, vec3 rd, out bool hit){
+  hit = false;
+  if (rd.y > -1e-4) return vec3(0.0);
+  float t = (FLOOR_Y - ro.y) / rd.y;
+  if (t <= 0.0 || t > 30.0) return vec3(0.0);
+  hit = true;
+
+  vec3 p = ro + rd * t;
+  float w = t * (2.4 / uRes.y) / max(abs(rd.y), 0.02);
+  vec2 g  = abs(fract(p.xz * 0.5 - 0.5) - 0.5) / max(w * 0.5, 1e-4);
+  vec2 g2 = abs(fract(p.xz * 0.1 - 0.5) - 0.5) / max(w * 0.1, 1e-4);
+  float line  = 1.0 - min(min(g.x,  g.y),  1.0);
+  float line2 = 1.0 - min(min(g2.x, g2.y), 1.0);
+
+  vec3 c = vec3(0.020, 0.023, 0.025);
+  c += vec3(0.55, 0.72, 0.20) * line  * 0.16;
+  c += vec3(0.30, 0.36, 0.40) * line2 * 0.22;
+  return c;
+}
+
 // One channel of dispersion: in through the surface, across the interior,
 // out the far side, then whatever the environment has to say.
+vec3 backdropFor(vec3 ro, vec3 rd, float rough){
+  bool fh;
+  vec3 fc = floorCheap(ro, rd, fh);
+  return fh ? fc : envColor(rd, rough, uRimBoost);
+}
+
 vec3 refractChannel(vec3 p, vec3 n, vec3 rd, float ior){
   vec3 dir = refract(rd, n, 1.0 / ior);
   if (dot(dir, dir) < 1e-6) return envColor(reflect(rd, n), 0.02, uRimBoost);
 
   bool ok;
   vec3 p2 = exitPoint(p - n * 0.008, dir, ok);
-  if (!ok) return envColor(dir, 0.05, uRimBoost);
+  if (!ok) return backdropFor(p, dir, 0.05);
 
   vec3 n2 = -nrmS(p2, 0.0022);
   vec3 out2 = refract(dir, n2, ior);
@@ -2571,7 +2641,7 @@ vec3 refractChannel(vec3 p, vec3 n, vec3 rd, float ior){
   float pathLen = distance(p, p2);
   vec3 absorb = exp(-uAbsorb * pathLen * 1.1);
 
-  return envColor(normalize(out2), 0.03, uRimBoost) * absorb;
+  return backdropFor(p2, normalize(out2), 0.03) * absorb;
 }
 
 /* ── the floor ─────────────────────────────────────────────────────────── */
@@ -2690,7 +2760,7 @@ void main(){
           refractChannel(p, n, rd, uIor    ).g,
           refractChannel(p, n, rd, uIor + d).b);
 
-        col = mix(tr, refl, clamp(F * 2.4, 0.06, 1.0)) * ao;
+        col = mix(tr, refl, clamp(F * 3.1, 0.05, 1.0)) * ao;
         col += s.emis;
       } else {
         col = shadeSurface(p, n, rd, s, ao, 1.0);
@@ -2799,8 +2869,8 @@ void main(){
   vec3 acc = vec3(0.0);
 
   // ambient divergence-free flow
-  vec3 flow = curlNoise(p * 0.62 + vec3(0.0, uTime * 0.055, 0.0));
-  flow += 0.42 * curlNoise(p * 1.71 + vec3(11.0, uTime * 0.10, 3.0));
+  vec3 flow = curlNoise(p * 0.62 + vec3(0.0, uTime * 0.024, 0.0));
+  flow += 0.42 * curlNoise(p * 1.71 + vec3(11.0, uTime * 0.045, 3.0));
   acc += flow * uCurl;
 
   // slow orbit, so the cloud reads as one body rather than a fog
@@ -2834,7 +2904,7 @@ void main(){
   v += acc * dt;
   v *= exp(-uDamp * dt);                 // frame-rate independent drag
   float sp = length(v);
-  if (sp > 3.2) v *= 3.2 / sp;           // clamp before it can tunnel, and
+  if (sp > 1.9) v *= 1.9 / sp;           // clamp before it can tunnel, and
                                          // well below anything that reads as fast
   p += v * dt;
 
@@ -2945,8 +3015,8 @@ void main(){
   a *= smoothstep(0.0, 0.14, vLife) * smoothstep(1.0, 0.80, vLife);
 
   float sp = length(vVel);
-  vec3 col = mix(vec3(0.055, 0.085, 0.030), vec3(0.78, 0.95, 0.31), smoothstep(0.03, 0.85, sp));
-  col = mix(col, vec3(1.00, 1.00, 0.93), smoothstep(0.85, 1.9, sp));
+  vec3 col = mix(vec3(0.055, 0.085, 0.030), vec3(0.78, 0.95, 0.31), smoothstep(0.015, 0.5, sp));
+  col = mix(col, vec3(1.00, 1.00, 0.93), smoothstep(0.5, 1.25, sp));
   col *= 0.72 + 0.55 * vSeed;
 
   oColor = vec4(col * a * uIntensity * uFade, a);
@@ -4706,6 +4776,12 @@ const GH_USER = 'winchxyz';
 
 const SNAPSHOT_DATE = '2026-08-20';
 
+/* Which preset the page opens on. Index into MATERIALS — 6 is the cast
+   crystal, which shows the dielectric solver, the dispersion and the
+   refracted floor all at once, so the first thing anyone sees is the part
+   that is hardest to fake. */
+const DEFAULT_MATERIAL = 6;
+
 /* ── typing line under the wordmark ────────────────────────────────────── */
 
 const ROTATOR = [
@@ -4986,8 +5062,8 @@ const R_BOUND = 1.62;
    type, which is the opposite of what a background is for. Orbit speed is
    halved; the curl flow is toned down less, because that one contributes
    shape as much as speed. */
-const SPIN_SCALE = 0.42;
-const CURL_SCALE = 0.62;
+const SPIN_SCALE = 0.18;
+const CURL_SCALE = 0.34;
 
 /* ── keyframes ─────────────────────────────────────────────────────────────
    yaw / pitch  direction from the subject to the camera, radians
@@ -5004,7 +5080,7 @@ const CURL_SCALE = 0.62;
 
 const K = [
   { /* 00 hero */
-    yaw: -0.03, pitch: 0.06, fov: 42, fill: 0.58, fillW: 0.34, fx: 0.88, fy: 0.46,
+    yaw: -0.03, pitch: 0.06, fov: 42, fill: 0.50, fillW: 0.30, fx: 1.06, fy: 0.44,
     pivot: [0, 0, 0], radius: R_BOUND,
     shape: 0.00, detail: 1.00, scale: 1.00, rimBoost: 0.0, sceneExposure: 1.0,
     pGain: 1.00, pCurl: 1.15, pAttract: 0.85, pTangent: 0.85, pSpin: 0.30, pSize: 1.6, pDamp: 0.55, pLife: 0.13,
@@ -5078,7 +5154,7 @@ class Director {
   constructor() {
     this.section = 0;
     this.local = 0;
-    this.materialIndex = 0;
+    this.materialIndex = DEFAULT_MATERIAL;
     this.calm = false;
     this.photo = false;
 
@@ -5187,7 +5263,22 @@ class Director {
 
     // where on screen, in NDC
     const col = contentColumn(vw);
-    const screenX = (col.left + col.width * fx) / vw;
+    let screenX = (col.left + col.width * fx) / vw;
+
+    /* Keep the subject inside the frame, whatever fx asked for.
+
+       fx is a fraction of the CONTENT COLUMN, and on a narrow window the
+       column is most of the viewport — so an fx past 1.0, which sits neatly
+       just outside the column on a wide screen, lands half off the edge on a
+       smaller one. Clamping against the subject's own projected radius makes
+       "just outside the column" mean that at every width, and makes clipping
+       impossible at any aspect ratio rather than merely unlikely at the ones
+       that happened to get tested. */
+    const rFrac = R / (2.0 * d * aspect * tanV);   // half-width, as a fraction of the viewport
+    const margin = 0.012;
+    const lo = margin + rFrac, hi = 1 - margin - rFrac;
+    screenX = lo > hi ? 0.5 : clamp(screenX, lo, hi);
+
     const ndcX = screenX * 2 - 1;
     const ndcY = (1 - fy) * 2 - 1;
 
@@ -5382,7 +5473,7 @@ class UI {
       li.appendChild(b);
       list.appendChild(li);
     });
-    this.selectMaterial(0, true);
+    this.selectMaterial(DEFAULT_MATERIAL, true);
   }
 
   selectMaterial(i, silent = false) {

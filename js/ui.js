@@ -6,7 +6,7 @@
    calls happen on resize.
    ══════════════════════════════════════════════════════════════════════════ */
 
-import { MATERIALS, SLIDERS, SHORTCUTS, REPOS, ROTATOR, LANG_COLOR, LIVE_STATS, GH_USER } from './content.js';
+import { MATERIALS, SLIDERS, SHORTCUTS, REPOS, ROTATOR, LANG_COLOR, LIVE_STATS, GH_USER, DEFAULT_MATERIAL } from './content.js';
 import { clamp, damp, fmt, fmtShort } from './math.js';
 
 const $  = (s, r = document) => r.querySelector(s);
@@ -65,7 +65,7 @@ export class UI {
       li.appendChild(b);
       list.appendChild(li);
     });
-    this.selectMaterial(0, true);
+    this.selectMaterial(DEFAULT_MATERIAL, true);
   }
 
   selectMaterial(i, silent = false) {

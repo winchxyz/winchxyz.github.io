@@ -84,8 +84,8 @@ void main(){
   vec3 acc = vec3(0.0);
 
   // ambient divergence-free flow
-  vec3 flow = curlNoise(p * 0.62 + vec3(0.0, uTime * 0.055, 0.0));
-  flow += 0.42 * curlNoise(p * 1.71 + vec3(11.0, uTime * 0.10, 3.0));
+  vec3 flow = curlNoise(p * 0.62 + vec3(0.0, uTime * 0.024, 0.0));
+  flow += 0.42 * curlNoise(p * 1.71 + vec3(11.0, uTime * 0.045, 3.0));
   acc += flow * uCurl;
 
   // slow orbit, so the cloud reads as one body rather than a fog
@@ -119,7 +119,7 @@ void main(){
   v += acc * dt;
   v *= exp(-uDamp * dt);                 // frame-rate independent drag
   float sp = length(v);
-  if (sp > 3.2) v *= 3.2 / sp;           // clamp before it can tunnel, and
+  if (sp > 1.9) v *= 1.9 / sp;           // clamp before it can tunnel, and
                                          // well below anything that reads as fast
   p += v * dt;
 
@@ -230,8 +230,8 @@ void main(){
   a *= smoothstep(0.0, 0.14, vLife) * smoothstep(1.0, 0.80, vLife);
 
   float sp = length(vVel);
-  vec3 col = mix(vec3(0.055, 0.085, 0.030), vec3(0.78, 0.95, 0.31), smoothstep(0.03, 0.85, sp));
-  col = mix(col, vec3(1.00, 1.00, 0.93), smoothstep(0.85, 1.9, sp));
+  vec3 col = mix(vec3(0.055, 0.085, 0.030), vec3(0.78, 0.95, 0.31), smoothstep(0.015, 0.5, sp));
+  col = mix(col, vec3(1.00, 1.00, 0.93), smoothstep(0.5, 1.25, sp));
   col *= 0.72 + 0.55 * vSeed;
 
   oColor = vec4(col * a * uIntensity * uFade, a);

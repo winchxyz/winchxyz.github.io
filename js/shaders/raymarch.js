@@ -415,15 +415,49 @@ vec3 exitPoint(vec3 ro, vec3 rd, out bool ok){
   return ro + rd * t;
 }
 
+/* A cheap floor sample, for rays that are not primary.
+
+   Without this the glass only ever refracts the sky — and the sky below the
+   horizon is nearly black, so a clear dielectric came out looking like dark
+   chrome. Letting the refracted ray find the floor grid gives it something
+   with structure to bend, which is the cue that reads as glass rather than
+   as a dark blob. No shadows and no reflections: it is seen through two
+   refractions and a Beer-Lambert term, and none of that would survive. */
+vec3 floorCheap(vec3 ro, vec3 rd, out bool hit){
+  hit = false;
+  if (rd.y > -1e-4) return vec3(0.0);
+  float t = (FLOOR_Y - ro.y) / rd.y;
+  if (t <= 0.0 || t > 30.0) return vec3(0.0);
+  hit = true;
+
+  vec3 p = ro + rd * t;
+  float w = t * (2.4 / uRes.y) / max(abs(rd.y), 0.02);
+  vec2 g  = abs(fract(p.xz * 0.5 - 0.5) - 0.5) / max(w * 0.5, 1e-4);
+  vec2 g2 = abs(fract(p.xz * 0.1 - 0.5) - 0.5) / max(w * 0.1, 1e-4);
+  float line  = 1.0 - min(min(g.x,  g.y),  1.0);
+  float line2 = 1.0 - min(min(g2.x, g2.y), 1.0);
+
+  vec3 c = vec3(0.020, 0.023, 0.025);
+  c += vec3(0.55, 0.72, 0.20) * line  * 0.16;
+  c += vec3(0.30, 0.36, 0.40) * line2 * 0.22;
+  return c;
+}
+
 // One channel of dispersion: in through the surface, across the interior,
 // out the far side, then whatever the environment has to say.
+vec3 backdropFor(vec3 ro, vec3 rd, float rough){
+  bool fh;
+  vec3 fc = floorCheap(ro, rd, fh);
+  return fh ? fc : envColor(rd, rough, uRimBoost);
+}
+
 vec3 refractChannel(vec3 p, vec3 n, vec3 rd, float ior){
   vec3 dir = refract(rd, n, 1.0 / ior);
   if (dot(dir, dir) < 1e-6) return envColor(reflect(rd, n), 0.02, uRimBoost);
 
   bool ok;
   vec3 p2 = exitPoint(p - n * 0.008, dir, ok);
-  if (!ok) return envColor(dir, 0.05, uRimBoost);
+  if (!ok) return backdropFor(p, dir, 0.05);
 
   vec3 n2 = -nrmS(p2, 0.0022);
   vec3 out2 = refract(dir, n2, ior);
@@ -434,7 +468,7 @@ vec3 refractChannel(vec3 p, vec3 n, vec3 rd, float ior){
   float pathLen = distance(p, p2);
   vec3 absorb = exp(-uAbsorb * pathLen * 1.1);
 
-  return envColor(normalize(out2), 0.03, uRimBoost) * absorb;
+  return backdropFor(p2, normalize(out2), 0.03) * absorb;
 }
 
 /* ── the floor ─────────────────────────────────────────────────────────── */
@@ -553,7 +587,7 @@ void main(){
           refractChannel(p, n, rd, uIor    ).g,
           refractChannel(p, n, rd, uIor + d).b);
 
-        col = mix(tr, refl, clamp(F * 2.4, 0.06, 1.0)) * ao;
+        col = mix(tr, refl, clamp(F * 3.1, 0.05, 1.0)) * ao;
         col += s.emis;
       } else {
         col = shadeSurface(p, n, rd, s, ao, 1.0);
