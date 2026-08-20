@@ -144,10 +144,18 @@ translator. It can also load the site and screenshot it:
 SITE='http://localhost:8141/?tier=medium' SECTION='#physics' node tools/gputest.mjs shot out.png
 ```
 
-The images in `docs/` were captured that way. They are software-rendered at a
-few frames a second, so they are honest about layout and lighting and
-unfairly harsh about everything the temporal accumulation would have cleaned
-up. On a real GPU it is sharper than this.
+`GPU=1` runs the same harness on the real adapter instead — which is how the
+sixty-eight-second shader compile described below was found:
+
+```bash
+GPU=1 node tools/gputest.mjs                    # per-program compile times
+GPU=1 PAGE=bisect.html node tools/gputest.mjs   # which part of one costs what
+```
+
+The hero image at the top is a real GPU capture. The four below are
+software-rendered at a few frames a second, so they are honest about layout
+and lighting and unfairly harsh about everything the temporal accumulation
+would have cleaned up.
 
 | | |
 |---|---|
@@ -184,11 +192,44 @@ of that file and the page never touches the network at all.
 
 Quality is detected from core count, memory and the pointer type rather than
 by sniffing the user agent, then adapts to the measured frame time with
-hysteresis and a cooldown. It starts at half resolution deliberately: the
-first frame is also the frame that pays for every shader's first real
-execution, and on Windows a frame that takes more than about two seconds is
-killed by the display driver's watchdog — which reads as "the tab crashed"
-rather than "that was slow".
+hysteresis and a cooldown. If a load starts and never finishes, the next one
+comes back a tier quieter — a page too heavy for an unfamiliar driver is
+otherwise unrecoverable, because reloading does exactly the same thing again.
+
+### Why the distance field reads its noise from a texture
+
+The first version computed value noise analytically: eight hash calls and a
+quintic interpolant, about a hundred instructions. That is nothing at runtime,
+and it was catastrophic anyway — because the noise lives inside the distance
+field, the distance field is inlined at every march step and at every normal
+and occlusion tap, and the compiler expands every copy of it.
+
+The raymarch program took **sixty-eight seconds to compile** on an RTX 4070.
+The entire rest of the pipeline compiled in 1.6 seconds combined. During those
+sixty-eight seconds the main thread is blocked, which the browser reports as
+an unresponsive page — the site was effectively unopenable, and no amount of
+reloading helped.
+
+Bisecting it by stubbing one function at a time (`tools/bisect.html`):
+
+| | compile |
+|---|---|
+| baseline | 64.9 s |
+| stub `noised()` | 15.3 s |
+| stub `sculpture()` | **5.2 s** |
+
+So it was never the arithmetic — it was inlining. Reading the noise from a
+64³ texture instead, where hardware trilinear filtering *is* the
+interpolation, took the program to **4.7 s**. Linking through
+`KHR_parallel_shader_compile` and collecting the result from a
+`requestAnimationFrame` loop took the freeze to zero: the driver compiles on
+its own threads while the boot bar keeps moving.
+
+Boot went from 133 seconds to about ten, and it holds 60 fps after.
+
+The lesson generalises: in a shader, the cost of a function is not what it
+costs to run. It is what it costs to run, multiplied by every place the
+compiler decides to paste it.
 
 ---
 
