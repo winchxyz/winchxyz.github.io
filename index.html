@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="en" data-nojs>
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>winch — real-time graphics &amp; AI dev tools</title>
+
+<meta name="description" content="winch — vibecoding cool shit. Real-time graphics and AI dev tools. Shaders on one end, agents on the other. Local-first, open source, nothing hidden." />
+<meta name="author" content="winch" />
+<meta name="theme-color" content="#07090A" />
+<link rel="canonical" href="https://winchxyz.github.io/" />
+
+<meta property="og:type" content="website" />
+<meta property="og:title" content="winch — real-time graphics &amp; AI dev tools" />
+<meta property="og:description" content="Shaders on one end, agents on the other. Everything on this page is drawn by hand-written GLSL — no engine, no libraries, no asset files." />
+<meta property="og:url" content="https://winchxyz.github.io/" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:creator" content="@winchxyz" />
+<meta name="twitter:title" content="winch — real-time graphics &amp; AI dev tools" />
+<meta name="twitter:description" content="Shaders on one end, agents on the other. No engine, no libraries, no asset files." />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:ital,wght@0,300..900;1,400&family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="css/main.css" />
+
+<!-- The favicon is drawn at runtime, like everything else here. -->
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%2307090A'/><path d='M6 10l4.5 12L16 12l5.5 10L26 10' fill='none' stroke='%23C6F24E' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/></svg>" />
+
+<script>document.documentElement.removeAttribute('data-nojs');</script>
+</head>
+
+<body>
+
+<!-- ══ GPU LAYER ══ one WebGL2 context, fixed behind everything ══════════════ -->
+<canvas id="gl" aria-hidden="true"></canvas>
+<div id="grain" aria-hidden="true"></div>
+<div id="vignette" aria-hidden="true"></div>
+
+<!-- ══ BOOT ═════════════════════════════════════════════════════════════════ -->
+<div id="boot" role="status" aria-live="polite">
+  <div class="boot-inner">
+    <div class="boot-mark" aria-hidden="true">
+      <svg viewBox="0 0 120 44" width="120" height="44"><path d="M8 10l14 26 14-26 14 26 14-26" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" pathLength="1" class="boot-stroke"/></svg>
+    </div>
+    <div class="boot-bar"><i></i></div>
+    <div class="boot-log" id="boot-log">initialising</div>
+  </div>
+</div>
+
+<!-- ══ NO-WEBGL2 FALLBACK ═══════════════════════════════════════════════════ -->
+<div id="nogl" hidden>
+  <p><b>This page renders itself on the GPU.</b></p>
+  <p>It needs WebGL2 and hardware acceleration. The words below still work fine without it.</p>
+  <button type="button" data-dismiss-nogl>continue anyway</button>
+</div>
+
+<!-- ══ HUD ══════════════════════════════════════════════════════════════════ -->
+<aside id="hud" aria-hidden="true">
+  <div class="hud-row hud-head"><span class="k">renderer</span><span class="v" id="hud-gpu">—</span></div>
+  <div class="hud-row"><span class="k">frame</span><span class="v"><b id="hud-fps">—</b> fps · <b id="hud-ms">—</b> ms</span></div>
+  <div class="hud-row"><span class="k">internal</span><span class="v" id="hud-res">—</span></div>
+  <div class="hud-row"><span class="k">particles</span><span class="v" id="hud-parts">—</span></div>
+  <div class="hud-row"><span class="k">cloth</span><span class="v" id="hud-cloth">—</span></div>
+  <div class="hud-row"><span class="k">passes</span><span class="v" id="hud-passes">—</span></div>
+  <div class="hud-graph"><canvas id="hud-graph" width="220" height="34"></canvas></div>
+  <div class="hud-row hud-foot"><span class="k">quality</span><span class="v" id="hud-tier">—</span></div>
+</aside>
+
+<button id="hud-toggle" type="button" aria-label="Toggle performance readout">
+  <span class="dot"></span><span class="lbl">gpu</span>
+</button>
+
+<!-- ══ NAV ══════════════════════════════════════════════════════════════════ -->
+<header id="nav">
+  <a class="nav-mark" href="#top" data-magnetic>
+    <svg viewBox="0 0 120 44" width="60" height="22" aria-hidden="true"><path d="M8 10l14 26 14-26 14 26 14-26" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <span class="sr-only">winch — home</span>
+  </a>
+  <nav aria-label="Sections">
+    <a href="#whoami" data-magnetic>whoami</a>
+    <a href="#materials" data-magnetic>materials</a>
+    <a href="#physics" data-magnetic>physics</a>
+    <a href="#work" data-magnetic>work</a>
+    <a href="#contact" class="cta" data-magnetic>contact</a>
+  </nav>
+</header>
+
+<!-- ══ SCROLL PROGRESS ══════════════════════════════════════════════════════ -->
+<div id="rail" aria-hidden="true">
+  <i id="rail-fill"></i>
+  <ol id="rail-ticks"></ol>
+</div>
+
+<main id="top">
+
+<!-- ── 00 · HERO ─────────────────────────────────────────────────────────── -->
+<section class="sec sec-hero" id="hero" data-scene="hero" data-label="00 / hero">
+  <div class="wrap">
+    <p class="eyebrow" data-reveal>
+      <span class="tick"></span>real-time graphics &amp; AI dev tools
+    </p>
+
+    <h1 class="wordmark" data-reveal data-reveal-delay="1">
+      <span class="letter">w</span><span class="letter">i</span><span class="letter">n</span><span class="letter">c</span><span class="letter">h</span>
+    </h1>
+
+    <p class="tagline" data-reveal data-reveal-delay="2">vibecoding cool shit</p>
+
+    <p class="rotator mono" data-reveal data-reveal-delay="3">
+      <span class="caret">&gt;</span> <span id="rotator-text"></span><span class="cursor" aria-hidden="true">▍</span>
+    </p>
+
+    <div class="hero-meta mono" data-reveal data-reveal-delay="4">
+      <span><b id="stat-stars">216</b> stars</span>
+      <span><b id="stat-forks">47</b> forks</span>
+      <span><b id="stat-repos">13</b> repos</span>
+      <span class="live" title="Refreshed from the GitHub API when it is reachable; otherwise these are the numbers baked in at build time."><i></i><span id="stat-src">snapshot</span></span>
+    </div>
+  </div>
+
+  <a class="scroll-cue mono" href="#whoami" aria-label="Scroll to content">
+    <span>scroll</span>
+    <svg viewBox="0 0 12 34" width="12" height="34" aria-hidden="true"><path d="M6 0v26M1.5 21.5L6 26l4.5-4.5" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>
+  </a>
+
+  <p class="hero-footnote mono" data-reveal data-reveal-delay="5">
+    everything you see moving is one WebGL2 context ·
+    <button type="button" class="linkish" data-scrollto="#numbers">the numbers</button>
+  </p>
+</section>
+
+<!-- ── 01 · WHOAMI ───────────────────────────────────────────────────────── -->
+<section class="sec sec-whoami" id="whoami" data-scene="whoami" data-label="01 / whoami">
+  <div class="wrap grid-2">
+    <div class="col">
+      <h2 class="h-mono" data-reveal><span class="prompt">$</span> whoami</h2>
+      <p class="lede" data-reveal data-reveal-delay="1">
+        I build the thing I wish existed, then put it on GitHub.
+      </p>
+      <p data-reveal data-reveal-delay="2">
+        Some of it is graphics — real-time simulators where the world is generated in
+        shaders and there's no engine underneath. Some of it is tooling I reach for
+        every day: a design studio that verifies its own edits, a ghostwriter that
+        actually sounds like me, a way to think an idea through that pushes back
+        instead of nodding along.
+      </p>
+      <p data-reveal data-reveal-delay="3">
+        Different problems, same habits. Runs on your machine. Open source.
+        Nothing hidden behind a wrapper.
+      </p>
+    </div>
+
+    <div class="col">
+      <div class="codeblock" data-reveal data-reveal-delay="2">
+        <div class="codeblock-bar mono"><span></span><span></span><span></span><em>whoami.yaml</em></div>
+        <pre class="mono"><code><span class="y-k">building</span>:     <span class="y-s">real-time graphics, AI dev tools, agent workflows</span>
+<span class="y-k">stack</span>:        <span class="y-s">JavaScript · GLSL · TypeScript · Electron · Claude Agent SDK</span>
+<span class="y-k">principles</span>:   [<span class="y-a">local-first</span>, <span class="y-a">BYOK</span>, <span class="y-a">open source</span>, <span class="y-a">no black boxes</span>]
+<span class="y-k">allergic_to</span>:  [<span class="y-x">AI slop</span>, <span class="y-x">tools that hide what they did</span>, <span class="y-x">400 MB for a triangle</span>]
+<span class="y-k">find_me_at</span>:   <span class="y-l">x.com/winchxyz</span></code></pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── 02 · MATERIALS ────────────────────────────────────────────────────── -->
+<section class="sec sec-materials" id="materials" data-scene="materials" data-label="02 / materials">
+  <div class="wrap">
+    <header class="sec-head">
+      <h2 class="h-mono" data-reveal><span class="prompt">$</span> materials</h2>
+      <p class="sec-sub" data-reveal data-reveal-delay="1">
+        Nine hundred lines of BRDF. No texture files, no environment map — the studio
+        lighting is an analytic function of the view direction, and every surface
+        detail comes out of noise. Pick one; the sculpture changes while you watch.
+      </p>
+    </header>
+
+    <div class="mat-lab" data-reveal data-reveal-delay="2">
+      <ul class="mat-list" role="tablist" aria-label="Material presets" id="mat-list"></ul>
+      <div class="mat-detail" id="mat-detail" role="tabpanel">
+        <h3 class="mat-name" id="mat-name">—</h3>
+        <p class="mat-desc" id="mat-desc">—</p>
+        <dl class="mat-params mono" id="mat-params"></dl>
+        <p class="mat-hint mono">press <kbd>1</kbd>–<kbd>6</kbd> · drag to orbit · <kbd>P</kbd> photo mode</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── 03 · PHYSICS ──────────────────────────────────────────────────────── -->
+<section class="sec sec-physics" id="physics" data-scene="physics" data-label="03 / physics">
+  <div class="wrap">
+    <header class="sec-head">
+      <h2 class="h-mono" data-reveal><span class="prompt">$</span> physics</h2>
+      <p class="sec-sub" data-reveal data-reveal-delay="1">
+        A <b>128 × 128</b> Verlet cloth solved entirely in fragment shaders — sixteen
+        thousand particles, structural, shear and bend constraints relaxed eight times
+        a frame with Jacobi iteration, colliding against the signed distance field of
+        the sculpture behind it. <b>Grab it and throw it.</b>
+      </p>
+    </header>
+
+    <div class="phys-panel" data-reveal data-reveal-delay="2">
+      <div class="sliders" id="sliders"></div>
+      <div class="phys-side">
+        <div class="phys-readout mono" id="phys-readout"></div>
+        <button type="button" class="btn" data-action="reset-cloth"><span>reset</span> <kbd>R</kbd></button>
+        <button type="button" class="btn ghost" data-action="tear-cloth"><span>cut it loose</span></button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── 04 · WORK ─────────────────────────────────────────────────────────── -->
+<section class="sec sec-work" id="work" data-scene="work" data-label="04 / work">
+  <div class="wrap">
+    <header class="sec-head">
+      <h2 class="h-mono" data-reveal><span class="prompt">$</span> ls ~/projects</h2>
+      <p class="sec-sub" data-reveal data-reveal-delay="1">
+        Everything generated at runtime — no asset files, no build step, nothing
+        downloaded. Star counts are live when GitHub answers, and the last verified
+        snapshot when it doesn't.
+      </p>
+    </header>
+
+    <div class="work-filters mono" data-reveal data-reveal-delay="2" role="group" aria-label="Filter projects">
+      <button type="button" class="chip is-on" data-filter="all">all</button>
+      <button type="button" class="chip" data-filter="graphics">real-time graphics</button>
+      <button type="button" class="chip" data-filter="tools">tools</button>
+    </div>
+
+    <ul class="work-grid" id="work-grid"></ul>
+  </div>
+</section>
+
+<!-- ── 05 · NUMBERS ──────────────────────────────────────────────────────── -->
+<section class="sec sec-numbers" id="numbers" data-scene="numbers" data-label="05 / the numbers">
+  <div class="wrap">
+    <header class="sec-head">
+      <h2 class="h-mono" data-reveal><span class="prompt">$</span> cat NUMBERS</h2>
+      <p class="sec-sub" data-reveal data-reveal-delay="1">
+        What this page is actually doing, measured on your machine, right now.
+      </p>
+    </header>
+    <ul class="numbers" id="numbers-grid"></ul>
+    <p class="numbers-note mono" data-reveal>
+      Dependencies: <b>0</b>. Asset files: <b>0</b>. Build step: <b>none</b>.
+      Everything above is one <code>&lt;canvas&gt;</code>, hand-written GLSL, and a
+      few thousand lines of JavaScript that never leave your machine.
+    </p>
+  </div>
+</section>
+
+<!-- ── 06 · CONTACT ──────────────────────────────────────────────────────── -->
+<section class="sec sec-contact" id="contact" data-scene="contact" data-label="06 / contact">
+  <div class="wrap">
+    <h2 class="contact-h" data-reveal>
+      Different problems.<br /><span class="accent">Same habits.</span>
+    </h2>
+
+    <ul class="links" data-reveal data-reveal-delay="1">
+      <li>
+        <a href="https://x.com/winchxyz" rel="me noopener" target="_blank" data-magnetic>
+          <span class="l-i" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M18.9 2H22l-7.1 8.1L23.2 22h-6.5l-5.1-6.6L5.8 22H2.7l7.6-8.7L1.2 2h6.7l4.6 6.1L18.9 2Zm-1.1 18.1h1.7L7.3 3.8H5.5l12.3 16.3Z"/></svg>
+          </span>
+          <span class="l-t"><b>@winchxyz</b><em>x.com</em></span>
+          <span class="l-a" aria-hidden="true">↗</span>
+        </a>
+      </li>
+      <li>
+        <a href="https://github.com/winchxyz" rel="me noopener" target="_blank" data-magnetic>
+          <span class="l-i" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M12 .5a11.5 11.5 0 0 0-3.64 22.42c.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.36-3.88-1.36-.53-1.34-1.29-1.7-1.29-1.7-1.06-.72.08-.7.08-.7 1.17.08 1.78 1.2 1.78 1.2 1.04 1.78 2.73 1.27 3.4.97.1-.75.4-1.27.73-1.56-2.56-.29-5.25-1.28-5.25-5.7 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.8 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.12 3.05.74.81 1.18 1.84 1.18 3.1 0 4.43-2.69 5.4-5.26 5.69.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .5Z"/></svg>
+          </span>
+          <span class="l-t"><b>github.com/winchxyz</b><em>the source for all of it</em></span>
+          <span class="l-a" aria-hidden="true">↗</span>
+        </a>
+      </li>
+      <li>
+        <a href="https://tryloupe.app" rel="noopener" target="_blank" data-magnetic>
+          <span class="l-i" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="20" height="20"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15.5 15.5L21 21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </span>
+          <span class="l-t"><b>tryloupe.app</b><em>local AI web-design studio</em></span>
+          <span class="l-a" aria-hidden="true">↗</span>
+        </a>
+      </li>
+    </ul>
+
+    <footer class="foot mono">
+      <span>© <span id="year">2026</span> winch</span>
+      <span class="sep">·</span>
+      <span>no engine · no libraries · no asset files</span>
+      <span class="sep">·</span>
+      <button type="button" class="linkish" data-action="shortcuts">keyboard shortcuts</button>
+    </footer>
+  </div>
+</section>
+
+</main>
+
+<!-- ══ SHORTCUTS SHEET ══════════════════════════════════════════════════════ -->
+<div id="sheet" hidden>
+  <div class="sheet-card" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts">
+    <h3 class="mono">keyboard</h3>
+    <dl class="mono" id="sheet-list"></dl>
+    <button type="button" class="btn" data-action="close-sheet">close <kbd>esc</kbd></button>
+  </div>
+</div>
+
+<!-- ══ CURSOR ═══════════════════════════════════════════════════════════════ -->
+<div id="cursor" aria-hidden="true"><i class="c-dot"></i><i class="c-ring"></i><span class="c-lbl"></span></div>
+
+<div id="flash" role="status" aria-live="polite"></div>
+
+<script type="module" src="js/main.js"></script>
+<noscript>
+  <style>#boot{display:none}#gl{display:none}.sec{opacity:1!important;transform:none!important}[data-reveal]{opacity:1!important;transform:none!important}</style>
+</noscript>
+</body>
+</html>

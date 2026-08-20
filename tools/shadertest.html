@@ -1,0 +1,116 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>shader compile harness</title>
+<style>body{background:#07090A;color:#E9EDE3;font:12px ui-monospace,monospace;padding:16px;white-space:pre-wrap}
+.ok{color:#C6F24E}.bad{color:#ff6b5e}</style>
+<canvas id="c" width="64" height="64" style="display:none"></canvas>
+<div id="out">running…</div>
+
+<script type="module">
+/* Compiles and links every program the renderer builds, in a throwaway
+   context, and reports the driver's own logs. Compilation is CPU-side in
+   ANGLE, so this is fast even under SwiftShader — which means the GLSL can
+   be verified on a machine with no GPU at all. */
+
+import { Program, FS_VERT } from '../js/gl.js';
+import { RAYMARCH_FRAG } from '../js/shaders/raymarch.js';
+import { PARTICLE_SIM_FRAG, PARTICLE_VERT, PARTICLE_FRAG } from '../js/shaders/particles.js';
+import { CLOTH_INTEGRATE_FRAG, CLOTH_RELAX_FRAG, CLOTH_VERT, CLOTH_FRAG } from '../js/shaders/cloth.js';
+import {
+  COMPOSITE_FRAG, TAA_FRAG, BLOOM_PREFILTER_FRAG, BLOOM_DOWN_FRAG,
+  BLOOM_UP_FRAG, STREAK_FRAG, FINAL_FRAG,
+} from '../js/shaders/post.js';
+
+const PROGRAMS = [
+  ['raymarch',        FS_VERT,        RAYMARCH_FRAG],
+  ['particle.sim',    FS_VERT,        PARTICLE_SIM_FRAG],
+  ['particle.draw',   PARTICLE_VERT,  PARTICLE_FRAG],
+  ['cloth.integrate', FS_VERT,        CLOTH_INTEGRATE_FRAG],
+  ['cloth.relax',     FS_VERT,        CLOTH_RELAX_FRAG],
+  ['cloth.draw',      CLOTH_VERT,     CLOTH_FRAG],
+  ['composite',       FS_VERT,        COMPOSITE_FRAG],
+  ['taa',             FS_VERT,        TAA_FRAG],
+  ['bloom.prefilter', FS_VERT,        BLOOM_PREFILTER_FRAG],
+  ['bloom.down',      FS_VERT,        BLOOM_DOWN_FRAG],
+  ['bloom.up',        FS_VERT,        BLOOM_UP_FRAG],
+  ['bloom.streak',    FS_VERT,        STREAK_FRAG],
+  ['final',           FS_VERT,        FINAL_FRAG],
+];
+
+const result = { ok: false, gl: null, renderer: null, exts: {}, programs: [], fbo: null };
+
+try {
+  const gl = document.getElementById('c').getContext('webgl2', { antialias: false });
+  if (!gl) throw new Error('no webgl2 context');
+  result.gl = gl.getParameter(gl.VERSION);
+  result.renderer = gl.getParameter(gl.RENDERER);
+
+  result.exts = {
+    colorFloat: !!gl.getExtension('EXT_color_buffer_float'),
+    floatLinear: !!gl.getExtension('OES_texture_float_linear'),
+    floatBlend: !!gl.getExtension('EXT_float_blend'),
+    maxDrawBuffers: gl.getParameter(gl.MAX_DRAW_BUFFERS),
+    maxTexture: gl.getParameter(gl.MAX_TEXTURE_SIZE),
+    maxPointSize: gl.getParameter(gl.ALIASED_POINT_SIZE_RANGE)[1],
+  };
+
+  for (const [name, vs, fs] of PROGRAMS) {
+    const entry = { name, ok: false, error: null, uniforms: [] };
+    try {
+      const p = new Program(gl, vs, fs, name);
+      entry.ok = true;
+      entry.uniforms = [...p.u.keys()].sort();
+      p.dispose();
+    } catch (e) {
+      entry.error = String(e.message || e);
+    }
+    result.programs.push(entry);
+  }
+
+  /* Also prove the MRT float targets the renderer depends on are actually
+     framebuffer-complete here, since that is the other silent failure. */
+  try {
+    const mk = (internal) => {
+      const t = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, t);
+      gl.texStorage2D(gl.TEXTURE_2D, 1, internal, 64, 64);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+      return t;
+    };
+    const fbo = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, mk(gl.RGBA16F), 0);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT1, gl.TEXTURE_2D, mk(gl.R32F), 0);
+    const rb = gl.createRenderbuffer();
+    gl.bindRenderbuffer(gl.RENDERBUFFER, rb);
+    gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT24, 64, 64);
+    gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, rb);
+    gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1]);
+    const st = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+    result.fbo = st === gl.FRAMEBUFFER_COMPLETE ? 'complete' : '0x' + st.toString(16);
+
+    const rgba32 = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, rgba32);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, mk(gl.RGBA32F), 0);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT1, gl.TEXTURE_2D, mk(gl.RGBA32F), 0);
+    gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1]);
+    const st2 = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+    result.fboSim = st2 === gl.FRAMEBUFFER_COMPLETE ? 'complete' : '0x' + st2.toString(16);
+  } catch (e) {
+    result.fbo = 'threw: ' + e.message;
+  }
+
+  result.ok = result.programs.every((p) => p.ok);
+} catch (e) {
+  result.fatal = String(e.message || e);
+}
+
+window.__RESULT = result;
+
+document.getElementById('out').innerHTML =
+  `renderer: ${result.renderer}\nexts: ${JSON.stringify(result.exts)}\nMRT hdr+r32f: ${result.fbo}\nMRT sim: ${result.fboSim}\n\n` +
+  result.programs.map((p) => (p.ok
+    ? `<span class="ok">ok  </span> ${p.name}  (${p.uniforms.length} uniforms)`
+    : `<span class="bad">FAIL</span> ${p.name}\n${p.error}`)).join('\n');
+</script>

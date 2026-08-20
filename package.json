@@ -1,0 +1,16 @@
+{
+  "name": "winchxyz-site",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "winch - portfolio. One WebGL2 context, hand-written GLSL, zero dependencies.",
+  "scripts": {
+    "start": "node server.js 8141",
+    "dev": "node server.js 8141",
+    "build": "node tools/build.mjs",
+    "lint": "node tools/lint.mjs",
+    "verify": "node tools/gputest.mjs",
+    "shot": "node tools/gputest.mjs shot docs/hero.png",
+    "test": "node tools/lint.mjs"
+  }
+}
