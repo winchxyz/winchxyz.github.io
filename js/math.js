@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════════════════
-   math.js — the parts of a linear-algebra library this page actually uses.
+   math.js: the parts of a linear-algebra library this page actually uses.
    Column-major Float32Array(16) matrices, i.e. what WebGL wants without a
    transpose. No gl-matrix; there is no dependency to add.
    ══════════════════════════════════════════════════════════════════════════ */
@@ -14,7 +14,7 @@ export const TAU = Math.PI * 2;
 
 /* Frame-rate-independent exponential smoothing.
    `rate` is roughly "how many e-foldings per second"; higher = snappier.
-   The pow() form is what makes it correct at 30fps AND 144fps — the naive
+   The pow() form is what makes it correct at 30fps AND 144fps, the naive
    `a += (b-a)*0.1` is not, and it is the single most common source of
    "why is the animation faster on my other monitor". */
 export const damp = (a, b, rate, dt) => lerp(a, b, 1 - Math.exp(-rate * dt));
@@ -161,7 +161,7 @@ export function m4invert(o, a) {
   return o;
 }
 
-/* Transform a point (w=1) and divide through — used to project the mouse. */
+/* Transform a point (w=1) and divide through, used to project the mouse. */
 export function m4xformPoint(o, m, p) {
   const x=p[0], y=p[1], z=p[2];
   let w = m[3]*x + m[7]*y + m[11]*z + m[15];

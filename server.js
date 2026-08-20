@@ -1,5 +1,5 @@
 /* A static server, because ES modules need an http origin and file:// will
-   not load them. It does nothing else — there is no build step to run. */
+   not load them. It does nothing else; there is no build step to run. */
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { extname, resolve, sep } from 'node:path';

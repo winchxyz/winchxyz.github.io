@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════════════════
-   particles.js — a GPU particle system with no vertex buffer.
+   particles.js: a GPU particle system with no vertex buffer.
 
    State lives in two RGBA32F textures. The solver is a fullscreen pass with
    two colour attachments, so position and velocity are written in the same
@@ -57,7 +57,7 @@ vec3 sdfGrad(vec3 p){
 
 // Archimedes' hat-box theorem: sampling z uniformly and then taking the
 // circle of the matching radius gives a genuinely uniform sphere. Picking
-// two angles uniformly instead — the version everyone writes first — piles
+// two angles uniformly instead, the version everyone writes first, piles
 // a third of the particles onto the two poles.
 vec3 uniformSphere(vec2 u){
   float z = u.x * 2.0 - 1.0;
@@ -92,7 +92,7 @@ void main(){
   acc += vec3(-p.z, 0.0, p.x) * uSpin;
 
   // pull onto the level set, then take away the velocity component that
-  // points through it — the result is particles that flow ALONG the
+  // points through it: the result is particles that flow ALONG the
   // surface instead of oscillating across it
   float d = sdfAt(p);
   vec3  n = sdfGrad(p);
@@ -128,7 +128,7 @@ void main(){
   // ── respawn ────────────────────────────────────────────────────────────
   // The !(x < big) form is deliberate: every comparison against NaN is
   // false, so this catches a poisoned particle as well as a distant one.
-  // Without it a single NaN is permanent — it never leaves the buffer.
+  // Without it a single NaN is permanent; it never leaves the buffer.
   bool bad = !(dot(p, p) < 1.0e8) || !(dot(v, v) < 1.0e8);
 
   if (life <= 0.0 || rr > 6.0 || bad){

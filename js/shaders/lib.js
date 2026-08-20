@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════════════════
-   lib.js — shared GLSL. Every shader in this page is assembled from these
+   lib.js: shared GLSL. Every shader in this page is assembled from these
    chunks, so there is exactly one implementation of each hash, each noise
    and each BRDF term rather than six subtly different ones.
 
@@ -51,7 +51,7 @@ vec3 hash33(vec3 p3){
   return fract((p3.xxy + p3.yxx) * p3.zyx);
 }
 
-// Integer hash — for anything that must be bit-exact and stable forever,
+// Integer hash: for anything that must be bit-exact and stable forever,
 // like per-particle seeds. PCG-style; passes far better statistics than
 // float hashes and costs the same.
 uint pcg(uint v){
@@ -63,7 +63,7 @@ float pcgF(uint v){ return float(pcg(v)) * (1.0 / 4294967296.0); }
 
 // Interleaved Gradient Noise (Jimenez, Next Generation Post Processing in
 // Call of Duty: Advanced Warfare). The best value-for-ALU screen-space
-// dither there is — one madd and a fract.
+// dither there is: one madd and a fract.
 float ign(vec2 p){
   return fract(52.9829189 * fract(dot(p, vec2(0.06711056, 0.00583715))));
 }
@@ -134,7 +134,7 @@ float fbm(vec3 p, int octaves){
 }
 
 // Divergence-free curl noise, built from the analytic gradients above.
-// Exactly divergence-free — not approximately — which is what stops the
+// Exactly divergence-free, not approximately, which is what stops the
 // particles from piling up in sinks over time.
 vec3 curlNoise(vec3 p){
   vec4 nx = noised(p);
@@ -169,7 +169,7 @@ export const SDF = `
 /* Value noise, read from a 64^3 texture instead of computed.
 
    This is the single most important line in the file for compile time. The
-   analytic version — eight hash calls and a quintic interpolant — is perhaps
+   analytic version, eight hash calls and a quintic interpolant, is perhaps
    a hundred instructions, which is nothing at runtime. But it lives inside
    the distance field, the distance field is inlined at every march step, at
    every normal tap and at every ambient occlusion tap, and the compiler
@@ -234,7 +234,7 @@ float smax(float a, float b, float k){ return -smin(-a, -b, k); }
    for half a second in the middle of the morph.
    ────────────────────────────────────────────────────────────────────────── */
 
-// 0 — a sphere the noise will not let settle
+// 0: a sphere the noise will not let settle
 //
 // The band test is the difference between this page running and this page
 // tripping the driver's watchdog. Evaluating the noise at every one of a
@@ -242,7 +242,7 @@ float smax(float a, float b, float k){ return -smin(-a, -b, k); }
 // value that only matters within a tenth of a unit of the surface. Outside
 // that band the undisplaced sphere, minus the largest displacement the noise
 // can possibly produce, is already a valid under-estimate of the true
-// distance — which is the only thing sphere tracing requires — and it costs
+// distance, which is the only thing sphere tracing requires, and it costs
 // one length(). The march therefore pays for the noise perhaps five times
 // per pixel instead of a hundred and thirty.
 float formLiquid(vec3 p, float t, float detail){
@@ -259,7 +259,7 @@ float formLiquid(vec3 p, float t, float detail){
   return d + (n - 0.725) * K * detail;
 }
 
-// 1 — a gyroid lattice carved out of a hollow shell
+// 1: a gyroid lattice carved out of a hollow shell
 float formLattice(vec3 p, float t){
   vec3 q = p * 3.3;
   q.xz = rot2(t * 0.016) * q.xz;
@@ -272,7 +272,7 @@ float formLattice(vec3 p, float t){
   return max(max(outer, inner), g);
 }
 
-// 2 — a rounded box frame, slowly turning
+// 2: a rounded box frame, slowly turning
 float formFrame(vec3 p, float t){
   vec3 q = p;
   q.xz = rot2(t * 0.022) * q.xz;
@@ -280,7 +280,7 @@ float formFrame(vec3 p, float t){
   return sdBoxFrame(q, vec3(0.80), 0.06) - 0.035;
 }
 
-// 3 — a rectangular torus given three half-turns of twist
+// 3: a rectangular torus given three half-turns of twist
 float formRing(vec3 p, float t){
   vec3 q = p;
   q.xz = rot2(t * 0.028) * q.xz;
@@ -298,7 +298,7 @@ float sculpture(vec3 p, float t, float shape, float detail){
   int i = int(floor(s));
   float f = smoothstep(0.0, 1.0, fract(s));
 
-  /* Select, then blend — rather than a branch per pair.
+  /* Select, then blend, rather than a branch per pair.
 
      The obvious formulation names formLattice in two branches, formFrame in
      two and formRing in two, so seven copies of form code get compiled into
@@ -350,7 +350,7 @@ float D_GGX(float NoH, float a){
   return a2 / max(PI * d * d, 1e-8);
 }
 
-// Height-correlated Smith visibility (Heitz). This is V, not G — the
+// Height-correlated Smith visibility (Heitz). This is V, not G: the
 // 1/(4·NoL·NoV) denominator is already folded in, so specular is D*V*F and
 // dividing again is the single most common way to end up with a suspiciously
 // dark metal.
@@ -380,7 +380,7 @@ float V_SmithGGX_aniso(float ToV, float BoV, float ToL, float BoL,
   return 0.5 / max(lv + ll, 1e-5);
 }
 
-// Charlie sheen — the cloth term. Inverted Gaussian; this is what makes
+// Charlie sheen: the cloth term. Inverted Gaussian; this is what makes
 // fabric bright at grazing angles instead of dark like a dielectric.
 float D_Charlie(float NoH, float r){
   float invR = 1.0 / max(r, 0.03);
@@ -418,7 +418,7 @@ vec3 multiScatter(vec3 f0, vec2 ab, vec3 irradiance){
 // Two reflections, one off the top of the oxide layer and one off the metal
 // underneath, arriving out of phase by the optical path difference. The
 // colour is a physical consequence of the film thickness and the viewing
-// angle — there is no gradient texture and no palette anywhere in it.
+// angle; there is no gradient texture and no palette anywhere in it.
 vec3 thinFilm(float cosTheta, float thicknessNm, float etaFilm){
   float sinT2 = (1.0 - cosTheta * cosTheta) / (etaFilm * etaFilm);
   float cosT  = sqrt(max(0.0, 1.0 - sinT2));
@@ -444,7 +444,7 @@ float softbox(vec3 d, vec3 dir, vec2 halfSize, float soft){
   return smoothstep(soft, 0.0, length(e)) * smoothstep(0.0, 0.06, z);
 }
 
-/* lightGain scales the emissive sources only — not the backdrop.
+/* lightGain scales the emissive sources only, not the backdrop.
 
    A backlight points roughly where the camera is looking, so it lands in
    frame as a bright rectangle unless it is flagged off. A reflection of it
@@ -455,7 +455,7 @@ vec3 envColor(vec3 d, float rough, float rimBoost, float lightGain){
   float h = d.y * 0.5 + 0.5;
 
   // Backdrop. This is what a mirror sees when it is not looking at a light,
-  // which on a chrome-heavy page is most of the surface — set it too dark and
+  // which on a chrome-heavy page is most of the surface; set it too dark and
   // the sculpture reads as a black ball with a hotspot rather than as metal.
   vec3 sky = mix(vec3(0.030, 0.034, 0.040), vec3(0.145, 0.156, 0.175), smoothstep(0.40, 1.0, h));
   sky = mix(vec3(0.016, 0.018, 0.022), sky, smoothstep(0.0, 0.46, h));
@@ -465,11 +465,11 @@ vec3 envColor(vec3 d, float rough, float rimBoost, float lightGain){
 
   float soft = 0.05 + rough * rough * 1.7;
 
-  // key — large, high, slightly warm, camera left
+  // key: large, high, slightly warm, camera left
   sky += lightGain * vec3(1.00, 0.96, 0.90) * 3.60 * softbox(d, normalize(vec3(-0.55, 0.72, 0.42)), vec2(0.30, 0.20), soft);
-  // fill — cool, wide, camera right and low
+  // fill: cool, wide, camera right and low
   sky += lightGain * vec3(0.62, 0.72, 0.95) * 1.05 * softbox(d, normalize(vec3( 0.86, 0.10, 0.16)), vec2(0.62, 0.44), soft + 0.14);
-  // Rim — the brand accent, behind the subject and hard off to camera right.
+  // Rim: the brand accent, behind the subject and hard off to camera right.
   // A backlight points roughly where the camera is looking, so it is visible
   // in frame unless it is pushed outside the field of view; at 60 degrees off
   // axis it rims the silhouette without becoming a green wall behind it.
@@ -499,7 +499,7 @@ const vec3 C_RIM  = vec3(0.78, 0.95, 0.31) * 1.5;
 export const COLOR = `
 // ACES, the full fit (Stephen Hill's RRT+ODT approximation) rather than the
 // one-line Narkowicz curve. The difference only shows on very bright
-// saturated highlights — which, on a page that is mostly chrome, is most of
+// saturated highlights, which, on a page that is mostly chrome, is most of
 // the interesting pixels. Written as columns because GLSL constructs
 // matrices column-major and the published matrices are row-major.
 const mat3 ACES_IN = mat3(
@@ -574,7 +574,7 @@ vec3 blackbody(float kelvin){
 // This uses interleaved gradient noise rather than an ordered Bayer matrix:
 // Bayer needs a 64-entry lookup table, and a const int[64] indexed by a
 // varying value is the kind of thing a driver is entitled to reject. IGN also
-// looks better — no repeating 8x8 grid to spot once you have seen it once.
+// looks better: no repeating 8x8 grid to spot once you have seen it once.
 float ditherOffset(vec2 fragCoord, float frame){
   return (ign(fragCoord, frame) - 0.5) * (1.0 / 255.0);
 }

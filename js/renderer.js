@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════════════════
-   renderer.js — the frame.
+   renderer.js: the frame.
 
    raymarch ─┬─► scene HDR ──┐
              └─► ray dist ───┼─► composite ─► TAA ─► bloom chain ─► final
@@ -57,9 +57,9 @@ export class Renderer {
     /* Detection gives a CEILING, not a starting point.
 
        Guessing a tier from core count and a renderer string and then opening
-       at it means the very first frame — the one that also pays for every
+       at it means the very first frame, the one that also pays for every
        shader's first execution and every pipeline object the driver has to
-       build — is the heaviest frame the machine will ever draw. Getting that
+       build, is the heaviest frame the machine will ever draw. Getting that
        guess wrong on unfamiliar hardware is what makes a tab stop responding.
 
        So everyone starts at the smallest tier and the adaptive controller in
@@ -236,7 +236,7 @@ export class Renderer {
     if (this.ppTaa) this.ppTaa.resize(w, h);
     else this.ppTaa = new PingPong(gl, w, h, { formats: [HDR], label: 'taa' });
 
-    // bloom chain — separate textures per level rather than mip levels of one
+    // bloom chain: separate textures per level rather than mip levels of one
     // texture. Sampling level N while rendering to level N+1 of the same
     // texture is a feedback loop; separate textures make that impossible.
     this.bloom?.forEach((t) => t.dispose());
@@ -307,7 +307,7 @@ export class Renderer {
   }
 
   /* A 64^3 lattice of random bytes, sampled with hardware trilinear filtering
-     and REPEAT wrapping — which makes the filtering itself the interpolation,
+     and REPEAT wrapping, which makes the filtering itself the interpolation,
      so this IS value noise, in one fetch.
 
      The generator is a seeded xorshift rather than Math.random(), so the
@@ -340,7 +340,7 @@ export class Renderer {
   }
 
   /* The only raster image on the page, and it is drawn here rather than
-     loaded — a 2D canvas, one fillText, uploaded once. */
+     loaded: a 2D canvas, one fillText, uploaded once. */
   makePrintTexture() {
     const gl = this.gl;
     const S = 512;
@@ -392,7 +392,7 @@ export class Renderer {
   }
 
   /* Flatten the material list into the uniform arrays the shader indexes.
-     Called once — the palette never changes at runtime. */
+     Called once; the palette never changes at runtime. */
   setPalette(materials) {
     const N = 8;
     const f = () => new Float32Array(N);
@@ -496,7 +496,7 @@ export class Renderer {
     gl.depthMask(true);
     gl.depthFunc(gl.ALWAYS);   // a fullscreen pass that supplies its own depth
     {
-      // orb transforms, straight from the director — the same array the
+      // orb transforms, straight from the director: the same array the
       // click test in main.js reads
       const oc = Math.min(p.orbCount | 0, 8);
       this.orbPosBuf.fill(0); this.orbRadBuf.fill(0);
@@ -515,6 +515,7 @@ export class Renderer {
         uMatEmis: this.pal.emis, uMatDisp: this.pal.disp, uMatAbsorb: this.pal.absorb,
         uOrbPos: this.orbPosBuf, uOrbR: this.orbRadBuf, uOrbCount: oc,
         uPulse: p.pulse, uPulseDir: p.pulseDir, uFlash: p.flash,
+        uFlyPos: p.flyPos, uFlyR: p.flyR, uFlyK: p.flyK, uBound: p.bound,
         uRes: [this.iw, this.ih],
         uTime: this.simTime, uFrame: this.frame,
         uInvViewProj: this.invViewProjJ, uViewProj: this.viewProjJ,
@@ -552,7 +553,7 @@ export class Renderer {
         /* Normalise brightness against the particle count.
 
            Additive blending sums every sprite, so quadrupling the count
-           quadruples the glow — the ultra tier was washing the entire frame
+           quadruples the glow; the ultra tier was washing the entire frame
            lime while medium looked right, because the gain was tuned at
            medium and never re-checked at ultra. More particles should buy
            finer structure, not more light. */
@@ -691,7 +692,7 @@ export class Renderer {
       this.onLog('gpu context lost');
     });
     this.canvas.addEventListener('webglcontextrestored', () => {
-      this.onLog('gpu context restored — rebuilding');
+      this.onLog('gpu context restored, rebuilding');
       try {
         this.buildPrograms();
         this.resize(true);

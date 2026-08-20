@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════════════════
-   director.js — what the scene is doing, and why.
+   director.js: what the scene is doing, and why.
 
    Each section owns a keyframe. Scrolling through a section holds its
    keyframe for the first half and then eases into the next one, so the camera
@@ -13,7 +13,7 @@
    section. That framing is only correct at the one aspect ratio it was tuned
    at: the page's type sits in a centred, max-width column, so as the viewport
    widens the column stays put while a world-space camera offset keeps sliding
-   the sculpture outward until it runs off the edge — which is exactly what
+   the sculpture outward until it runs off the edge, which is exactly what
    happened at 16:9.
 
    So a keyframe now says where the sculpture should appear *on screen* and
@@ -33,7 +33,7 @@ const R_BOUND = 1.62;
 /* How lively the particle field is, as one dial.
 
    The first pass had the cloud whipping around the sculpture fast enough to
-   read as agitation rather than as atmosphere — it pulled the eye off the
+   read as agitation rather than as atmosphere; it pulled the eye off the
    type, which is the opposite of what a background is for. Orbit speed is
    halved; the curl flow is toned down less, because that one contributes
    shape as much as speed. */
@@ -47,7 +47,7 @@ const CURL_SCALE = 0.34;
    click test and the pixels are reading the same numbers. */
 const ORB_RING = 2.15;    // ring radius, world units
 /* Tilt reads as an ellipse and gives the ring depth, but every degree of it
-   also spreads the orbs in Z — and a near orb sits at half the camera
+   also spreads the orbs in Z, and a near orb sits at half the camera
    distance of a far one, so it projects twice the size. Too much tilt and the
    near ones grow out of frame while the far ones shrink to specks. */
 const ORB_TILT = 0.34;    // tilt about X, radians
@@ -58,7 +58,7 @@ const FLY_TIME = 0.52;    // seconds from click to impact
    yaw / pitch  direction from the subject to the camera, radians
    fov          vertical field of view, degrees
    fill         subject diameter as a fraction of viewport HEIGHT
-   fillW        the same as a fraction of viewport WIDTH — a cap, so a narrow
+   fillW        the same as a fraction of viewport WIDTH, a cap, so a narrow
                 window pulls the camera back instead of cropping
    fx           horizontal placement, as a fraction across the content column
    fy           vertical placement, as a fraction of viewport height
@@ -90,7 +90,7 @@ const K = [
     pGain: 0.30, pCurl: 0.55, pAttract: 1.35, pTangent: 1.00, pSpin: 0.12, pSize: 1.0, pDamp: 0.85, pLife: 0.09,
     bloom: 0.95, streak: 0.42, ca: 0.60, vignette: 0.78, grain: 0.026,
   },
-  { /* 03 work — the grid owns the page, so the sculpture sits high and small */
+  { /* 03 work: the grid owns the page, so the sculpture sits high and small */
     yaw: -0.68, pitch: 0.40, fov: 35, fill: 0.46, fillW: 0.28, fx: 0.74, fy: 0.24,
     orbShow: 0, pivot: [0, 0, 0], radius: R_BOUND,
     shape: 2.00, detail: 0.45, scale: 1.00, rimBoost: 0.15, sceneExposure: 0.92,
@@ -140,7 +140,8 @@ export class Director {
 
     this.orbs = {
       show: 0, spin: 0, hover: -1,
-      fly: 0, flyId: -1, pending: -1,
+      fly: 0, flyId: -1, pending: -1, merged: false,
+      flyPos: [0, 0, 0], flyR: 0, flyK: 0.3, bound: R_BOUND,
       pulse: 0, pulseDir: [0, 1, 0], flash: 0,
       pos: MATERIALS.map(() => [0, 0, 0]),
       rad: MATERIALS.map(() => 0),
@@ -162,7 +163,7 @@ export class Director {
     this.burst = 0.65;
   }
 
-  /* Send an orb into the sculpture. The material does not change now — it
+  /* Send an orb into the sculpture. The material does not change now; it
      changes when the orb lands, under the ripple. */
   absorb(i) {
     const o = this.orbs;
@@ -204,11 +205,19 @@ export class Director {
 
     if (o.flyId >= 0) {
       o.fly = Math.min(1, o.fly + dt / FLY_TIME);
-      if (o.fly >= 1) {
+
+      /* The switch happens when the two forms actually touch, not when the
+         orb reaches the centre. Everything after that is the sculpture
+         swallowing a lump that is already the new material, which is what
+         makes it read as becoming rather than as replacing. */
+      if (!o.merged && o.fly >= 0.52) {
+        o.merged = true;
         this.materialIndex = o.pending;
-        o.flyId = -1; o.fly = 0; o.pending = -1;
         o.pulse = 1; o.flash = 1;
         this.burst = 0.7;
+      }
+      if (o.fly >= 1) {
+        o.flyId = -1; o.fly = 0; o.pending = -1; o.merged = false;
       }
     }
     o.pulse = Math.max(0, o.pulse - dt / 0.85);
@@ -229,11 +238,27 @@ export class Director {
       if (k === o.flyId) {
         const e = o.fly * o.fly;                 // accelerates inward
         px *= 1 - e; py *= 1 - e; pz *= 1 - e;
-        r *= 1 - o.fly * 0.9;
+        r *= 1 - o.fly * 0.55;
+
+        if (o.merged) {
+          // handed to the distance field; drawn there, not here
+          o.flyPos[0] = px; o.flyPos[1] = py; o.flyPos[2] = pz;
+          o.flyR = r;
+          o.flyK = 0.22 + 0.34 * (1 - o.fly);    // the neck thins as it closes
+          r = 0;
+        }
       }
       o.pos[k][0] = px; o.pos[k][1] = py; o.pos[k][2] = pz;
       o.rad[k] = r;
     }
+
+    if (!o.merged) { o.flyR = 0; }
+
+    // the marcher's bounding sphere has to reach whatever is being absorbed
+    const reach = o.flyR > 0
+      ? Math.hypot(o.flyPos[0], o.flyPos[1], o.flyPos[2]) + o.flyR + o.flyK
+      : 0;
+    o.bound = Math.max(R_BOUND * this.current.scale, reach) + 0.02;
   }
 
   computeTarget() {
@@ -260,7 +285,7 @@ export class Director {
   }
 
   /* Solve a camera that puts a sphere of `radius` at `pivot` on screen at
-     (fx, fy) filling `fill` of the height — at whatever aspect we happen to
+     (fx, fy) filling `fill` of the height, at whatever aspect we happen to
      have this frame. */
   solveCamera(c, aspect, vw) {
     const tanV = Math.tan((c.fov * Math.PI) / 180 / 2);
@@ -274,7 +299,7 @@ export class Director {
        column, which works because on a landscape screen there is a column of
        empty page over there. On a phone the type runs down the middle and
        that space does not exist, so the same framing puts the sculpture
-       entirely off the right edge — which is what it did: the whole reason
+       entirely off the right edge, which is what it did: the whole reason
        the page exists, cropped to a green sliver.
 
        So on a portrait viewport it moves to the top centre and is allowed to
@@ -317,7 +342,7 @@ export class Director {
     /* Keep the subject inside the frame, whatever fx asked for.
 
        fx is a fraction of the CONTENT COLUMN, and on a narrow window the
-       column is most of the viewport — so an fx past 1.0, which sits neatly
+       column is most of the viewport, so an fx past 1.0, which sits neatly
        just outside the column on a wide screen, lands half off the edge on a
        smaller one. Clamping against the subject's own projected radius makes
        "just outside the column" mean that at every width, and makes clipping
@@ -376,7 +401,7 @@ export class Director {
     this.orbit.pitch += this.mouse.sy * 0.055 * par;
     // The canvas's own width, not innerWidth. They are the same on a desktop
     // browser and they are not under mobile emulation or with a pinch-zoomed
-    // visual viewport — and it is the canvas the composition is being solved
+    // visual viewport, and it is the canvas the composition is being solved
     // against, so that is the number that has to be right.
     const cam = this.solveCamera(c, aspect, renderer.canvas.clientWidth || innerWidth);
     this.orbit.yaw = saveYaw; this.orbit.pitch = savePitch;
@@ -445,6 +470,10 @@ export class Director {
     o.orbPos = this.orbs.pos;
     o.orbRad = this.orbs.rad;
     o.orbCount = this.orbs.show > 0.01 ? this.orbs.pos.length : 0;
+    o.flyPos = this.orbs.flyPos;
+    o.flyR = this.orbs.flyR;
+    o.flyK = this.orbs.flyK;
+    o.bound = this.orbs.bound;
     o.pulse = this.orbs.pulse;
     o.pulseDir = this.orbs.pulseDir;
     o.flash = this.orbs.flash;

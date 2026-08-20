@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════════════════
-   content.js — everything the page says.
+   content.js: everything the page says.
 
    The repo numbers are a verified snapshot (2026-08-20). At runtime the page
    tries the public GitHub API once and upgrades them if it answers; if it is
@@ -12,11 +12,11 @@ export const GH_USER = 'winchxyz';
 
 export const SNAPSHOT_DATE = '2026-08-20';
 
-/* Which preset the page opens on. Index into MATERIALS — 6 is the cast
+/* Which preset the page opens on. Index into MATERIALS. 5 is the cast
    crystal, which shows the dielectric solver, the dispersion and the
    refracted floor all at once, so the first thing anyone sees is the part
    that is hardest to fake. */
-export const DEFAULT_MATERIAL = 6;
+export const DEFAULT_MATERIAL = 5;
 
 /* ── typing line under the wordmark ────────────────────────────────────── */
 
@@ -43,7 +43,7 @@ export const REPOS = [
   {
     name: 'winchxyz.github.io',
     group: 'graphics',
-    desc: 'This page. A portfolio that renders itself on the GPU — one WebGL2 context, a few thousand lines of hand-written GLSL, and nothing else at all.',
+    desc: 'This page. A portfolio that renders itself on the GPU: one WebGL2 context, a few thousand lines of hand-written GLSL, and nothing else at all.',
     lang: 'JavaScript',
     stars: 0, forks: 0,
     tags: ['WebGL2', 'GLSL', 'raymarching', 'zero-deps'],
@@ -53,7 +53,7 @@ export const REPOS = [
   {
     name: 'moon-rover',
     group: 'graphics',
-    desc: 'A 3D lunar rover survey game. WebGL2, no build step, no third-party assets — every texture and every sound is generated at runtime.',
+    desc: 'A 3D lunar rover survey game. WebGL2, no build step, no third-party assets. Every texture and every sound is generated at runtime.',
     lang: 'JavaScript',
     stars: 102, forks: 23,
     tags: ['WebGL2', 'procedural-audio', 'zero-assets', 'gamedev'],
@@ -62,7 +62,7 @@ export const REPOS = [
   {
     name: 'tidewright',
     group: 'graphics',
-    desc: 'A 3D sandcastle simulator that runs entirely on the GPU. No engine, no libraries, no asset files — and a beach that actually obeys the angle of repose.',
+    desc: 'A 3D sandcastle simulator that runs entirely on the GPU. No engine, no libraries, no asset files, and a beach that actually obeys the angle of repose.',
     lang: 'JavaScript',
     stars: 72, forks: 21,
     tags: ['WebGL2', 'GLSL', 'zero-deps', 'one-prompt'],
@@ -90,7 +90,7 @@ export const REPOS = [
   {
     name: 'loupe',
     group: 'tools',
-    desc: 'Open-source, local Windows AI website builder. AI builds the site, you refine it by hand on the live render — every edit verified against the real DOM.',
+    desc: 'Open-source, local Windows AI website builder. AI builds the site, you refine it by hand on the live render, and every edit is verified against the real DOM.',
     lang: 'CSS',
     stars: 7, forks: 1,
     tags: ['Electron', 'Claude Agent SDK', 'BYOK', 'local-first'],
@@ -100,7 +100,7 @@ export const REPOS = [
   {
     name: 'navis',
     group: 'graphics',
-    desc: 'A flooded Gothic cathedral rendered in real time. One HTML file, no assets — the rose window, the marble, the caustics and the reverb are all generated at load.',
+    desc: 'A flooded Gothic cathedral rendered in real time. One HTML file, no assets. The rose window, the marble, the caustics and the reverb are all generated at load.',
     lang: 'HTML',
     stars: 6, forks: 1,
     tags: ['three.js', 'GLSL', 'single-file', 'procedural-audio'],
@@ -110,7 +110,7 @@ export const REPOS = [
   {
     name: 'solebound',
     group: 'graphics',
-    desc: 'A GPU shoe-repair simulator about roads that remember. One HTML file — geometry, materials, audio and portraits all generated at runtime.',
+    desc: 'A GPU shoe-repair simulator about roads that remember. One HTML file. Geometry, materials, audio and portraits all generated at runtime.',
     lang: 'HTML',
     stars: 4, forks: 0,
     tags: ['WebGL', 'GLSL', 'procedural', 'single-file'],
@@ -119,7 +119,7 @@ export const REPOS = [
   {
     name: 'x-ghostwriter',
     group: 'tools',
-    desc: 'Your AI ghostwriter for X — drafts posts and replies in your voice. Runs locally, costs nothing, and you always hit publish yourself.',
+    desc: 'Your AI ghostwriter for X. It drafts posts and replies in your voice, runs locally, costs nothing, and you always hit publish yourself.',
     lang: 'PowerShell',
     stars: 3, forks: 0,
     tags: ['n8n', 'self-hosted', 'Telegram', 'build-in-public'],
@@ -128,7 +128,7 @@ export const REPOS = [
   {
     name: 'cut',
     group: 'graphics',
-    desc: 'A quiet 3D slicing sandbox — cut objects apart along the exact path your mouse draws.',
+    desc: 'A quiet 3D slicing sandbox. Cut objects apart along the exact path your mouse draws.',
     lang: 'JavaScript',
     stars: 1, forks: 0,
     tags: ['mesh-surgery', 'WebGL', 'sandbox'],
@@ -155,7 +155,7 @@ export const REPOS = [
   {
     name: 'loupe-website',
     group: 'tools',
-    desc: 'The product site for Loupe — the AI web-design studio.',
+    desc: 'The product site for Loupe, the AI web-design studio.',
     lang: 'HTML',
     stars: 0, forks: 0,
     tags: ['marketing', 'static'],
@@ -166,7 +166,7 @@ export const REPOS = [
 
 /* ── materials ─────────────────────────────────────────────────────────────
    `p` maps straight onto the uniforms the raymarch shader reads. Everything
-   here is analytic — there is not one texture file behind any of it.
+   here is analytic. There is not one texture file behind any of it.
    ─────────────────────────────────────────────────────────────────────── */
 
 export const MATERIALS = [
@@ -174,7 +174,7 @@ export const MATERIALS = [
     id: 0,
     name: 'Liquid chrome',
     sw: '#cdd3cc',
-    desc: 'A near-perfect mirror over a surface that will not hold still. Rough enough to catch the softboxes, smooth enough that the whole studio bends across it. The only reason it reads as metal is the Fresnel term — there is no reflection probe anywhere in this page.',
+    desc: 'A near-perfect mirror over a surface that will not hold still. Rough enough to catch the softboxes, smooth enough that the whole studio bends across it. The only reason it reads as metal is the Fresnel term. There is no reflection probe anywhere in this page.',
     p: { rough: 0.045, metal: 1.0, ior: 2.4, aniso: 0.0, film: 0.0, trans: 0.0 },
     stats: [['roughness', '0.045'], ['metalness', '1.00'], ['model', 'GGX · Smith'], ['env', 'analytic']],
   },
@@ -190,7 +190,7 @@ export const MATERIALS = [
     id: 2,
     name: 'Obsidian glass',
     sw: '#3a4b52',
-    desc: 'Three refracted rays instead of one, at slightly different indices of refraction, recombined as red, green and blue. That is the whole trick behind dispersion — the reason a prism throws a rainbow and cheap CG glass never does. This one is heavily absorbing, so thickness reads as darkness.',
+    desc: 'Three refracted rays instead of one, at slightly different indices of refraction, recombined as red, green and blue. That is the whole trick behind dispersion, and the reason a prism throws a rainbow while cheap CG glass never does. This one absorbs hard, so thickness reads as darkness.',
     p: {
       rough: 0.02, metal: 0.0, ior: 1.52, aniso: 0.0, film: 0.0, trans: 1.0,
       absorb: [0.68, 0.46, 0.40], dispersion: 0.017,
@@ -201,20 +201,12 @@ export const MATERIALS = [
     id: 3,
     name: 'Brushed alloy',
     sw: '#9a9c93',
-    desc: 'Anisotropic GGX with the tangent frame built from a procedural direction field wrapped around the form — no UVs, because a signed distance field does not have any. The highlight stretches perpendicular to the grain, which is the entire reason brushed metal looks brushed.',
+    desc: 'Anisotropic GGX with the tangent frame built from a procedural direction field wrapped around the form. A signed distance field has no UVs, so the frame has to come from somewhere. The highlight stretches perpendicular to the grain, which is the entire reason brushed metal looks brushed.',
     p: { rough: 0.30, metal: 1.0, ior: 1.9, aniso: 0.85, film: 0.0, trans: 0.0 },
     stats: [['α tangent', '0.42'], ['α bitangent', '0.06'], ['anisotropy', '0.85'], ['model', 'aniso GGX']],
   },
   {
     id: 4,
-    name: 'Kiln ceramic',
-    sw: '#e6e2d6',
-    desc: 'A dielectric with a wrapped diffuse term standing in for subsurface scattering, under a clear specular coat. The glaze pools in the low places and thins over the high ones, because the roughness is driven by the same noise field that carves the surface.',
-    p: { rough: 0.42, metal: 0.0, ior: 1.46, aniso: 0.0, film: 0.0, trans: 0.0 },
-    stats: [['roughness', '0.42'], ['metalness', '0.00'], ['wrap', '0.55'], ['coat', '0.35']],
-  },
-  {
-    id: 5,
     name: 'Molten core',
     sw: '#ff7a2f',
     desc: 'The lattice is opaque; what is behind it is not. Emission ramped along a blackbody curve from about 1100 K at the skin to 2400 K deep in, so the colour shift from dull red to white is the real Planck locus rather than a hand-picked gradient.',
@@ -222,10 +214,10 @@ export const MATERIALS = [
     stats: [['T skin', '1 100 K'], ['T core', '2 400 K'], ['curve', 'Planck'], ['exposure', '+1.4 EV']],
   },
   {
-    id: 6,
+    id: 5,
     name: 'Cast crystal',
     sw: '#dfeef5',
-    desc: 'The same dielectric solver as the obsidian, with the tint taken out and the dispersion turned up. Absorption is near zero, so thickness reads as depth rather than as darkness, and the three wavelengths separate far enough that the edges throw real colour. Lead crystal is dense, slow glass — a low Abbe number, which is the number that says how hard it splits light.',
+    desc: 'The same dielectric solver as the obsidian, with the tint taken out and the dispersion turned up. Absorption is near zero, so thickness reads as depth rather than as darkness, and the three wavelengths separate far enough that the edges throw real colour. Lead crystal is dense, slow glass with a low Abbe number: the measure of how hard a glass splits light.',
     p: {
       rough: 0.015, metal: 0.0, ior: 1.62, aniso: 0.0, film: 0.0, trans: 1.0,
       absorb: [0.055, 0.030, 0.075], dispersion: 0.042,
@@ -237,11 +229,11 @@ export const MATERIALS = [
 /* ── keyboard ──────────────────────────────────────────────────────────── */
 
 export const SHORTCUTS = [
-  ['1 – 7',  'material preset'],
+  ['1 – 6',  'material preset'],
   ['drag',   'orbit the sculpture'],
-  ['P',      'photo mode — UI off, 2× render scale'],
+  ['P',      'photo mode, UI off, 2x render scale'],
   ['Enter',  'save a PNG'],
   ['G',      'performance readout'],
-  ['M',      'calm mode — halve the motion'],
+  ['M',      'calm mode, half the motion'],
   ['?',      'this list'],
 ];

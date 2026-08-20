@@ -1,12 +1,12 @@
 /* ══════════════════════════════════════════════════════════════════════════
-   tools/lint.mjs — a static check for the GLSL, because the shaders are
+   tools/lint.mjs: a static check for the GLSL, because the shaders are
    assembled from string chunks and the compiler that would catch this lives
    on a GPU.
 
    It checks the two things that actually go wrong when you build shaders by
    concatenation:
 
-     1. a function called before it is defined — GLSL has no forward
+     1. a function called before it is defined; GLSL has no forward
         declarations, so getting the chunk order wrong is a compile error
         that only appears on a machine with a working driver;
      2. a uniform the JavaScript sets that the shader never declares (a typo
@@ -141,7 +141,7 @@ function analyse(name, stage, src) {
     const firstDef = Math.min(...defs.get(fname));
     if (at < firstDef) {
       errors.push(
-        `${name}.${stage}: calls '${fname}()' at char ${at} but it is not defined until ${firstDef} — ` +
+        `${name}.${stage}: calls '${fname}()' at char ${at} but it is not defined until ${firstDef}, ` +
         `GLSL has no forward declarations, so the chunks are in the wrong order`,
       );
     }
@@ -202,7 +202,7 @@ for (const [handle, body] of blocks) {
 
   for (const u of used) {
     if (!declared.has(u)) {
-      warnings.push(`${prog}: renderer sets '${u}' but no shader stage declares it — silently ignored`);
+      warnings.push(`${prog}: renderer sets '${u}' but no shader stage declares it; silently ignored`);
     }
   }
   for (const u of declared) {
@@ -216,7 +216,7 @@ for (const [handle, body] of blocks) {
 
 const line = '─'.repeat(72);
 console.log(line);
-console.log(`glsl lint — ${Object.keys(PROGRAMS).length} programs, ` +
+console.log(`glsl lint: ${Object.keys(PROGRAMS).length} programs, ` +
             `${Object.values(PROGRAMS).flat().reduce((n, s) => n + s.split('\n').length, 0)} lines`);
 console.log(line);
 

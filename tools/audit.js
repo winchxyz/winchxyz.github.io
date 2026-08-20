@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════════════════
-   tools/audit.js — a layout auditor that runs inside the page.
+   tools/audit.js: a layout auditor that runs inside the page.
 
    Screenshots catch what you happen to look at. This walks every element and
    measures the three things that actually go wrong in a layout:
@@ -39,7 +39,7 @@ const visible = (el, r) => {
 };
 
 /* An element that holds text directly, rather than one that only wraps other
-   elements — those are the ones whose boxes overlapping actually means
+   elements: those are the ones whose boxes overlapping actually means
    something. */
 function isTextLeaf(el) {
   for (const n of el.childNodes) {
@@ -101,7 +101,7 @@ export function run() {
   /* Compared per LINE BOX, not per element.
 
      getBoundingClientRect() on an inline span that wraps returns the union of
-     its line boxes — a rectangle covering everything from the middle of one
+     its line boxes, a rectangle covering everything from the middle of one
      line to the middle of another, including all the text in between that
      belongs to its neighbours. Comparing those unions reports every wrapped
      inline as overlapping every sibling, at frac 1.0, which is entirely an

@@ -1,17 +1,17 @@
 <title>Winch GPU Portfolio</title>
 
-<meta name="description" content="winch — vibecoding cool shit. Real-time graphics and AI dev tools. Shaders on one end, agents on the other. Local-first, open source, nothing hidden." />
+<meta name="description" content="winch. Vibecoding cool shit. Real-time graphics and AI dev tools. Shaders on one end, agents on the other. Local-first, open source, nothing hidden." />
 <meta name="author" content="winch" />
 <meta name="theme-color" content="#07090A" />
 <link rel="canonical" href="https://winchxyz.github.io/" />
 
 <meta property="og:type" content="website" />
-<meta property="og:title" content="winch — real-time graphics &amp; AI dev tools" />
-<meta property="og:description" content="Shaders on one end, agents on the other. Everything on this page is drawn by hand-written GLSL — no engine, no libraries, no asset files." />
+<meta property="og:title" content="winch · real-time graphics &amp; AI dev tools" />
+<meta property="og:description" content="Shaders on one end, agents on the other. Everything on this page is drawn by hand-written GLSL. No engine, no libraries, no asset files." />
 <meta property="og:url" content="https://winchxyz.github.io/" />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:creator" content="@winchxyz" />
-<meta name="twitter:title" content="winch — real-time graphics &amp; AI dev tools" />
+<meta name="twitter:title" content="winch · real-time graphics &amp; AI dev tools" />
 <meta name="twitter:description" content="Shaders on one end, agents on the other. No engine, no libraries, no asset files." />
 
 <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -19,7 +19,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&family=Inter+Tight:ital,wght@0,300..900;1,400&family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet" />
 <style>
 /* ══════════════════════════════════════════════════════════════════════════
-   winch — main.css
+   winch · main.css
    Palette "Signal": monochrome + one acid accent. Same hex values as the
    GitHub profile, so the two read as one identity.
    ══════════════════════════════════════════════════════════════════════════ */
@@ -45,7 +45,7 @@
   --sans: "Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, system-ui, sans-serif;
   /* A display face with a real width axis.
 
-     The wordmark was set in Inter Tight, which is — as the name says — the
+     The wordmark was set in Inter Tight, which is, as the name says, the
      narrow cut of Inter. At 300px that reads as cramped however the tracking
      is adjusted, because it is the letterforms themselves that are narrow,
      not the space between them. Archivo carries a wdth axis, so the display
@@ -67,7 +67,7 @@
 /* The `hidden` attribute hides things by way of `display:none` in the user
    agent stylesheet, which any author `display` rule silently outranks. Every
    dialog in here sets its own display, so without this the shortcut sheet is
-   open on load — and its full-viewport backdrop-filter blurs the entire page
+   open on load, and its full-viewport backdrop-filter blurs the entire page
    while looking, at a glance, like a rendering bug. */
 [hidden]{ display:none !important; }
 
@@ -427,7 +427,7 @@ html[data-nojs] [data-reveal]{ opacity:1; transform:none; }
   /* NOT display:flex.
 
      Each letter is its own span so the hover can cascade across them, and as
-     flex items the browser lays every one out as an independent box — which
+     flex items the browser lays every one out as an independent box, which
      means no kerning is applied between them at all. On a face with real
      kerning pairs that reads as subtly, unplaceably wrong: the gaps come out
      mechanically equal instead of optically equal. Inline layout shapes the
@@ -497,20 +497,38 @@ html.scrolled .scroll-cue{ opacity:0; pointer-events:none; }
 .h-mono .prompt{ color:var(--lime); margin-right:.6em; }
 
 .sec-head{ max-width:70ch; margin-bottom:clamp(34px,6vh,64px); }
-.sec-sub{ margin:0; color:var(--muted); font-size:clamp(16px,1.05vw,18.5px); max-width:60ch; }
+/* Two settings, and the choice between them is the paragraph's length.
+
+   balance evens every line, so a four-line block cannot end on one stubby
+   word. Browsers cap it at a handful of lines, which is exactly the range
+   the short blocks here live in: ledes, headings, card copy.
+
+   pretty is the fallback for anything longer. It only protects the last
+   line, which is all that is needed once a paragraph is tall enough that
+   even lines stop mattering.
+
+   Neither can promise a short sentence a line of its own. Where the writing
+   wants that, the sentence gets its own element: see .sec-sub-lead. */
+.sec-sub{
+  margin:0; color:var(--muted);
+  font-size:clamp(16px,1.05vw,18.5px); max-width:60ch;
+  text-wrap:balance;
+}
+.sec-sub-lead{ margin-top:1.1em; color:var(--ash); }
 .sec-sub b{ color:var(--bone); font-weight:500; }
 
 .lede{
   font-family:var(--display); font-stretch:104%;
   font-size:clamp(21px,2.05vw,29px); font-weight:400; line-height:1.32;
   letter-spacing:-.014em; color:var(--chalk); margin:0 0 26px; max-width:24ch;
+  text-wrap:balance;
 }
 
 .grid-2{ display:grid; grid-template-columns:1fr 1fr; gap:clamp(28px,5vw,80px); align-items:start; }
 @media (max-width:900px){ .grid-2{ grid-template-columns:1fr; } }
 
 /* Grid and flex items default to `min-width:auto`, which resolves to their
-   MIN-CONTENT size — so one long unbreakable line inside the code block was
+   MIN-CONTENT size, so one long unbreakable line inside the code block was
    forcing its track wider than the viewport, and `overflow-x:auto` on the
    <pre> could not save it because the track itself refused to shrink.
    On a 375px phone the page laid out 554px wide because of this.
@@ -519,9 +537,12 @@ html.scrolled .scroll-cue{ opacity:0; pointer-events:none; }
 .mat-lab > *,
 .phys-panel > *,
 .codeblock,
-.codeblock pre{ min-width:0; }
+.yaml{ min-width:0; }
 
-.col p{ color:var(--muted); margin:0 0 18px; max-width:52ch; }
+/* :not(.lede) because .col p outranks .lede on specificity, and the lede is
+   a p inside a col. It was quietly losing its colour, its margin, its
+   measure and its wrap setting to this one line. */
+.col p:not(.lede){ color:var(--muted); margin:0 0 18px; max-width:52ch; text-wrap:pretty; }
 .col p:last-child{ margin-bottom:0; }
 
 /* ══ CODE BLOCK ══════════════════════════════════════════════════════════ */
@@ -543,12 +564,22 @@ html.scrolled .scroll-cue{ opacity:0; pointer-events:none; }
   margin-left:auto; font-style:normal; font-size:11px;
   letter-spacing:.12em; color:var(--dim); text-transform:uppercase;
 }
-.codeblock pre{
-  margin:0; padding:18px 16px; overflow-x:auto;
-  font-size:clamp(12.5px,.9vw,14.5px); line-height:1.85; color:var(--muted);
+/* This was a <pre> with the keys padded out to a column by hand, which
+   meant one horizontal scrollbar and half the longest value cut off mid
+   word at every width. A two-column grid aligns the same way without
+   asking the text to fit on one line: the keys size to their content, the
+   values take the rest and wrap inside it. Whitespace-only runs between
+   the spans are not rendered as grid items, so the source stays readable. */
+.yaml{
+  display:grid; grid-template-columns:max-content minmax(0,1fr);
+  column-gap:1.4ch; row-gap:.34em;
+  padding:18px 16px;
+  font-size:clamp(12.5px,.9vw,14.5px); line-height:1.75; color:var(--muted);
 }
-.codeblock code{ color:inherit; font-size:inherit; }
 .y-k{ color:var(--ash); }
+.y-k::after{ content:":"; color:var(--dim); }
+.y-v{ min-width:0; overflow-wrap:break-word; }
+.y-v i{ font-style:normal; }
 .y-s{ color:var(--muted); }
 .y-a{ color:var(--lime); }
 .y-x{ color:#C97B6B; }
@@ -556,7 +587,7 @@ html.scrolled .scroll-cue{ opacity:0; pointer-events:none; }
 
 /* ══ MATERIALS ═══════════════════════════════════════════════════════════ */
 
-/* The palette is in the scene now — seven orbs on a ring around the
+/* The palette is in the scene now: six orbs on a ring around the
    sculpture, clicked to be absorbed. This column is the panel that names
    whichever one is on, plus a row of chips that does the same job for a
    keyboard, a screen reader, and a thumb. */
@@ -587,13 +618,22 @@ html.scrolled .scroll-cue{ opacity:0; pointer-events:none; }
   font-size:clamp(25px,3.1vw,42px); font-weight:660;
   letter-spacing:-.014em; color:var(--chalk); line-height:1.08;
 }
-.mat-desc{ margin:0 0 24px; color:var(--muted); max-width:46ch; font-size:16.5px; }
+.mat-desc{ margin:0 0 24px; color:var(--muted); max-width:46ch; font-size:16.5px; text-wrap:pretty; }
+/* Flex, not grid, because the four values are not four similar widths. An
+   IOR triple is three numbers and two slashes; the cell beside it holds the
+   word "2". Equal columns made the wide one wrap into a three-line stack
+   next to three cells that were mostly air. min-width:max-content sizes
+   every cell to its own content, flex-grow shares out what is left, and a
+   row that will not fit wraps whole rather than breaking a value. */
 .mat-params{
-  display:grid; grid-template-columns:repeat(auto-fit,minmax(118px,1fr));
+  display:flex; flex-wrap:wrap;
   gap:1px; margin:0 0 22px; max-width:620px;
   background:var(--line-2); border:1px solid var(--line-2);
 }
-.mat-params div{ background:var(--ink); padding:11px 12px; }
+.mat-params div{
+  background:var(--ink); padding:11px 12px;
+  flex:1 1 auto; min-width:max-content;
+}
 .mat-params dt{ font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--dim); }
 .mat-params dd{ margin:5px 0 0; font-size:16px; color:var(--lime); font-variant-numeric:tabular-nums; }
 .mat-hint{ font-size:12px; color:var(--dim); letter-spacing:.06em; margin:0; }
@@ -646,7 +686,7 @@ html.scrolled .scroll-cue{ opacity:0; pointer-events:none; }
 }
 .card:hover .card-arrow{ transform:translate(3px,-3px); color:var(--lime); }
 
-.card-desc{ margin:0 0 auto; color:var(--muted); font-size:15.5px; line-height:1.6; }
+.card-desc{ margin:0 0 auto; color:var(--muted); font-size:15.5px; line-height:1.6; text-wrap:balance; }
 
 .card-tags{
   list-style:none; display:flex; flex-wrap:wrap; gap:5px; margin:18px 0 0; padding:0;
@@ -677,7 +717,7 @@ html.scrolled .scroll-cue{ opacity:0; pointer-events:none; }
 
 /* 240px, not 190px. "1,572,864" set at 42px is about 200px wide and the cell
    content box was 144px, so the longest figures in this grid were overflowing
-   by up to 50px — which the layout audit caught and no screenshot did. */
+   by up to 50px, which the layout audit caught and no screenshot did. */
 .numbers{
   list-style:none; margin:0 0 26px; padding:0;
   display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));
@@ -708,12 +748,12 @@ html.scrolled .scroll-cue{ opacity:0; pointer-events:none; }
 
    At 98px over two lines the section was taller than the viewport, so
    scrolling to the end left the headline sliced in half and sitting under
-   the navigation bar. Nothing was broken — it was simply too big to land. */
+   the navigation bar. Nothing was broken; it was simply too big to land. */
 .contact-h{
   margin:0 0 clamp(30px,5vh,54px);
   font-family:var(--display); font-stretch:108%;
   font-size:clamp(34px,5.1vw,72px); font-weight:720; line-height:1.0;
-  letter-spacing:-.018em; color:var(--chalk);
+  letter-spacing:-.018em; color:var(--chalk); text-wrap:balance;
 }
 
 .links{ list-style:none; margin:0 0 clamp(32px,5vh,58px); padding:0; border-top:1px solid var(--line-2); }
@@ -806,16 +846,15 @@ body.cur-drag .c-lbl{ opacity:1; }
 
 /* ══ RESPONSIVE / MOTION ═════════════════════════════════════════════════ */
 
-/* On a phone, wrap the code rather than hiding half of it behind a
-   horizontal scroller nobody discovers. The yaml loses its column alignment,
-   which is a smaller loss than half the content being unreachable. */
+/* Below this width the value column is too narrow to be worth aligning, so
+   the key gets its own line and the value runs the full width under it. */
 @media (max-width:640px){
-  .codeblock pre{
-    white-space:pre-wrap;
-    overflow-wrap:anywhere;
-    font-size:11px;
-    line-height:1.75;
+  .yaml{
+    grid-template-columns:minmax(0,1fr); row-gap:0;
+    font-size:11.5px; line-height:1.7;
   }
+  .y-k{ margin-top:.7em; }
+  .y-k:first-child{ margin-top:0; }
 }
 
 @media (max-width:760px){
@@ -900,7 +939,7 @@ body.cur-drag .c-lbl{ opacity:1; }
 <header id="nav">
   <a class="nav-mark" href="#top" data-magnetic>
     <svg viewBox="0 0 120 44" width="60" height="22" aria-hidden="true"><path d="M8 10l14 26 14-26 14 26 14-26" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    <span class="sr-only">winch — home</span>
+    <span class="sr-only">winch, home</span>
   </a>
   <nav aria-label="Sections">
     <a href="#whoami" data-magnetic>whoami</a>
@@ -949,7 +988,7 @@ body.cur-drag .c-lbl{ opacity:1; }
   </a>
 
   <p class="hero-footnote mono" data-reveal data-reveal-delay="5">
-    everything you see moving is one WebGL2 context — no engine, no asset files
+    everything you see moving is one WebGL2 context. no engine, no asset files.
   </p>
 </section>
 
@@ -962,11 +1001,11 @@ body.cur-drag .c-lbl{ opacity:1; }
         I build the thing I wish existed, then put it on GitHub.
       </p>
       <p data-reveal data-reveal-delay="2">
-        Some of it is graphics — real-time simulators where the world is generated in
-        shaders and there's no engine underneath. Some of it is tooling I reach for
-        every day: a design studio that verifies its own edits, a ghostwriter that
-        actually sounds like me, a way to think an idea through that pushes back
-        instead of nodding along.
+        Some of it is graphics. Real-time simulators where the world is generated
+        in shaders and there is no engine underneath. Some of it is tooling I reach
+        for every day: a design studio that verifies its own edits, a ghostwriter
+        that actually sounds like me, a way to think an idea through that pushes
+        back instead of nodding along.
       </p>
       <p data-reveal data-reveal-delay="3">
         Different problems, same habits. Runs on your machine. Open source.
@@ -977,11 +1016,13 @@ body.cur-drag .c-lbl{ opacity:1; }
     <div class="col">
       <div class="codeblock" data-reveal data-reveal-delay="2">
         <div class="codeblock-bar mono"><span></span><span></span><span></span><em>whoami.yaml</em></div>
-        <pre class="mono"><code><span class="y-k">building</span>:     <span class="y-s">real-time graphics, AI dev tools, agent workflows</span>
-<span class="y-k">stack</span>:        <span class="y-s">JavaScript · GLSL · TypeScript · Electron · Claude Agent SDK</span>
-<span class="y-k">principles</span>:   [<span class="y-a">local-first</span>, <span class="y-a">BYOK</span>, <span class="y-a">open source</span>, <span class="y-a">no black boxes</span>]
-<span class="y-k">allergic_to</span>:  [<span class="y-x">AI slop</span>, <span class="y-x">tools that hide what they did</span>, <span class="y-x">400 MB for a triangle</span>]
-<span class="y-k">find_me_at</span>:   <span class="y-l">x.com/winchxyz</span></code></pre>
+        <div class="yaml mono">
+          <span class="y-k">building</span><span class="y-v y-s">real-time graphics, AI dev tools, agent workflows</span>
+          <span class="y-k">stack</span><span class="y-v y-s">JavaScript · GLSL · TypeScript · Electron · Claude Agent SDK</span>
+          <span class="y-k">principles</span><span class="y-v">[<i class="y-a">local-first</i>, <i class="y-a">BYOK</i>, <i class="y-a">open source</i>, <i class="y-a">no black boxes</i>]</span>
+          <span class="y-k">allergic_to</span><span class="y-v">[<i class="y-x">AI slop</i>, <i class="y-x">tools that hide what they did</i>, <i class="y-x">400 MB for a triangle</i>]</span>
+          <span class="y-k">find_me_at</span><span class="y-v y-l">x.com/winchxyz</span>
+        </div>
       </div>
     </div>
   </div>
@@ -995,8 +1036,11 @@ body.cur-drag .c-lbl{ opacity:1; }
       <p class="sec-sub" data-reveal data-reveal-delay="1">
         This is the part of the job I like most: working out how a surface should
         answer light, and then writing that answer down. Each of these is a few
-        lines of maths — no textures, no photographed environment, nothing
-        downloaded. Pick one and watch it change.
+        lines of maths. No textures, no photographed environment, nothing
+        downloaded.
+      </p>
+      <p class="sec-sub sec-sub-lead" data-reveal data-reveal-delay="2">
+        Pick one and watch it change.
       </p>
     </header>
 
@@ -1009,7 +1053,7 @@ body.cur-drag .c-lbl{ opacity:1; }
       <!-- The orbs are the control. This row is the keyboard and touch path
            to the same thing, and it is what a screen reader reads. -->
       <ul class="mat-chips mono" role="tablist" aria-label="Material presets" id="mat-list"></ul>
-      <p class="mat-hint mono">click an orb · or press <kbd>1</kbd>–<kbd>7</kbd> · drag to orbit</p>
+      <p class="mat-hint mono">click an orb · or press <kbd>1</kbd>–<kbd>6</kbd> · drag to orbit</p>
     </div>
   </div>
 </section>
@@ -1022,7 +1066,7 @@ body.cur-drag .c-lbl{ opacity:1; }
     <header class="sec-head">
       <h2 class="h-mono" data-reveal><span class="prompt">$</span> ls ~/projects</h2>
       <p class="sec-sub" data-reveal data-reveal-delay="1">
-        Everything generated at runtime — no asset files, no build step, nothing
+        Everything generated at runtime. No asset files, no build step, nothing
         downloaded. Star counts are live when GitHub answers, and the last verified
         snapshot when it doesn't.
       </p>
@@ -1106,7 +1150,7 @@ body.cur-drag .c-lbl{ opacity:1; }
 <script type="module">
 /* ── js/gl.js ────────────────────────────────────────────────── */
 /* ══════════════════════════════════════════════════════════════════════════
-   gl.js — a thin WebGL2 layer. Programs, render targets, ping-pong, and
+   gl.js: a thin WebGL2 layer. Programs, render targets, ping-pong, and
    shader errors that tell you the line instead of making you count.
    ══════════════════════════════════════════════════════════════════════════ */
 
@@ -1130,7 +1174,7 @@ function createContext(canvas) {
 
   /* EXT_color_buffer_float is the one that actually matters. Without it every
      float FBO comes back FRAMEBUFFER_INCOMPLETE_ATTACHMENT and the page is
-     black with no GL error raised anywhere — the classic silent failure. */
+     black with no GL error raised anywhere: the classic silent failure. */
   const caps = {
     colorFloat:  !!gl.getExtension('EXT_color_buffer_float'),
     halfFloat:   !!gl.getExtension('EXT_color_buffer_half_float'),
@@ -1140,7 +1184,7 @@ function createContext(canvas) {
     timer:       gl.getExtension('EXT_disjoint_timer_query_webgl2'),
     /* Lets the driver compile and link on its own threads. Without it, the
        first getProgramParameter(LINK_STATUS) blocks the main thread until the
-       program is ready — which for a heavy shader means a frozen tab and a
+       program is ready, which for a heavy shader means a frozen tab and a
        browser offering to kill the page. */
     parallel:    gl.getExtension('KHR_parallel_shader_compile'),
     debugRender: gl.getExtension('WEBGL_debug_renderer_info'),
@@ -1155,7 +1199,7 @@ function createContext(canvas) {
     caps.renderer = caps.debugRender
       ? gl.getParameter(caps.debugRender.UNMASKED_RENDERER_WEBGL)
       : gl.getParameter(gl.RENDERER);
-  } catch { /* masked in some browsers — that is fine, it is only a label */ }
+  } catch { /* masked in some browsers; that is fine, it is only a label */ }
 
   if (!caps.colorFloat && !caps.halfFloat) {
     throw new GLError('no float render targets (EXT_color_buffer_float missing)');
@@ -1242,7 +1286,7 @@ class Program {
     const gl = this.gl, p = this.p;
 
     if (!gl.getProgramParameter(p, gl.LINK_STATUS)) {
-      // Only now is the per-shader status worth paying for — to say which
+      // Only now is the per-shader status worth paying for, to say which
       // stage failed, and on which line.
       const ve = checkShader(gl, this._vs, this._vsSrc, `${this.label}.vert`);
       const fe = checkShader(gl, this._fs, this._fsSrc, `${this.label}.frag`);
@@ -1269,7 +1313,7 @@ class Program {
 
   use() { this.gl.useProgram(this.p); this.unit = 0; return this; }
 
-  /* Silently ignores names the compiler optimised away — that is a feature,
+  /* Silently ignores names the compiler optimised away; that is a feature,
      not a bug: it means uniforms can be set unconditionally by the caller. */
   set(name, v) {
     const e = this.u.get(name);
@@ -1426,7 +1470,7 @@ class Target {
   }
 }
 
-/* Two complete targets that swap. It has to be two whole framebuffers — you
+/* Two complete targets that swap. It has to be two whole framebuffers; you
    cannot keep one FBO and re-point its attachments each frame without a
    framebuffer re-validation, which costs more than the object it saves. */
 class PingPong {
@@ -1443,7 +1487,7 @@ class PingPong {
 
 /* ── fullscreen triangle ───────────────────────────────────────────────── */
 
-/* One triangle, not two — no diagonal seam, one fewer vertex, and the
+/* One triangle, not two: no diagonal seam, one fewer vertex, and the
    rasteriser does not shade the quad edge twice. Attributeless: the vertex
    shader derives the position from gl_VertexID. */
 const FS_VERT = `#version 300 es
@@ -1498,7 +1542,7 @@ function targetBytes(t) {
 
 /* ── js/shaders/lib.js ───────────────────────────────────────── */
 /* ══════════════════════════════════════════════════════════════════════════
-   lib.js — shared GLSL. Every shader in this page is assembled from these
+   lib.js: shared GLSL. Every shader in this page is assembled from these
    chunks, so there is exactly one implementation of each hash, each noise
    and each BRDF term rather than six subtly different ones.
 
@@ -1550,7 +1594,7 @@ vec3 hash33(vec3 p3){
   return fract((p3.xxy + p3.yxx) * p3.zyx);
 }
 
-// Integer hash — for anything that must be bit-exact and stable forever,
+// Integer hash: for anything that must be bit-exact and stable forever,
 // like per-particle seeds. PCG-style; passes far better statistics than
 // float hashes and costs the same.
 uint pcg(uint v){
@@ -1562,7 +1606,7 @@ float pcgF(uint v){ return float(pcg(v)) * (1.0 / 4294967296.0); }
 
 // Interleaved Gradient Noise (Jimenez, Next Generation Post Processing in
 // Call of Duty: Advanced Warfare). The best value-for-ALU screen-space
-// dither there is — one madd and a fract.
+// dither there is: one madd and a fract.
 float ign(vec2 p){
   return fract(52.9829189 * fract(dot(p, vec2(0.06711056, 0.00583715))));
 }
@@ -1633,7 +1677,7 @@ float fbm(vec3 p, int octaves){
 }
 
 // Divergence-free curl noise, built from the analytic gradients above.
-// Exactly divergence-free — not approximately — which is what stops the
+// Exactly divergence-free, not approximately, which is what stops the
 // particles from piling up in sinks over time.
 vec3 curlNoise(vec3 p){
   vec4 nx = noised(p);
@@ -1668,7 +1712,7 @@ const SDF = `
 /* Value noise, read from a 64^3 texture instead of computed.
 
    This is the single most important line in the file for compile time. The
-   analytic version — eight hash calls and a quintic interpolant — is perhaps
+   analytic version, eight hash calls and a quintic interpolant, is perhaps
    a hundred instructions, which is nothing at runtime. But it lives inside
    the distance field, the distance field is inlined at every march step, at
    every normal tap and at every ambient occlusion tap, and the compiler
@@ -1733,7 +1777,7 @@ float smax(float a, float b, float k){ return -smin(-a, -b, k); }
    for half a second in the middle of the morph.
    ────────────────────────────────────────────────────────────────────────── */
 
-// 0 — a sphere the noise will not let settle
+// 0: a sphere the noise will not let settle
 //
 // The band test is the difference between this page running and this page
 // tripping the driver's watchdog. Evaluating the noise at every one of a
@@ -1741,7 +1785,7 @@ float smax(float a, float b, float k){ return -smin(-a, -b, k); }
 // value that only matters within a tenth of a unit of the surface. Outside
 // that band the undisplaced sphere, minus the largest displacement the noise
 // can possibly produce, is already a valid under-estimate of the true
-// distance — which is the only thing sphere tracing requires — and it costs
+// distance, which is the only thing sphere tracing requires, and it costs
 // one length(). The march therefore pays for the noise perhaps five times
 // per pixel instead of a hundred and thirty.
 float formLiquid(vec3 p, float t, float detail){
@@ -1758,7 +1802,7 @@ float formLiquid(vec3 p, float t, float detail){
   return d + (n - 0.725) * K * detail;
 }
 
-// 1 — a gyroid lattice carved out of a hollow shell
+// 1: a gyroid lattice carved out of a hollow shell
 float formLattice(vec3 p, float t){
   vec3 q = p * 3.3;
   q.xz = rot2(t * 0.016) * q.xz;
@@ -1771,7 +1815,7 @@ float formLattice(vec3 p, float t){
   return max(max(outer, inner), g);
 }
 
-// 2 — a rounded box frame, slowly turning
+// 2: a rounded box frame, slowly turning
 float formFrame(vec3 p, float t){
   vec3 q = p;
   q.xz = rot2(t * 0.022) * q.xz;
@@ -1779,7 +1823,7 @@ float formFrame(vec3 p, float t){
   return sdBoxFrame(q, vec3(0.80), 0.06) - 0.035;
 }
 
-// 3 — a rectangular torus given three half-turns of twist
+// 3: a rectangular torus given three half-turns of twist
 float formRing(vec3 p, float t){
   vec3 q = p;
   q.xz = rot2(t * 0.028) * q.xz;
@@ -1797,7 +1841,7 @@ float sculpture(vec3 p, float t, float shape, float detail){
   int i = int(floor(s));
   float f = smoothstep(0.0, 1.0, fract(s));
 
-  /* Select, then blend — rather than a branch per pair.
+  /* Select, then blend, rather than a branch per pair.
 
      The obvious formulation names formLattice in two branches, formFrame in
      two and formRing in two, so seven copies of form code get compiled into
@@ -1849,7 +1893,7 @@ float D_GGX(float NoH, float a){
   return a2 / max(PI * d * d, 1e-8);
 }
 
-// Height-correlated Smith visibility (Heitz). This is V, not G — the
+// Height-correlated Smith visibility (Heitz). This is V, not G: the
 // 1/(4·NoL·NoV) denominator is already folded in, so specular is D*V*F and
 // dividing again is the single most common way to end up with a suspiciously
 // dark metal.
@@ -1879,7 +1923,7 @@ float V_SmithGGX_aniso(float ToV, float BoV, float ToL, float BoL,
   return 0.5 / max(lv + ll, 1e-5);
 }
 
-// Charlie sheen — the cloth term. Inverted Gaussian; this is what makes
+// Charlie sheen: the cloth term. Inverted Gaussian; this is what makes
 // fabric bright at grazing angles instead of dark like a dielectric.
 float D_Charlie(float NoH, float r){
   float invR = 1.0 / max(r, 0.03);
@@ -1917,7 +1961,7 @@ vec3 multiScatter(vec3 f0, vec2 ab, vec3 irradiance){
 // Two reflections, one off the top of the oxide layer and one off the metal
 // underneath, arriving out of phase by the optical path difference. The
 // colour is a physical consequence of the film thickness and the viewing
-// angle — there is no gradient texture and no palette anywhere in it.
+// angle; there is no gradient texture and no palette anywhere in it.
 vec3 thinFilm(float cosTheta, float thicknessNm, float etaFilm){
   float sinT2 = (1.0 - cosTheta * cosTheta) / (etaFilm * etaFilm);
   float cosT  = sqrt(max(0.0, 1.0 - sinT2));
@@ -1943,7 +1987,7 @@ float softbox(vec3 d, vec3 dir, vec2 halfSize, float soft){
   return smoothstep(soft, 0.0, length(e)) * smoothstep(0.0, 0.06, z);
 }
 
-/* lightGain scales the emissive sources only — not the backdrop.
+/* lightGain scales the emissive sources only, not the backdrop.
 
    A backlight points roughly where the camera is looking, so it lands in
    frame as a bright rectangle unless it is flagged off. A reflection of it
@@ -1954,7 +1998,7 @@ vec3 envColor(vec3 d, float rough, float rimBoost, float lightGain){
   float h = d.y * 0.5 + 0.5;
 
   // Backdrop. This is what a mirror sees when it is not looking at a light,
-  // which on a chrome-heavy page is most of the surface — set it too dark and
+  // which on a chrome-heavy page is most of the surface; set it too dark and
   // the sculpture reads as a black ball with a hotspot rather than as metal.
   vec3 sky = mix(vec3(0.030, 0.034, 0.040), vec3(0.145, 0.156, 0.175), smoothstep(0.40, 1.0, h));
   sky = mix(vec3(0.016, 0.018, 0.022), sky, smoothstep(0.0, 0.46, h));
@@ -1964,11 +2008,11 @@ vec3 envColor(vec3 d, float rough, float rimBoost, float lightGain){
 
   float soft = 0.05 + rough * rough * 1.7;
 
-  // key — large, high, slightly warm, camera left
+  // key: large, high, slightly warm, camera left
   sky += lightGain * vec3(1.00, 0.96, 0.90) * 3.60 * softbox(d, normalize(vec3(-0.55, 0.72, 0.42)), vec2(0.30, 0.20), soft);
-  // fill — cool, wide, camera right and low
+  // fill: cool, wide, camera right and low
   sky += lightGain * vec3(0.62, 0.72, 0.95) * 1.05 * softbox(d, normalize(vec3( 0.86, 0.10, 0.16)), vec2(0.62, 0.44), soft + 0.14);
-  // Rim — the brand accent, behind the subject and hard off to camera right.
+  // Rim: the brand accent, behind the subject and hard off to camera right.
   // A backlight points roughly where the camera is looking, so it is visible
   // in frame unless it is pushed outside the field of view; at 60 degrees off
   // axis it rims the silhouette without becoming a green wall behind it.
@@ -1998,7 +2042,7 @@ const vec3 C_RIM  = vec3(0.78, 0.95, 0.31) * 1.5;
 const COLOR = `
 // ACES, the full fit (Stephen Hill's RRT+ODT approximation) rather than the
 // one-line Narkowicz curve. The difference only shows on very bright
-// saturated highlights — which, on a page that is mostly chrome, is most of
+// saturated highlights, which, on a page that is mostly chrome, is most of
 // the interesting pixels. Written as columns because GLSL constructs
 // matrices column-major and the published matrices are row-major.
 const mat3 ACES_IN = mat3(
@@ -2073,7 +2117,7 @@ vec3 blackbody(float kelvin){
 // This uses interleaved gradient noise rather than an ordered Bayer matrix:
 // Bayer needs a 64-entry lookup table, and a const int[64] indexed by a
 // varying value is the kind of thing a driver is entitled to reject. IGN also
-// looks better — no repeating 8x8 grid to spot once you have seen it once.
+// looks better: no repeating 8x8 grid to spot once you have seen it once.
 float ditherOffset(vec2 fragCoord, float frame){
   return (ign(fragCoord, frame) - 0.5) * (1.0 / 255.0);
 }
@@ -2085,7 +2129,7 @@ const LIB_NO_SDF = HEAD + HASH + NOISE + PBR + COLOR;
 
 /* ── js/shaders/raymarch.js ──────────────────────────────────── */
 /* ══════════════════════════════════════════════════════════════════════════
-   raymarch.js — the hero pass.
+   raymarch.js: the hero pass.
 
    One fullscreen triangle. Every pixel sphere-traces a signed distance field,
    shades it with a hand-written BRDF against an environment that is a
@@ -2145,13 +2189,22 @@ uniform vec3  uMatAbsorb[MAT_MAX];
    and the pixels on screen cannot disagree about where an orb is. */
 uniform vec3  uOrbPos[MAT_MAX];
 uniform float uOrbR[MAT_MAX];
-uniform int   uOrbCount;      // 0 outside the materials section — skips it all
+uniform int   uOrbCount;      // 0 outside the materials section; skips it all
 
 /* The absorb. A ring wave crosses the sculpture and the switch happens under
    it, so the eye follows the ripple rather than catching the change. */
 uniform float uPulse;         // 1 at impact, decaying to 0
 uniform vec3  uPulseDir;      // where on the surface it landed
 uniform float uFlash;         // emissive burst, same decay
+
+/* The orb being absorbed stops being a sphere in the list and becomes part
+   of the distance field, smooth-unioned with the sculpture. That is what
+   grows the neck between them and lets the form reach out and swallow it;
+   two separate primitives can only ever intersect. */
+uniform vec3  uFlyPos;
+uniform float uFlyR;          // 0 when nothing is being absorbed
+uniform float uFlyK;          // blend radius of the smooth union
+uniform float uBound;         // scene bounding radius, grown to cover the flight
 
 /* Every one of these is a LOOP BOUND, and every one of them is a uniform
    rather than a constant on purpose.
@@ -2170,7 +2223,7 @@ uniform int   uSteps;        // camera march budget, set by the quality tier
 uniform int   uTransSteps;   // interior march budget for the glass preset
 uniform int   uReflSteps;    // reflection march budget
 uniform int   uShadowSteps;  // soft shadow march budget
-uniform float uReflect;     // 0 or 1 — one-bounce reflections on/off
+uniform float uReflect;     // 0 or 1, one-bounce reflections on/off
 uniform float uRimBoost;    // section-driven lift on the accent rim light
 uniform float uExposure;
 
@@ -2186,9 +2239,14 @@ const float STEP_K   = 0.62;   // < 1 because the morph, the gyroid and the
 float mapS(vec3 p){
   float d = sculpture(p / uScale, uTime, uShape, uDetail) * uScale;
 
+  // the orb mid-absorb, fused rather than merely overlapping
+  if (uFlyR > 0.001){
+    d = smin(d, length(p - uFlyPos) - uFlyR, uFlyK);
+  }
+
   /* The absorb ripple. A ring wave leaves the impact point and crosses the
      form; the material switches underneath it. Angular position is measured
-     with a dot product rather than acos() — the shape of the falloff matters,
+     with a dot product rather than acos(): the shape of the falloff matters,
      its units do not, and this sits inside the march loop. */
   if (uPulse > 0.002){
     float ad = 1.0 - dot(normalize(p + 1e-5), uPulseDir);   // 0 at the impact, 2 opposite
@@ -2278,14 +2336,14 @@ Hit trace(vec3 ro, vec3 rd, float pixelRadius){
   h.t = MAX_DIST;
   h.id = 0;
 
-  // floor first — it is a plane, so it is one divide, not a loop
+  // floor first: it is a plane, so it is one divide, not a loop
   if (rd.y < -1e-4){
     float tp = (FLOOR_Y - ro.y) / rd.y;
     if (tp > 0.0 && tp < MAX_DIST){ h.t = tp; h.id = 2; }
   }
 
   float t0, t1;
-  if (sphereRange(ro, rd, R_BOUND * uScale, t0, t1)){
+  if (sphereRange(ro, rd, uBound, t0, t1)){
     float t = max(t0, 0.02);
     float tEnd = min(t1, h.t);
     // Dither the entry point along the ray. Costs nothing and turns the
@@ -2307,7 +2365,7 @@ Hit trace(vec3 ro, vec3 rd, float pixelRadius){
 
 float softShadow(vec3 ro, vec3 rd, float k){
   float t0, t1;
-  if (!sphereRange(ro, rd, R_BOUND * uScale, t0, t1)) return 1.0;
+  if (!sphereRange(ro, rd, uBound, t0, t1)) return 1.0;
 
   float res = 1.0;
   float t = max(t0, 0.03);
@@ -2379,7 +2437,7 @@ Mat matCurrent(){
 }
 
 // A tangent field on a surface with no UVs. Latitude lines around the local
-// Y axis, which reads as a part turned on a lathe — exactly the grain
+// Y axis, which reads as a part turned on a lathe: exactly the grain
 // direction brushed metal actually has.
 vec3 tangentField(vec3 p, vec3 n){
   vec3 axis = vec3(0.0, 1.0, 0.0);
@@ -2391,8 +2449,8 @@ vec3 tangentField(vec3 p, vec3 n){
   return normalize(t + w - n * dot(n, w));
 }
 
-/* The first argument is the LOCAL space the procedural detail lives in — the
-   sculpture's own coordinates, or an orb's — while the second stays world
+/* The first argument is the LOCAL space the procedural detail lives in (the
+   sculpture's own coordinates, or an orb's) while the second stays world
    space for the view-dependent terms. Without that split an orb would wear a
    slice of the sculpture's noise field rather than its own. */
 Surf describe(vec3 q, vec3 p, vec3 n, Mat m){
@@ -2418,7 +2476,7 @@ Surf describe(vec3 q, vec3 p, vec3 n, Mat m){
     s.albedo = mix(base, base * film * 1.9, m.film);
     s.rough  = clamp(m.rough + tfbm2(q * 6.0) * 0.10 - 0.04, 0.03, 1.0);
   }
-  else if (m.id == 2 || m.id == 6){   // the two dielectrics
+  else if (m.id == 2 || m.id == 5){   // the two dielectrics
     // Whatever colour a piece of glass has comes from absorption along the
     // path, not from an albedo, so both share one branch here and differ
     // only in uAbsorb and uDispersion.
@@ -2428,23 +2486,10 @@ Surf describe(vec3 q, vec3 p, vec3 n, Mat m){
   }
   else if (m.id == 3){                  // brushed alloy
     s.albedo = vec3(0.90, 0.90, 0.88);
-    // fine brush grain in the roughness, not the normal — cheaper and it
+    // fine brush grain in the roughness, not the normal: cheaper, and it
     // survives minification without aliasing into sparkle
     float grain = tfbm2(vec3(q.x * 90.0, q.y * 3.0, q.z * 90.0));
     s.rough  = clamp(m.rough + (grain - 0.5) * 0.22, 0.04, 1.0);
-  }
-  else if (m.id == 4){                  // kiln ceramic
-    /* This was a 27-iteration Worley loop. describe() is inlined at five
-       call sites now, so that loop was being compiled five times over — it
-       cost more in compile time than the cell structure was worth. A ridged
-       noise lookup pools the glaze the same way for one texture fetch. */
-    float glaze = 1.0 - abs(tnoise(q * 4.5) * 2.0 - 1.0);
-    s.albedo = mix(vec3(0.88, 0.87, 0.82), vec3(0.72, 0.75, 0.70), glaze * 0.6);
-    s.metal  = 0.0;
-    // glaze pools in the hollows: thinner (rougher) where the form is convex
-    s.rough  = clamp(m.rough - glaze * 0.26 + tfbm2(q * 9.0) * 0.12, 0.05, 1.0);
-    s.coat   = 0.35;
-    s.wrap   = 0.55;
   }
   else {                                  // molten core
     float depth = clamp(1.0 - length(q) / 1.05, 0.0, 1.0);
@@ -2468,7 +2513,7 @@ Surf describe(vec3 q, vec3 p, vec3 n, Mat m){
    Deliberately cheap: no shadow marches, no ambient occlusion, and above all
    no second bounce. Calling the full shading function from inside a
    reflection is how a scene that renders in four milliseconds starts taking
-   four hundred — every floor pixel would then run two soft-shadow marches and
+   four hundred; every floor pixel would then run two soft-shadow marches and
    another reflection march of its own. At this size nobody can tell. */
 vec3 shadeApprox(vec3 p, vec3 n, vec3 rd){
   Surf s = describe(p / uScale, p, n, matCurrent());
@@ -2541,8 +2586,8 @@ vec3 shadeSurface(vec3 p, vec3 n, vec3 rd, Surf s, float ao, float shadowScale){
   float shF = mix(1.0, softShadow(p + n * 0.012, lf,  9.0), shadowScale * 0.6);
 
   /* Written as a loop over the three sources. Measured: it makes no
-     difference to compile time — a three-iteration constant-bound loop gets
-     unrolled straight back into three copies — but it keeps the light rig in
+     difference to compile time (a three-iteration constant-bound loop gets
+     unrolled straight back into three copies) but it keeps the light rig in
      one place instead of three parallel edits. */
   vec3 lDir[3]; lDir[0] = lk; lDir[1] = lf; lDir[2] = lr;
   vec3 lCol[3]; lCol[0] = C_KEY * shK; lCol[1] = C_FILL * shF; lCol[2] = C_RIM * (1.0 + uRimBoost);
@@ -2568,7 +2613,7 @@ vec3 shadeSurface(vec3 p, vec3 n, vec3 rd, Surf s, float ao, float shadowScale){
   if (uReflect > 0.5 && s.rough < 0.34){
     float t0, t1;
     vec3 ro2 = p + n * 0.02;
-    if (sphereRange(ro2, R, R_BOUND * uScale, t0, t1)){
+    if (sphereRange(ro2, R, uBound, t0, t1)){
       bool hit;
       float t = marchSDF(ro2, R, max(t0, 0.01), min(t1, 8.0), 0.0015, uReflSteps, hit);
       if (hit){
@@ -2613,7 +2658,7 @@ vec3 exitPoint(vec3 ro, vec3 rd, out bool ok){
 
 /* A cheap floor sample, for rays that are not primary.
 
-   Without this the glass only ever refracts the sky — and the sky below the
+   Without this the glass only ever refracts the sky, and the sky below the
    horizon is nearly black, so a clear dielectric came out looking like dark
    chrome. Letting the refracted ray find the floor grid gives it something
    with structure to bend, which is the cue that reads as glass rather than
@@ -2696,7 +2741,7 @@ vec3 shadeOrb(vec3 q, vec3 p, vec3 n, vec3 rd, Mat m){
   for (int i = 0; i < 3; i++) col += brdfDirect(n, v, oDir[i], oCol[i], s, f0, diffCol, T, B);
 
   /* Lit a stop and a half brighter than the sculpture. A mirror in a dark
-     room is a dark ball — correct, and useless as a swatch. These are
+     room is a dark ball: correct, and useless as a swatch. These are
      previews, and a preview has to be legible before it is accurate. */
   const float ORB_GAIN = 1.55;
   vec2 ab = envBRDFApprox(NoV, s.rough);
@@ -2746,7 +2791,7 @@ vec3 shadeFloor(vec3 p, vec3 rd, float t){
   if (uReflect > 0.5){
     float t0, t1;
     vec3 ro2 = p + n * 0.02;
-    if (sphereRange(ro2, R, R_BOUND * uScale, t0, t1)){
+    if (sphereRange(ro2, R, uBound, t0, t1)){
       bool hit;
       float tt = marchSDF(ro2, R, max(t0, 0.01), min(t1, 10.0), 0.002, uReflSteps, hit);
       if (hit){
@@ -2780,7 +2825,7 @@ void main(){
   vec3 ro = uCamPos;
   vec3 rd = normalize(pFar.xyz / pFar.w - pNear.xyz / pNear.w);
 
-  // half the angular size of one pixel — the march's stopping criterion
+  // half the angular size of one pixel: the march's stopping criterion
   // scales with distance so distant geometry is not marched to a precision
   // no one can see.
   float pixelRadius = 1.2 / uRes.y;
@@ -2819,7 +2864,7 @@ void main(){
         float F = F_Schlick(0.04, 1.0, NoV);
         vec3 refl = envColor(reflect(rd, n), s.rough, uRimBoost);
 
-        // one interior march per channel — this is where dispersion comes
+        // one interior march per channel; this is where dispersion comes
         // from, and doing it with a single shared path is exactly the
         // shortcut that makes most real-time glass look like plastic
         float d = uDispersion;
@@ -2854,7 +2899,7 @@ void main(){
 
 /* ── js/shaders/particles.js ─────────────────────────────────── */
 /* ══════════════════════════════════════════════════════════════════════════
-   particles.js — a GPU particle system with no vertex buffer.
+   particles.js: a GPU particle system with no vertex buffer.
 
    State lives in two RGBA32F textures. The solver is a fullscreen pass with
    two colour attachments, so position and velocity are written in the same
@@ -2912,7 +2957,7 @@ vec3 sdfGrad(vec3 p){
 
 // Archimedes' hat-box theorem: sampling z uniformly and then taking the
 // circle of the matching radius gives a genuinely uniform sphere. Picking
-// two angles uniformly instead — the version everyone writes first — piles
+// two angles uniformly instead, the version everyone writes first, piles
 // a third of the particles onto the two poles.
 vec3 uniformSphere(vec2 u){
   float z = u.x * 2.0 - 1.0;
@@ -2947,7 +2992,7 @@ void main(){
   acc += vec3(-p.z, 0.0, p.x) * uSpin;
 
   // pull onto the level set, then take away the velocity component that
-  // points through it — the result is particles that flow ALONG the
+  // points through it: the result is particles that flow ALONG the
   // surface instead of oscillating across it
   float d = sdfAt(p);
   vec3  n = sdfGrad(p);
@@ -2983,7 +3028,7 @@ void main(){
   // ── respawn ────────────────────────────────────────────────────────────
   // The !(x < big) form is deliberate: every comparison against NaN is
   // false, so this catches a poisoned particle as well as a distant one.
-  // Without it a single NaN is permanent — it never leaves the buffer.
+  // Without it a single NaN is permanent; it never leaves the buffer.
   bool bad = !(dot(p, p) < 1.0e8) || !(dot(v, v) < 1.0e8);
 
   if (life <= 0.0 || rr > 6.0 || bad){
@@ -3095,7 +3140,7 @@ void main(){
 
 /* ── js/shaders/post.js ──────────────────────────────────────── */
 /* ══════════════════════════════════════════════════════════════════════════
-   post.js — everything that happens after the scene exists.
+   post.js: everything that happens after the scene exists.
 
    composite → TAA → bloom (prefilter, 6 down, 6 up) → streak → final grade.
    All of it in linear HDR until the very last line, where the only sRGB
@@ -3123,7 +3168,7 @@ void main(){
 
 /* ── temporal anti-aliasing ────────────────────────────────────────────────
    The raymarch is dithered per pixel and jittered per frame, so TAA is not
-   just anti-aliasing here — it is what turns the noise the marcher is
+   just anti-aliasing here; it is what turns the noise the marcher is
    deliberately introducing back into detail. Turning it off does not make
    the image sharper, it makes it grainy.
    ─────────────────────────────────────────────────────────────────────── */
@@ -3289,7 +3334,7 @@ void main(){
 }
 `;
 
-/* 9-tap tent upsample. This outputs ONLY the blurred contribution — the
+/* 9-tap tent upsample. This outputs ONLY the blurred contribution; the
    accumulation onto the larger level is done by hardware additive blending,
    which is why there is no uBase sampler here. Sampling the destination and
    adding it in the shader as well would double every level on the way back
@@ -3435,7 +3480,7 @@ void main(){
 
 /* ── js/math.js ──────────────────────────────────────────────── */
 /* ══════════════════════════════════════════════════════════════════════════
-   math.js — the parts of a linear-algebra library this page actually uses.
+   math.js: the parts of a linear-algebra library this page actually uses.
    Column-major Float32Array(16) matrices, i.e. what WebGL wants without a
    transpose. No gl-matrix; there is no dependency to add.
    ══════════════════════════════════════════════════════════════════════════ */
@@ -3450,7 +3495,7 @@ const TAU = Math.PI * 2;
 
 /* Frame-rate-independent exponential smoothing.
    `rate` is roughly "how many e-foldings per second"; higher = snappier.
-   The pow() form is what makes it correct at 30fps AND 144fps — the naive
+   The pow() form is what makes it correct at 30fps AND 144fps, the naive
    `a += (b-a)*0.1` is not, and it is the single most common source of
    "why is the animation faster on my other monitor". */
 const damp = (a, b, rate, dt) => lerp(a, b, 1 - Math.exp(-rate * dt));
@@ -3597,7 +3642,7 @@ function m4invert(o, a) {
   return o;
 }
 
-/* Transform a point (w=1) and divide through — used to project the mouse. */
+/* Transform a point (w=1) and divide through, used to project the mouse. */
 function m4xformPoint(o, m, p) {
   const x=p[0], y=p[1], z=p[2];
   let w = m[3]*x + m[7]*y + m[11]*z + m[15];
@@ -3668,7 +3713,7 @@ function fmtShort(n) {
 
 /* ── js/renderer.js ──────────────────────────────────────────── */
 /* ══════════════════════════════════════════════════════════════════════════
-   renderer.js — the frame.
+   renderer.js: the frame.
 
    raymarch ─┬─► scene HDR ──┐
              └─► ray dist ───┼─► composite ─► TAA ─► bloom chain ─► final
@@ -3718,9 +3763,9 @@ class Renderer {
     /* Detection gives a CEILING, not a starting point.
 
        Guessing a tier from core count and a renderer string and then opening
-       at it means the very first frame — the one that also pays for every
+       at it means the very first frame, the one that also pays for every
        shader's first execution and every pipeline object the driver has to
-       build — is the heaviest frame the machine will ever draw. Getting that
+       build, is the heaviest frame the machine will ever draw. Getting that
        guess wrong on unfamiliar hardware is what makes a tab stop responding.
 
        So everyone starts at the smallest tier and the adaptive controller in
@@ -3897,7 +3942,7 @@ class Renderer {
     if (this.ppTaa) this.ppTaa.resize(w, h);
     else this.ppTaa = new PingPong(gl, w, h, { formats: [HDR], label: 'taa' });
 
-    // bloom chain — separate textures per level rather than mip levels of one
+    // bloom chain: separate textures per level rather than mip levels of one
     // texture. Sampling level N while rendering to level N+1 of the same
     // texture is a feedback loop; separate textures make that impossible.
     this.bloom?.forEach((t) => t.dispose());
@@ -3968,7 +4013,7 @@ class Renderer {
   }
 
   /* A 64^3 lattice of random bytes, sampled with hardware trilinear filtering
-     and REPEAT wrapping — which makes the filtering itself the interpolation,
+     and REPEAT wrapping, which makes the filtering itself the interpolation,
      so this IS value noise, in one fetch.
 
      The generator is a seeded xorshift rather than Math.random(), so the
@@ -4001,7 +4046,7 @@ class Renderer {
   }
 
   /* The only raster image on the page, and it is drawn here rather than
-     loaded — a 2D canvas, one fillText, uploaded once. */
+     loaded: a 2D canvas, one fillText, uploaded once. */
   makePrintTexture() {
     const gl = this.gl;
     const S = 512;
@@ -4053,7 +4098,7 @@ class Renderer {
   }
 
   /* Flatten the material list into the uniform arrays the shader indexes.
-     Called once — the palette never changes at runtime. */
+     Called once; the palette never changes at runtime. */
   setPalette(materials) {
     const N = 8;
     const f = () => new Float32Array(N);
@@ -4157,7 +4202,7 @@ class Renderer {
     gl.depthMask(true);
     gl.depthFunc(gl.ALWAYS);   // a fullscreen pass that supplies its own depth
     {
-      // orb transforms, straight from the director — the same array the
+      // orb transforms, straight from the director: the same array the
       // click test in main.js reads
       const oc = Math.min(p.orbCount | 0, 8);
       this.orbPosBuf.fill(0); this.orbRadBuf.fill(0);
@@ -4176,6 +4221,7 @@ class Renderer {
         uMatEmis: this.pal.emis, uMatDisp: this.pal.disp, uMatAbsorb: this.pal.absorb,
         uOrbPos: this.orbPosBuf, uOrbR: this.orbRadBuf, uOrbCount: oc,
         uPulse: p.pulse, uPulseDir: p.pulseDir, uFlash: p.flash,
+        uFlyPos: p.flyPos, uFlyR: p.flyR, uFlyK: p.flyK, uBound: p.bound,
         uRes: [this.iw, this.ih],
         uTime: this.simTime, uFrame: this.frame,
         uInvViewProj: this.invViewProjJ, uViewProj: this.viewProjJ,
@@ -4213,7 +4259,7 @@ class Renderer {
         /* Normalise brightness against the particle count.
 
            Additive blending sums every sprite, so quadrupling the count
-           quadruples the glow — the ultra tier was washing the entire frame
+           quadruples the glow; the ultra tier was washing the entire frame
            lime while medium looked right, because the gain was tuned at
            medium and never re-checked at ultra. More particles should buy
            finer structure, not more light. */
@@ -4352,7 +4398,7 @@ class Renderer {
       this.onLog('gpu context lost');
     });
     this.canvas.addEventListener('webglcontextrestored', () => {
-      this.onLog('gpu context restored — rebuilding');
+      this.onLog('gpu context restored, rebuilding');
       try {
         this.buildPrograms();
         this.resize(true);
@@ -4376,7 +4422,7 @@ class Renderer {
 
 /* ── js/content.js ───────────────────────────────────────────── */
 /* ══════════════════════════════════════════════════════════════════════════
-   content.js — everything the page says.
+   content.js: everything the page says.
 
    The repo numbers are a verified snapshot (2026-08-20). At runtime the page
    tries the public GitHub API once and upgrades them if it answers; if it is
@@ -4389,11 +4435,11 @@ const GH_USER = 'winchxyz';
 
 const SNAPSHOT_DATE = '2026-08-20';
 
-/* Which preset the page opens on. Index into MATERIALS — 6 is the cast
+/* Which preset the page opens on. Index into MATERIALS. 5 is the cast
    crystal, which shows the dielectric solver, the dispersion and the
    refracted floor all at once, so the first thing anyone sees is the part
    that is hardest to fake. */
-const DEFAULT_MATERIAL = 6;
+const DEFAULT_MATERIAL = 5;
 
 /* ── typing line under the wordmark ────────────────────────────────────── */
 
@@ -4420,7 +4466,7 @@ const REPOS = [
   {
     name: 'winchxyz.github.io',
     group: 'graphics',
-    desc: 'This page. A portfolio that renders itself on the GPU — one WebGL2 context, a few thousand lines of hand-written GLSL, and nothing else at all.',
+    desc: 'This page. A portfolio that renders itself on the GPU: one WebGL2 context, a few thousand lines of hand-written GLSL, and nothing else at all.',
     lang: 'JavaScript',
     stars: 0, forks: 0,
     tags: ['WebGL2', 'GLSL', 'raymarching', 'zero-deps'],
@@ -4430,7 +4476,7 @@ const REPOS = [
   {
     name: 'moon-rover',
     group: 'graphics',
-    desc: 'A 3D lunar rover survey game. WebGL2, no build step, no third-party assets — every texture and every sound is generated at runtime.',
+    desc: 'A 3D lunar rover survey game. WebGL2, no build step, no third-party assets. Every texture and every sound is generated at runtime.',
     lang: 'JavaScript',
     stars: 102, forks: 23,
     tags: ['WebGL2', 'procedural-audio', 'zero-assets', 'gamedev'],
@@ -4439,7 +4485,7 @@ const REPOS = [
   {
     name: 'tidewright',
     group: 'graphics',
-    desc: 'A 3D sandcastle simulator that runs entirely on the GPU. No engine, no libraries, no asset files — and a beach that actually obeys the angle of repose.',
+    desc: 'A 3D sandcastle simulator that runs entirely on the GPU. No engine, no libraries, no asset files, and a beach that actually obeys the angle of repose.',
     lang: 'JavaScript',
     stars: 72, forks: 21,
     tags: ['WebGL2', 'GLSL', 'zero-deps', 'one-prompt'],
@@ -4467,7 +4513,7 @@ const REPOS = [
   {
     name: 'loupe',
     group: 'tools',
-    desc: 'Open-source, local Windows AI website builder. AI builds the site, you refine it by hand on the live render — every edit verified against the real DOM.',
+    desc: 'Open-source, local Windows AI website builder. AI builds the site, you refine it by hand on the live render, and every edit is verified against the real DOM.',
     lang: 'CSS',
     stars: 7, forks: 1,
     tags: ['Electron', 'Claude Agent SDK', 'BYOK', 'local-first'],
@@ -4477,7 +4523,7 @@ const REPOS = [
   {
     name: 'navis',
     group: 'graphics',
-    desc: 'A flooded Gothic cathedral rendered in real time. One HTML file, no assets — the rose window, the marble, the caustics and the reverb are all generated at load.',
+    desc: 'A flooded Gothic cathedral rendered in real time. One HTML file, no assets. The rose window, the marble, the caustics and the reverb are all generated at load.',
     lang: 'HTML',
     stars: 6, forks: 1,
     tags: ['three.js', 'GLSL', 'single-file', 'procedural-audio'],
@@ -4487,7 +4533,7 @@ const REPOS = [
   {
     name: 'solebound',
     group: 'graphics',
-    desc: 'A GPU shoe-repair simulator about roads that remember. One HTML file — geometry, materials, audio and portraits all generated at runtime.',
+    desc: 'A GPU shoe-repair simulator about roads that remember. One HTML file. Geometry, materials, audio and portraits all generated at runtime.',
     lang: 'HTML',
     stars: 4, forks: 0,
     tags: ['WebGL', 'GLSL', 'procedural', 'single-file'],
@@ -4496,7 +4542,7 @@ const REPOS = [
   {
     name: 'x-ghostwriter',
     group: 'tools',
-    desc: 'Your AI ghostwriter for X — drafts posts and replies in your voice. Runs locally, costs nothing, and you always hit publish yourself.',
+    desc: 'Your AI ghostwriter for X. It drafts posts and replies in your voice, runs locally, costs nothing, and you always hit publish yourself.',
     lang: 'PowerShell',
     stars: 3, forks: 0,
     tags: ['n8n', 'self-hosted', 'Telegram', 'build-in-public'],
@@ -4505,7 +4551,7 @@ const REPOS = [
   {
     name: 'cut',
     group: 'graphics',
-    desc: 'A quiet 3D slicing sandbox — cut objects apart along the exact path your mouse draws.',
+    desc: 'A quiet 3D slicing sandbox. Cut objects apart along the exact path your mouse draws.',
     lang: 'JavaScript',
     stars: 1, forks: 0,
     tags: ['mesh-surgery', 'WebGL', 'sandbox'],
@@ -4532,7 +4578,7 @@ const REPOS = [
   {
     name: 'loupe-website',
     group: 'tools',
-    desc: 'The product site for Loupe — the AI web-design studio.',
+    desc: 'The product site for Loupe, the AI web-design studio.',
     lang: 'HTML',
     stars: 0, forks: 0,
     tags: ['marketing', 'static'],
@@ -4543,7 +4589,7 @@ const REPOS = [
 
 /* ── materials ─────────────────────────────────────────────────────────────
    `p` maps straight onto the uniforms the raymarch shader reads. Everything
-   here is analytic — there is not one texture file behind any of it.
+   here is analytic. There is not one texture file behind any of it.
    ─────────────────────────────────────────────────────────────────────── */
 
 const MATERIALS = [
@@ -4551,7 +4597,7 @@ const MATERIALS = [
     id: 0,
     name: 'Liquid chrome',
     sw: '#cdd3cc',
-    desc: 'A near-perfect mirror over a surface that will not hold still. Rough enough to catch the softboxes, smooth enough that the whole studio bends across it. The only reason it reads as metal is the Fresnel term — there is no reflection probe anywhere in this page.',
+    desc: 'A near-perfect mirror over a surface that will not hold still. Rough enough to catch the softboxes, smooth enough that the whole studio bends across it. The only reason it reads as metal is the Fresnel term. There is no reflection probe anywhere in this page.',
     p: { rough: 0.045, metal: 1.0, ior: 2.4, aniso: 0.0, film: 0.0, trans: 0.0 },
     stats: [['roughness', '0.045'], ['metalness', '1.00'], ['model', 'GGX · Smith'], ['env', 'analytic']],
   },
@@ -4567,7 +4613,7 @@ const MATERIALS = [
     id: 2,
     name: 'Obsidian glass',
     sw: '#3a4b52',
-    desc: 'Three refracted rays instead of one, at slightly different indices of refraction, recombined as red, green and blue. That is the whole trick behind dispersion — the reason a prism throws a rainbow and cheap CG glass never does. This one is heavily absorbing, so thickness reads as darkness.',
+    desc: 'Three refracted rays instead of one, at slightly different indices of refraction, recombined as red, green and blue. That is the whole trick behind dispersion, and the reason a prism throws a rainbow while cheap CG glass never does. This one absorbs hard, so thickness reads as darkness.',
     p: {
       rough: 0.02, metal: 0.0, ior: 1.52, aniso: 0.0, film: 0.0, trans: 1.0,
       absorb: [0.68, 0.46, 0.40], dispersion: 0.017,
@@ -4578,20 +4624,12 @@ const MATERIALS = [
     id: 3,
     name: 'Brushed alloy',
     sw: '#9a9c93',
-    desc: 'Anisotropic GGX with the tangent frame built from a procedural direction field wrapped around the form — no UVs, because a signed distance field does not have any. The highlight stretches perpendicular to the grain, which is the entire reason brushed metal looks brushed.',
+    desc: 'Anisotropic GGX with the tangent frame built from a procedural direction field wrapped around the form. A signed distance field has no UVs, so the frame has to come from somewhere. The highlight stretches perpendicular to the grain, which is the entire reason brushed metal looks brushed.',
     p: { rough: 0.30, metal: 1.0, ior: 1.9, aniso: 0.85, film: 0.0, trans: 0.0 },
     stats: [['α tangent', '0.42'], ['α bitangent', '0.06'], ['anisotropy', '0.85'], ['model', 'aniso GGX']],
   },
   {
     id: 4,
-    name: 'Kiln ceramic',
-    sw: '#e6e2d6',
-    desc: 'A dielectric with a wrapped diffuse term standing in for subsurface scattering, under a clear specular coat. The glaze pools in the low places and thins over the high ones, because the roughness is driven by the same noise field that carves the surface.',
-    p: { rough: 0.42, metal: 0.0, ior: 1.46, aniso: 0.0, film: 0.0, trans: 0.0 },
-    stats: [['roughness', '0.42'], ['metalness', '0.00'], ['wrap', '0.55'], ['coat', '0.35']],
-  },
-  {
-    id: 5,
     name: 'Molten core',
     sw: '#ff7a2f',
     desc: 'The lattice is opaque; what is behind it is not. Emission ramped along a blackbody curve from about 1100 K at the skin to 2400 K deep in, so the colour shift from dull red to white is the real Planck locus rather than a hand-picked gradient.',
@@ -4599,10 +4637,10 @@ const MATERIALS = [
     stats: [['T skin', '1 100 K'], ['T core', '2 400 K'], ['curve', 'Planck'], ['exposure', '+1.4 EV']],
   },
   {
-    id: 6,
+    id: 5,
     name: 'Cast crystal',
     sw: '#dfeef5',
-    desc: 'The same dielectric solver as the obsidian, with the tint taken out and the dispersion turned up. Absorption is near zero, so thickness reads as depth rather than as darkness, and the three wavelengths separate far enough that the edges throw real colour. Lead crystal is dense, slow glass — a low Abbe number, which is the number that says how hard it splits light.',
+    desc: 'The same dielectric solver as the obsidian, with the tint taken out and the dispersion turned up. Absorption is near zero, so thickness reads as depth rather than as darkness, and the three wavelengths separate far enough that the edges throw real colour. Lead crystal is dense, slow glass with a low Abbe number: the measure of how hard a glass splits light.',
     p: {
       rough: 0.015, metal: 0.0, ior: 1.62, aniso: 0.0, film: 0.0, trans: 1.0,
       absorb: [0.055, 0.030, 0.075], dispersion: 0.042,
@@ -4614,18 +4652,18 @@ const MATERIALS = [
 /* ── keyboard ──────────────────────────────────────────────────────────── */
 
 const SHORTCUTS = [
-  ['1 – 7',  'material preset'],
+  ['1 – 6',  'material preset'],
   ['drag',   'orbit the sculpture'],
-  ['P',      'photo mode — UI off, 2× render scale'],
+  ['P',      'photo mode, UI off, 2x render scale'],
   ['Enter',  'save a PNG'],
   ['G',      'performance readout'],
-  ['M',      'calm mode — halve the motion'],
+  ['M',      'calm mode, half the motion'],
   ['?',      'this list'],
 ];
 
 /* ── js/director.js ──────────────────────────────────────────── */
 /* ══════════════════════════════════════════════════════════════════════════
-   director.js — what the scene is doing, and why.
+   director.js: what the scene is doing, and why.
 
    Each section owns a keyframe. Scrolling through a section holds its
    keyframe for the first half and then eases into the next one, so the camera
@@ -4639,7 +4677,7 @@ const SHORTCUTS = [
    section. That framing is only correct at the one aspect ratio it was tuned
    at: the page's type sits in a centred, max-width column, so as the viewport
    widens the column stays put while a world-space camera offset keeps sliding
-   the sculpture outward until it runs off the edge — which is exactly what
+   the sculpture outward until it runs off the edge, which is exactly what
    happened at 16:9.
 
    So a keyframe now says where the sculpture should appear *on screen* and
@@ -4659,7 +4697,7 @@ const R_BOUND = 1.62;
 /* How lively the particle field is, as one dial.
 
    The first pass had the cloud whipping around the sculpture fast enough to
-   read as agitation rather than as atmosphere — it pulled the eye off the
+   read as agitation rather than as atmosphere; it pulled the eye off the
    type, which is the opposite of what a background is for. Orbit speed is
    halved; the curl flow is toned down less, because that one contributes
    shape as much as speed. */
@@ -4673,7 +4711,7 @@ const CURL_SCALE = 0.34;
    click test and the pixels are reading the same numbers. */
 const ORB_RING = 2.15;    // ring radius, world units
 /* Tilt reads as an ellipse and gives the ring depth, but every degree of it
-   also spreads the orbs in Z — and a near orb sits at half the camera
+   also spreads the orbs in Z, and a near orb sits at half the camera
    distance of a far one, so it projects twice the size. Too much tilt and the
    near ones grow out of frame while the far ones shrink to specks. */
 const ORB_TILT = 0.34;    // tilt about X, radians
@@ -4684,7 +4722,7 @@ const FLY_TIME = 0.52;    // seconds from click to impact
    yaw / pitch  direction from the subject to the camera, radians
    fov          vertical field of view, degrees
    fill         subject diameter as a fraction of viewport HEIGHT
-   fillW        the same as a fraction of viewport WIDTH — a cap, so a narrow
+   fillW        the same as a fraction of viewport WIDTH, a cap, so a narrow
                 window pulls the camera back instead of cropping
    fx           horizontal placement, as a fraction across the content column
    fy           vertical placement, as a fraction of viewport height
@@ -4716,7 +4754,7 @@ const K = [
     pGain: 0.30, pCurl: 0.55, pAttract: 1.35, pTangent: 1.00, pSpin: 0.12, pSize: 1.0, pDamp: 0.85, pLife: 0.09,
     bloom: 0.95, streak: 0.42, ca: 0.60, vignette: 0.78, grain: 0.026,
   },
-  { /* 03 work — the grid owns the page, so the sculpture sits high and small */
+  { /* 03 work: the grid owns the page, so the sculpture sits high and small */
     yaw: -0.68, pitch: 0.40, fov: 35, fill: 0.46, fillW: 0.28, fx: 0.74, fy: 0.24,
     orbShow: 0, pivot: [0, 0, 0], radius: R_BOUND,
     shape: 2.00, detail: 0.45, scale: 1.00, rimBoost: 0.15, sceneExposure: 0.92,
@@ -4766,7 +4804,8 @@ class Director {
 
     this.orbs = {
       show: 0, spin: 0, hover: -1,
-      fly: 0, flyId: -1, pending: -1,
+      fly: 0, flyId: -1, pending: -1, merged: false,
+      flyPos: [0, 0, 0], flyR: 0, flyK: 0.3, bound: R_BOUND,
       pulse: 0, pulseDir: [0, 1, 0], flash: 0,
       pos: MATERIALS.map(() => [0, 0, 0]),
       rad: MATERIALS.map(() => 0),
@@ -4788,7 +4827,7 @@ class Director {
     this.burst = 0.65;
   }
 
-  /* Send an orb into the sculpture. The material does not change now — it
+  /* Send an orb into the sculpture. The material does not change now; it
      changes when the orb lands, under the ripple. */
   absorb(i) {
     const o = this.orbs;
@@ -4830,11 +4869,19 @@ class Director {
 
     if (o.flyId >= 0) {
       o.fly = Math.min(1, o.fly + dt / FLY_TIME);
-      if (o.fly >= 1) {
+
+      /* The switch happens when the two forms actually touch, not when the
+         orb reaches the centre. Everything after that is the sculpture
+         swallowing a lump that is already the new material, which is what
+         makes it read as becoming rather than as replacing. */
+      if (!o.merged && o.fly >= 0.52) {
+        o.merged = true;
         this.materialIndex = o.pending;
-        o.flyId = -1; o.fly = 0; o.pending = -1;
         o.pulse = 1; o.flash = 1;
         this.burst = 0.7;
+      }
+      if (o.fly >= 1) {
+        o.flyId = -1; o.fly = 0; o.pending = -1; o.merged = false;
       }
     }
     o.pulse = Math.max(0, o.pulse - dt / 0.85);
@@ -4855,11 +4902,27 @@ class Director {
       if (k === o.flyId) {
         const e = o.fly * o.fly;                 // accelerates inward
         px *= 1 - e; py *= 1 - e; pz *= 1 - e;
-        r *= 1 - o.fly * 0.9;
+        r *= 1 - o.fly * 0.55;
+
+        if (o.merged) {
+          // handed to the distance field; drawn there, not here
+          o.flyPos[0] = px; o.flyPos[1] = py; o.flyPos[2] = pz;
+          o.flyR = r;
+          o.flyK = 0.22 + 0.34 * (1 - o.fly);    // the neck thins as it closes
+          r = 0;
+        }
       }
       o.pos[k][0] = px; o.pos[k][1] = py; o.pos[k][2] = pz;
       o.rad[k] = r;
     }
+
+    if (!o.merged) { o.flyR = 0; }
+
+    // the marcher's bounding sphere has to reach whatever is being absorbed
+    const reach = o.flyR > 0
+      ? Math.hypot(o.flyPos[0], o.flyPos[1], o.flyPos[2]) + o.flyR + o.flyK
+      : 0;
+    o.bound = Math.max(R_BOUND * this.current.scale, reach) + 0.02;
   }
 
   computeTarget() {
@@ -4886,7 +4949,7 @@ class Director {
   }
 
   /* Solve a camera that puts a sphere of `radius` at `pivot` on screen at
-     (fx, fy) filling `fill` of the height — at whatever aspect we happen to
+     (fx, fy) filling `fill` of the height, at whatever aspect we happen to
      have this frame. */
   solveCamera(c, aspect, vw) {
     const tanV = Math.tan((c.fov * Math.PI) / 180 / 2);
@@ -4900,7 +4963,7 @@ class Director {
        column, which works because on a landscape screen there is a column of
        empty page over there. On a phone the type runs down the middle and
        that space does not exist, so the same framing puts the sculpture
-       entirely off the right edge — which is what it did: the whole reason
+       entirely off the right edge, which is what it did: the whole reason
        the page exists, cropped to a green sliver.
 
        So on a portrait viewport it moves to the top centre and is allowed to
@@ -4943,7 +5006,7 @@ class Director {
     /* Keep the subject inside the frame, whatever fx asked for.
 
        fx is a fraction of the CONTENT COLUMN, and on a narrow window the
-       column is most of the viewport — so an fx past 1.0, which sits neatly
+       column is most of the viewport, so an fx past 1.0, which sits neatly
        just outside the column on a wide screen, lands half off the edge on a
        smaller one. Clamping against the subject's own projected radius makes
        "just outside the column" mean that at every width, and makes clipping
@@ -5002,7 +5065,7 @@ class Director {
     this.orbit.pitch += this.mouse.sy * 0.055 * par;
     // The canvas's own width, not innerWidth. They are the same on a desktop
     // browser and they are not under mobile emulation or with a pinch-zoomed
-    // visual viewport — and it is the canvas the composition is being solved
+    // visual viewport, and it is the canvas the composition is being solved
     // against, so that is the number that has to be right.
     const cam = this.solveCamera(c, aspect, renderer.canvas.clientWidth || innerWidth);
     this.orbit.yaw = saveYaw; this.orbit.pitch = savePitch;
@@ -5071,6 +5134,10 @@ class Director {
     o.orbPos = this.orbs.pos;
     o.orbRad = this.orbs.rad;
     o.orbCount = this.orbs.show > 0.01 ? this.orbs.pos.length : 0;
+    o.flyPos = this.orbs.flyPos;
+    o.flyR = this.orbs.flyR;
+    o.flyK = this.orbs.flyK;
+    o.bound = this.orbs.bound;
     o.pulse = this.orbs.pulse;
     o.pulseDir = this.orbs.pulseDir;
     o.flash = this.orbs.flash;
@@ -5086,7 +5153,7 @@ const SECTION_COUNT = K.length;
 
 /* ── js/ui.js ────────────────────────────────────────────────── */
 /* ══════════════════════════════════════════════════════════════════════════
-   ui.js — the DOM half.
+   ui.js: the DOM half.
 
    Scroll is read once per frame from a cached offset table rather than by
    asking the layout engine where things are; the only getBoundingClientRect
@@ -5155,6 +5222,12 @@ class UI {
   selectMaterial(i, silent = false) {
     const m = MATERIALS[i];
     if (!m) return;
+
+    /* Ask before committing. An absorb already in flight refuses a second
+       one, and the panel must not say a material the sculpture is not going
+       to become. */
+    if (!silent && this.onMaterial(i) === false) return;
+
     this.materialIndex = i;
     $$('#mat-list li').forEach((li, n) => li.classList.toggle('is-on', n === i));
     $$('#mat-list button').forEach((b, n) => b.setAttribute('aria-selected', String(n === i)));
@@ -5178,7 +5251,6 @@ class UI {
       );
     });
 
-    if (!silent) this.onMaterial(i);
   }
 
   buildWork() {
@@ -5498,7 +5570,7 @@ class UI {
       $('#stat-src').textContent = 'live';
       $('.hero-meta .live')?.classList.add('is-live');
       this.liveStars = stars;
-    } catch { /* offline, rate-limited, or blocked — the snapshot stands */ }
+    } catch { /* offline, rate-limited, or blocked; the snapshot stands */ }
   }
 
   countTo(node, to) {
@@ -5518,7 +5590,7 @@ class UI {
 
 /* ── js/main.js ──────────────────────────────────────────────── */
 /* ══════════════════════════════════════════════════════════════════════════
-   main.js — boot, input, and the loop.
+   main.js: boot, input, and the loop.
    ══════════════════════════════════════════════════════════════════════════ */
 
 
@@ -5588,10 +5660,10 @@ async function boot() {
   setBootAttempts(failed + 1);
 
   // The wordmark is drawn into a texture with fillText, so the font has to
-  // exist first — otherwise the wordmark texture is set in Times New Roman.
+  // exist first; otherwise the wordmark texture is set in Times New Roman.
   try {
     await Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 2500))]);
-  } catch { /* no font loading API — the fallback stack is fine */ }
+  } catch { /* no font loading API; the fallback stack is fine */ }
 
   mark('opening a webgl2 context', 0.18);
 
@@ -5615,7 +5687,7 @@ async function boot() {
     // everyone already starts at the bottom.
     const i = TIER_ORDER.indexOf(renderer.ceiling);
     renderer.ceiling = TIER_ORDER[Math.max(0, i - failed)];
-    ui.boot(`previous load did not finish — capped at ${renderer.ceiling}`, 0.6);
+    ui.boot(`previous load did not finish, capped at ${renderer.ceiling}`, 0.6);
   }
 
   // The driver is compiling on its own threads right now; this loop just
@@ -5636,12 +5708,12 @@ async function boot() {
   // Deliberately at a low internal resolution. The first frame after a link
   // is also the frame that pays for every shader's first real execution, and
   // on Windows a frame that takes more than a couple of seconds is killed by
-  // the display driver's watchdog — which reads as "the tab crashed" rather
+  // the display driver's watchdog, which reads as "the tab crashed" rather
   // than "that was slow". The adaptive controller walks the scale back up
   // over the first second once there are real frame times to go on.
   // Settle on the starting resolution BEFORE the warm frames, not after.
   // Resizing reallocates every render target, which forces the driver to
-  // finish whatever is still queued — so doing it after the warm frames
+  // finish whatever is still queued, so doing it after the warm frames
   // turned their cost into one long synchronous block at the worst possible
   // moment. The adaptive controller takes it from here.
   renderer.renderScale = Math.min(renderer.tier.scale, 0.72);
@@ -5666,8 +5738,11 @@ async function boot() {
   mark('ready', 1.0);
   await new Promise((r) => setTimeout(r, 220));
 
-  document.documentElement.classList.add('booted', 'gl-up', 'hud-on');
-  setBootAttempts(0);      // made it — forget the previous failures
+  /* No 'hud-on'. The performance readout is developer telemetry, and it was
+     sitting permanently on top of a portfolio. The small chip in the corner
+     opens it, and so does G. */
+  document.documentElement.classList.add('booted', 'gl-up');
+  setBootAttempts(0);      // made it; forget the previous failures
   running = true;
   last = performance.now();
   requestAnimationFrame(loop);
@@ -5739,7 +5814,7 @@ function wireInput() {
     lastX = e.clientX; lastY = e.clientY;
     downX = e.clientX; downY = e.clientY;
 
-    // Remember what was under the cursor, but do not act yet — acting on
+    // Remember what was under the cursor, but do not act yet: acting on
     // pointerdown would fire an absorb every time a drag happens to start
     // over an orb.
     const [nx, ny] = norm(e);
@@ -5786,8 +5861,11 @@ function wireInput() {
 
   ui.onMaterial = (i) => {
     // In the materials section the orb flies in and the sculpture changes
-    // when it lands; anywhere else there is no orb to send, so switch now.
-    if (!director.absorb(i)) director.setMaterial(i);
+    // when it lands. Anywhere else there is no orb to send, so switch now.
+    if (director.absorb(i)) return true;
+    if (director.orbs.flyId >= 0) return false;   // one at a time
+    director.setMaterial(i);
+    return true;
   };
 
   addEventListener('resize', () => {
@@ -5850,7 +5928,7 @@ function wireKeys() {
    between two scales at exactly the frequency that is most visible. */
 /* ── how much headroom is there? ──────────────────────────────────────────
    Not milliseconds. Rendering is locked to the display, so the frame delta
-   sits at the refresh interval — 16.7 ms on a 60 Hz panel — whether the GPU
+   sits at the refresh interval, 16.7 ms on a 60 Hz panel, whether the GPU
    finished in two milliseconds or in sixteen. A threshold like "under 11 ms
    means promote" can therefore never be true, and the first version of this
    controller would have sat at the lowest tier forever on any machine.
@@ -5887,7 +5965,7 @@ function adapt(dt) {
   const atBottom = renderer.renderScale <= t.minScale + 1e-3;
   const drops = dropRate();
 
-  // resolution first — it is free to change and invisible at these steps
+  // resolution first; it is free to change and invisible at these steps
   if (drops > 0.12 && !atBottom) {
     renderer.renderScale = Math.max(t.minScale, renderer.renderScale - 0.07);
     renderer.resize(true); renderer.markCameraCut();
@@ -5902,7 +5980,7 @@ function adapt(dt) {
   }
 
   /* Then the tier. Promotion needs two seconds of genuine headroom at full
-     scale, not one lucky frame — stepping up costs a reallocation and a
+     scale, not one lucky frame; stepping up costs a reallocation and a
      bigger particle buffer, and thrashing between tiers is worse than
      sitting one below the best one. */
   if (atTop && drops < 0.02) {

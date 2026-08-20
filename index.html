@@ -3,20 +3,20 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>winch — real-time graphics &amp; AI dev tools</title>
+<title>winch · real-time graphics &amp; AI dev tools</title>
 
-<meta name="description" content="winch — vibecoding cool shit. Real-time graphics and AI dev tools. Shaders on one end, agents on the other. Local-first, open source, nothing hidden." />
+<meta name="description" content="winch. Vibecoding cool shit. Real-time graphics and AI dev tools. Shaders on one end, agents on the other. Local-first, open source, nothing hidden." />
 <meta name="author" content="winch" />
 <meta name="theme-color" content="#07090A" />
 <link rel="canonical" href="https://winchxyz.github.io/" />
 
 <meta property="og:type" content="website" />
-<meta property="og:title" content="winch — real-time graphics &amp; AI dev tools" />
-<meta property="og:description" content="Shaders on one end, agents on the other. Everything on this page is drawn by hand-written GLSL — no engine, no libraries, no asset files." />
+<meta property="og:title" content="winch · real-time graphics &amp; AI dev tools" />
+<meta property="og:description" content="Shaders on one end, agents on the other. Everything on this page is drawn by hand-written GLSL. No engine, no libraries, no asset files." />
 <meta property="og:url" content="https://winchxyz.github.io/" />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:creator" content="@winchxyz" />
-<meta name="twitter:title" content="winch — real-time graphics &amp; AI dev tools" />
+<meta name="twitter:title" content="winch · real-time graphics &amp; AI dev tools" />
 <meta name="twitter:description" content="Shaders on one end, agents on the other. No engine, no libraries, no asset files." />
 
 <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -74,7 +74,7 @@
 <header id="nav">
   <a class="nav-mark" href="#top" data-magnetic>
     <svg viewBox="0 0 120 44" width="60" height="22" aria-hidden="true"><path d="M8 10l14 26 14-26 14 26 14-26" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    <span class="sr-only">winch — home</span>
+    <span class="sr-only">winch, home</span>
   </a>
   <nav aria-label="Sections">
     <a href="#whoami" data-magnetic>whoami</a>
@@ -123,7 +123,7 @@
   </a>
 
   <p class="hero-footnote mono" data-reveal data-reveal-delay="5">
-    everything you see moving is one WebGL2 context — no engine, no asset files
+    everything you see moving is one WebGL2 context. no engine, no asset files.
   </p>
 </section>
 
@@ -136,11 +136,11 @@
         I build the thing I wish existed, then put it on GitHub.
       </p>
       <p data-reveal data-reveal-delay="2">
-        Some of it is graphics — real-time simulators where the world is generated in
-        shaders and there's no engine underneath. Some of it is tooling I reach for
-        every day: a design studio that verifies its own edits, a ghostwriter that
-        actually sounds like me, a way to think an idea through that pushes back
-        instead of nodding along.
+        Some of it is graphics. Real-time simulators where the world is generated
+        in shaders and there is no engine underneath. Some of it is tooling I reach
+        for every day: a design studio that verifies its own edits, a ghostwriter
+        that actually sounds like me, a way to think an idea through that pushes
+        back instead of nodding along.
       </p>
       <p data-reveal data-reveal-delay="3">
         Different problems, same habits. Runs on your machine. Open source.
@@ -151,11 +151,13 @@
     <div class="col">
       <div class="codeblock" data-reveal data-reveal-delay="2">
         <div class="codeblock-bar mono"><span></span><span></span><span></span><em>whoami.yaml</em></div>
-        <pre class="mono"><code><span class="y-k">building</span>:     <span class="y-s">real-time graphics, AI dev tools, agent workflows</span>
-<span class="y-k">stack</span>:        <span class="y-s">JavaScript · GLSL · TypeScript · Electron · Claude Agent SDK</span>
-<span class="y-k">principles</span>:   [<span class="y-a">local-first</span>, <span class="y-a">BYOK</span>, <span class="y-a">open source</span>, <span class="y-a">no black boxes</span>]
-<span class="y-k">allergic_to</span>:  [<span class="y-x">AI slop</span>, <span class="y-x">tools that hide what they did</span>, <span class="y-x">400 MB for a triangle</span>]
-<span class="y-k">find_me_at</span>:   <span class="y-l">x.com/winchxyz</span></code></pre>
+        <div class="yaml mono">
+          <span class="y-k">building</span><span class="y-v y-s">real-time graphics, AI dev tools, agent workflows</span>
+          <span class="y-k">stack</span><span class="y-v y-s">JavaScript · GLSL · TypeScript · Electron · Claude Agent SDK</span>
+          <span class="y-k">principles</span><span class="y-v">[<i class="y-a">local-first</i>, <i class="y-a">BYOK</i>, <i class="y-a">open source</i>, <i class="y-a">no black boxes</i>]</span>
+          <span class="y-k">allergic_to</span><span class="y-v">[<i class="y-x">AI slop</i>, <i class="y-x">tools that hide what they did</i>, <i class="y-x">400 MB for a triangle</i>]</span>
+          <span class="y-k">find_me_at</span><span class="y-v y-l">x.com/winchxyz</span>
+        </div>
       </div>
     </div>
   </div>
@@ -169,8 +171,11 @@
       <p class="sec-sub" data-reveal data-reveal-delay="1">
         This is the part of the job I like most: working out how a surface should
         answer light, and then writing that answer down. Each of these is a few
-        lines of maths — no textures, no photographed environment, nothing
-        downloaded. Pick one and watch it change.
+        lines of maths. No textures, no photographed environment, nothing
+        downloaded.
+      </p>
+      <p class="sec-sub sec-sub-lead" data-reveal data-reveal-delay="2">
+        Pick one and watch it change.
       </p>
     </header>
 
@@ -183,7 +188,7 @@
       <!-- The orbs are the control. This row is the keyboard and touch path
            to the same thing, and it is what a screen reader reads. -->
       <ul class="mat-chips mono" role="tablist" aria-label="Material presets" id="mat-list"></ul>
-      <p class="mat-hint mono">click an orb · or press <kbd>1</kbd>–<kbd>7</kbd> · drag to orbit</p>
+      <p class="mat-hint mono">click an orb · or press <kbd>1</kbd>–<kbd>6</kbd> · drag to orbit</p>
     </div>
   </div>
 </section>
@@ -196,7 +201,7 @@
     <header class="sec-head">
       <h2 class="h-mono" data-reveal><span class="prompt">$</span> ls ~/projects</h2>
       <p class="sec-sub" data-reveal data-reveal-delay="1">
-        Everything generated at runtime — no asset files, no build step, nothing
+        Everything generated at runtime. No asset files, no build step, nothing
         downloaded. Star counts are live when GitHub answers, and the last verified
         snapshot when it doesn't.
       </p>

@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════════════════
-   winch — main.css
+   winch · main.css
    Palette "Signal": monochrome + one acid accent. Same hex values as the
    GitHub profile, so the two read as one identity.
    ══════════════════════════════════════════════════════════════════════════ */
@@ -25,7 +25,7 @@
   --sans: "Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, system-ui, sans-serif;
   /* A display face with a real width axis.
 
-     The wordmark was set in Inter Tight, which is — as the name says — the
+     The wordmark was set in Inter Tight, which is, as the name says, the
      narrow cut of Inter. At 300px that reads as cramped however the tracking
      is adjusted, because it is the letterforms themselves that are narrow,
      not the space between them. Archivo carries a wdth axis, so the display
@@ -47,7 +47,7 @@
 /* The `hidden` attribute hides things by way of `display:none` in the user
    agent stylesheet, which any author `display` rule silently outranks. Every
    dialog in here sets its own display, so without this the shortcut sheet is
-   open on load — and its full-viewport backdrop-filter blurs the entire page
+   open on load, and its full-viewport backdrop-filter blurs the entire page
    while looking, at a glance, like a rendering bug. */
 [hidden]{ display:none !important; }
 
@@ -407,7 +407,7 @@ html[data-nojs] [data-reveal]{ opacity:1; transform:none; }
   /* NOT display:flex.
 
      Each letter is its own span so the hover can cascade across them, and as
-     flex items the browser lays every one out as an independent box — which
+     flex items the browser lays every one out as an independent box, which
      means no kerning is applied between them at all. On a face with real
      kerning pairs that reads as subtly, unplaceably wrong: the gaps come out
      mechanically equal instead of optically equal. Inline layout shapes the
@@ -477,20 +477,38 @@ html.scrolled .scroll-cue{ opacity:0; pointer-events:none; }
 .h-mono .prompt{ color:var(--lime); margin-right:.6em; }
 
 .sec-head{ max-width:70ch; margin-bottom:clamp(34px,6vh,64px); }
-.sec-sub{ margin:0; color:var(--muted); font-size:clamp(16px,1.05vw,18.5px); max-width:60ch; }
+/* Two settings, and the choice between them is the paragraph's length.
+
+   balance evens every line, so a four-line block cannot end on one stubby
+   word. Browsers cap it at a handful of lines, which is exactly the range
+   the short blocks here live in: ledes, headings, card copy.
+
+   pretty is the fallback for anything longer. It only protects the last
+   line, which is all that is needed once a paragraph is tall enough that
+   even lines stop mattering.
+
+   Neither can promise a short sentence a line of its own. Where the writing
+   wants that, the sentence gets its own element: see .sec-sub-lead. */
+.sec-sub{
+  margin:0; color:var(--muted);
+  font-size:clamp(16px,1.05vw,18.5px); max-width:60ch;
+  text-wrap:balance;
+}
+.sec-sub-lead{ margin-top:1.1em; color:var(--ash); }
 .sec-sub b{ color:var(--bone); font-weight:500; }
 
 .lede{
   font-family:var(--display); font-stretch:104%;
   font-size:clamp(21px,2.05vw,29px); font-weight:400; line-height:1.32;
   letter-spacing:-.014em; color:var(--chalk); margin:0 0 26px; max-width:24ch;
+  text-wrap:balance;
 }
 
 .grid-2{ display:grid; grid-template-columns:1fr 1fr; gap:clamp(28px,5vw,80px); align-items:start; }
 @media (max-width:900px){ .grid-2{ grid-template-columns:1fr; } }
 
 /* Grid and flex items default to `min-width:auto`, which resolves to their
-   MIN-CONTENT size — so one long unbreakable line inside the code block was
+   MIN-CONTENT size, so one long unbreakable line inside the code block was
    forcing its track wider than the viewport, and `overflow-x:auto` on the
    <pre> could not save it because the track itself refused to shrink.
    On a 375px phone the page laid out 554px wide because of this.
@@ -499,9 +517,12 @@ html.scrolled .scroll-cue{ opacity:0; pointer-events:none; }
 .mat-lab > *,
 .phys-panel > *,
 .codeblock,
-.codeblock pre{ min-width:0; }
+.yaml{ min-width:0; }
 
-.col p{ color:var(--muted); margin:0 0 18px; max-width:52ch; }
+/* :not(.lede) because .col p outranks .lede on specificity, and the lede is
+   a p inside a col. It was quietly losing its colour, its margin, its
+   measure and its wrap setting to this one line. */
+.col p:not(.lede){ color:var(--muted); margin:0 0 18px; max-width:52ch; text-wrap:pretty; }
 .col p:last-child{ margin-bottom:0; }
 
 /* ══ CODE BLOCK ══════════════════════════════════════════════════════════ */
@@ -523,12 +544,22 @@ html.scrolled .scroll-cue{ opacity:0; pointer-events:none; }
   margin-left:auto; font-style:normal; font-size:11px;
   letter-spacing:.12em; color:var(--dim); text-transform:uppercase;
 }
-.codeblock pre{
-  margin:0; padding:18px 16px; overflow-x:auto;
-  font-size:clamp(12.5px,.9vw,14.5px); line-height:1.85; color:var(--muted);
+/* This was a <pre> with the keys padded out to a column by hand, which
+   meant one horizontal scrollbar and half the longest value cut off mid
+   word at every width. A two-column grid aligns the same way without
+   asking the text to fit on one line: the keys size to their content, the
+   values take the rest and wrap inside it. Whitespace-only runs between
+   the spans are not rendered as grid items, so the source stays readable. */
+.yaml{
+  display:grid; grid-template-columns:max-content minmax(0,1fr);
+  column-gap:1.4ch; row-gap:.34em;
+  padding:18px 16px;
+  font-size:clamp(12.5px,.9vw,14.5px); line-height:1.75; color:var(--muted);
 }
-.codeblock code{ color:inherit; font-size:inherit; }
 .y-k{ color:var(--ash); }
+.y-k::after{ content:":"; color:var(--dim); }
+.y-v{ min-width:0; overflow-wrap:break-word; }
+.y-v i{ font-style:normal; }
 .y-s{ color:var(--muted); }
 .y-a{ color:var(--lime); }
 .y-x{ color:#C97B6B; }
@@ -536,7 +567,7 @@ html.scrolled .scroll-cue{ opacity:0; pointer-events:none; }
 
 /* ══ MATERIALS ═══════════════════════════════════════════════════════════ */
 
-/* The palette is in the scene now — seven orbs on a ring around the
+/* The palette is in the scene now: six orbs on a ring around the
    sculpture, clicked to be absorbed. This column is the panel that names
    whichever one is on, plus a row of chips that does the same job for a
    keyboard, a screen reader, and a thumb. */
@@ -567,13 +598,22 @@ html.scrolled .scroll-cue{ opacity:0; pointer-events:none; }
   font-size:clamp(25px,3.1vw,42px); font-weight:660;
   letter-spacing:-.014em; color:var(--chalk); line-height:1.08;
 }
-.mat-desc{ margin:0 0 24px; color:var(--muted); max-width:46ch; font-size:16.5px; }
+.mat-desc{ margin:0 0 24px; color:var(--muted); max-width:46ch; font-size:16.5px; text-wrap:pretty; }
+/* Flex, not grid, because the four values are not four similar widths. An
+   IOR triple is three numbers and two slashes; the cell beside it holds the
+   word "2". Equal columns made the wide one wrap into a three-line stack
+   next to three cells that were mostly air. min-width:max-content sizes
+   every cell to its own content, flex-grow shares out what is left, and a
+   row that will not fit wraps whole rather than breaking a value. */
 .mat-params{
-  display:grid; grid-template-columns:repeat(auto-fit,minmax(118px,1fr));
+  display:flex; flex-wrap:wrap;
   gap:1px; margin:0 0 22px; max-width:620px;
   background:var(--line-2); border:1px solid var(--line-2);
 }
-.mat-params div{ background:var(--ink); padding:11px 12px; }
+.mat-params div{
+  background:var(--ink); padding:11px 12px;
+  flex:1 1 auto; min-width:max-content;
+}
 .mat-params dt{ font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--dim); }
 .mat-params dd{ margin:5px 0 0; font-size:16px; color:var(--lime); font-variant-numeric:tabular-nums; }
 .mat-hint{ font-size:12px; color:var(--dim); letter-spacing:.06em; margin:0; }
@@ -626,7 +666,7 @@ html.scrolled .scroll-cue{ opacity:0; pointer-events:none; }
 }
 .card:hover .card-arrow{ transform:translate(3px,-3px); color:var(--lime); }
 
-.card-desc{ margin:0 0 auto; color:var(--muted); font-size:15.5px; line-height:1.6; }
+.card-desc{ margin:0 0 auto; color:var(--muted); font-size:15.5px; line-height:1.6; text-wrap:balance; }
 
 .card-tags{
   list-style:none; display:flex; flex-wrap:wrap; gap:5px; margin:18px 0 0; padding:0;
@@ -657,7 +697,7 @@ html.scrolled .scroll-cue{ opacity:0; pointer-events:none; }
 
 /* 240px, not 190px. "1,572,864" set at 42px is about 200px wide and the cell
    content box was 144px, so the longest figures in this grid were overflowing
-   by up to 50px — which the layout audit caught and no screenshot did. */
+   by up to 50px, which the layout audit caught and no screenshot did. */
 .numbers{
   list-style:none; margin:0 0 26px; padding:0;
   display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));
@@ -688,12 +728,12 @@ html.scrolled .scroll-cue{ opacity:0; pointer-events:none; }
 
    At 98px over two lines the section was taller than the viewport, so
    scrolling to the end left the headline sliced in half and sitting under
-   the navigation bar. Nothing was broken — it was simply too big to land. */
+   the navigation bar. Nothing was broken; it was simply too big to land. */
 .contact-h{
   margin:0 0 clamp(30px,5vh,54px);
   font-family:var(--display); font-stretch:108%;
   font-size:clamp(34px,5.1vw,72px); font-weight:720; line-height:1.0;
-  letter-spacing:-.018em; color:var(--chalk);
+  letter-spacing:-.018em; color:var(--chalk); text-wrap:balance;
 }
 
 .links{ list-style:none; margin:0 0 clamp(32px,5vh,58px); padding:0; border-top:1px solid var(--line-2); }
@@ -786,16 +826,15 @@ body.cur-drag .c-lbl{ opacity:1; }
 
 /* ══ RESPONSIVE / MOTION ═════════════════════════════════════════════════ */
 
-/* On a phone, wrap the code rather than hiding half of it behind a
-   horizontal scroller nobody discovers. The yaml loses its column alignment,
-   which is a smaller loss than half the content being unreachable. */
+/* Below this width the value column is too narrow to be worth aligning, so
+   the key gets its own line and the value runs the full width under it. */
 @media (max-width:640px){
-  .codeblock pre{
-    white-space:pre-wrap;
-    overflow-wrap:anywhere;
-    font-size:11px;
-    line-height:1.75;
+  .yaml{
+    grid-template-columns:minmax(0,1fr); row-gap:0;
+    font-size:11.5px; line-height:1.7;
   }
+  .y-k{ margin-top:.7em; }
+  .y-k:first-child{ margin-top:0; }
 }
 
 @media (max-width:760px){

@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════════════════
-   ui.js — the DOM half.
+   ui.js: the DOM half.
 
    Scroll is read once per frame from a cached offset table rather than by
    asking the layout engine where things are; the only getBoundingClientRect
@@ -68,6 +68,12 @@ export class UI {
   selectMaterial(i, silent = false) {
     const m = MATERIALS[i];
     if (!m) return;
+
+    /* Ask before committing. An absorb already in flight refuses a second
+       one, and the panel must not say a material the sculpture is not going
+       to become. */
+    if (!silent && this.onMaterial(i) === false) return;
+
     this.materialIndex = i;
     $$('#mat-list li').forEach((li, n) => li.classList.toggle('is-on', n === i));
     $$('#mat-list button').forEach((b, n) => b.setAttribute('aria-selected', String(n === i)));
@@ -91,7 +97,6 @@ export class UI {
       );
     });
 
-    if (!silent) this.onMaterial(i);
   }
 
   buildWork() {
@@ -411,7 +416,7 @@ export class UI {
       $('#stat-src').textContent = 'live';
       $('.hero-meta .live')?.classList.add('is-live');
       this.liveStars = stars;
-    } catch { /* offline, rate-limited, or blocked — the snapshot stands */ }
+    } catch { /* offline, rate-limited, or blocked; the snapshot stands */ }
   }
 
   countTo(node, to) {

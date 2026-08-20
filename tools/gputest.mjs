@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════════════════
-   tools/gputest.mjs — drive headless Chrome over CDP with nothing but the
+   tools/gputest.mjs: drive headless Chrome over CDP with nothing but the
    Node standard library, so the shaders can be compiled by a real GLSL
    translator on a machine with no GPU.
 
@@ -169,7 +169,7 @@ try {
     console.log('');
     if (!(await evaluate(cdp, 'window.__RESULT !== undefined').catch(() => false))) {
       collect();
-      console.log(RED(`\ngave up after ${(budget / 1000).toFixed(0)}s — stuck on: `)
+      console.log(RED(`\ngave up after ${(budget / 1000).toFixed(0)}s, stuck on: `)
         + (await evaluate(cdp, 'window.__CURRENT').catch(() => '?')));
       consoleErrors.forEach((e) => console.log('  ' + e));
       cdp.close(); chrome.kill();
@@ -180,7 +180,7 @@ try {
     collect();
 
     console.log('─'.repeat(72));
-    console.log('shader compile — ' + r.renderer);
+    console.log('shader compile: ' + r.renderer);
     console.log('─'.repeat(72));
     console.log('  extensions      ', JSON.stringify(r.exts));
     console.log('  MRT hdr + r32f  ', r.fbo);

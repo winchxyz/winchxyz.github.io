@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════════════════
-   post.js — everything that happens after the scene exists.
+   post.js: everything that happens after the scene exists.
 
    composite → TAA → bloom (prefilter, 6 down, 6 up) → streak → final grade.
    All of it in linear HDR until the very last line, where the only sRGB
@@ -27,7 +27,7 @@ void main(){
 
 /* ── temporal anti-aliasing ────────────────────────────────────────────────
    The raymarch is dithered per pixel and jittered per frame, so TAA is not
-   just anti-aliasing here — it is what turns the noise the marcher is
+   just anti-aliasing here; it is what turns the noise the marcher is
    deliberately introducing back into detail. Turning it off does not make
    the image sharper, it makes it grainy.
    ─────────────────────────────────────────────────────────────────────── */
@@ -193,7 +193,7 @@ void main(){
 }
 `;
 
-/* 9-tap tent upsample. This outputs ONLY the blurred contribution — the
+/* 9-tap tent upsample. This outputs ONLY the blurred contribution; the
    accumulation onto the larger level is done by hardware additive blending,
    which is why there is no uBase sampler here. Sampling the destination and
    adding it in the shader as well would double every level on the way back

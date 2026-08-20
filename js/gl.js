@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════════════════
-   gl.js — a thin WebGL2 layer. Programs, render targets, ping-pong, and
+   gl.js: a thin WebGL2 layer. Programs, render targets, ping-pong, and
    shader errors that tell you the line instead of making you count.
    ══════════════════════════════════════════════════════════════════════════ */
 
@@ -23,7 +23,7 @@ export function createContext(canvas) {
 
   /* EXT_color_buffer_float is the one that actually matters. Without it every
      float FBO comes back FRAMEBUFFER_INCOMPLETE_ATTACHMENT and the page is
-     black with no GL error raised anywhere — the classic silent failure. */
+     black with no GL error raised anywhere: the classic silent failure. */
   const caps = {
     colorFloat:  !!gl.getExtension('EXT_color_buffer_float'),
     halfFloat:   !!gl.getExtension('EXT_color_buffer_half_float'),
@@ -33,7 +33,7 @@ export function createContext(canvas) {
     timer:       gl.getExtension('EXT_disjoint_timer_query_webgl2'),
     /* Lets the driver compile and link on its own threads. Without it, the
        first getProgramParameter(LINK_STATUS) blocks the main thread until the
-       program is ready — which for a heavy shader means a frozen tab and a
+       program is ready, which for a heavy shader means a frozen tab and a
        browser offering to kill the page. */
     parallel:    gl.getExtension('KHR_parallel_shader_compile'),
     debugRender: gl.getExtension('WEBGL_debug_renderer_info'),
@@ -48,7 +48,7 @@ export function createContext(canvas) {
     caps.renderer = caps.debugRender
       ? gl.getParameter(caps.debugRender.UNMASKED_RENDERER_WEBGL)
       : gl.getParameter(gl.RENDERER);
-  } catch { /* masked in some browsers — that is fine, it is only a label */ }
+  } catch { /* masked in some browsers; that is fine, it is only a label */ }
 
   if (!caps.colorFloat && !caps.halfFloat) {
     throw new GLError('no float render targets (EXT_color_buffer_float missing)');
@@ -135,7 +135,7 @@ export class Program {
     const gl = this.gl, p = this.p;
 
     if (!gl.getProgramParameter(p, gl.LINK_STATUS)) {
-      // Only now is the per-shader status worth paying for — to say which
+      // Only now is the per-shader status worth paying for, to say which
       // stage failed, and on which line.
       const ve = checkShader(gl, this._vs, this._vsSrc, `${this.label}.vert`);
       const fe = checkShader(gl, this._fs, this._fsSrc, `${this.label}.frag`);
@@ -162,7 +162,7 @@ export class Program {
 
   use() { this.gl.useProgram(this.p); this.unit = 0; return this; }
 
-  /* Silently ignores names the compiler optimised away — that is a feature,
+  /* Silently ignores names the compiler optimised away; that is a feature,
      not a bug: it means uniforms can be set unconditionally by the caller. */
   set(name, v) {
     const e = this.u.get(name);
@@ -319,7 +319,7 @@ export class Target {
   }
 }
 
-/* Two complete targets that swap. It has to be two whole framebuffers — you
+/* Two complete targets that swap. It has to be two whole framebuffers; you
    cannot keep one FBO and re-point its attachments each frame without a
    framebuffer re-validation, which costs more than the object it saves. */
 export class PingPong {
@@ -336,7 +336,7 @@ export class PingPong {
 
 /* ── fullscreen triangle ───────────────────────────────────────────────── */
 
-/* One triangle, not two — no diagonal seam, one fewer vertex, and the
+/* One triangle, not two: no diagonal seam, one fewer vertex, and the
    rasteriser does not shade the quad edge twice. Attributeless: the vertex
    shader derives the position from gl_VertexID. */
 export const FS_VERT = `#version 300 es

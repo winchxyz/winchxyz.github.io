@@ -1,8 +1,8 @@
-# winch — portfolio
+# winch · portfolio
 
 A portfolio site that renders itself on the GPU. One WebGL2 context, a few
-thousand lines of hand-written GLSL, and no dependencies at all — no engine,
-no libraries, no asset files, no build step required to run it.
+thousand lines of hand-written GLSL, and no dependencies at all. No engine, no libraries,
+no asset files, no build step required to run it.
 
 **[Open it →](https://winchxyz.github.io/)** · [@winchxyz](https://x.com/winchxyz) · [tryloupe.app](https://tryloupe.app)
 
@@ -16,7 +16,7 @@ no libraries, no asset files, no build step required to run it.
 npm start
 ```
 
-Then open <http://localhost:8141>. Any static server works — `npm start` just
+Then open <http://localhost:8141>. Any static server works; `npm start` just
 runs the 40-line one in `server.js`, which exists because ES modules need an
 http origin and `file://` will not load them.
 
@@ -26,11 +26,11 @@ Or skip all of that:
 npm run build
 ```
 
-That flattens the whole site into `dist/winch.html` — one file, 217 kB,
+That flattens the whole site into `dist/winch.html`: one file, 249 kB,
 double-click it and it runs. Nothing is fetched at runtime except the two
 Google Fonts, and it falls back to system fonts without them.
 
-**Requirements:** a browser with WebGL2 and hardware acceleration — recent
+**Requirements:** a browser with WebGL2 and hardware acceleration. Recent
 Chrome, Edge, Firefox or Safari 15+.
 
 ---
@@ -40,19 +40,19 @@ Chrome, Edge, Firefox or Safari 15+.
 Everything moving is one `<canvas>`, drawn in nineteen passes per frame.
 
 **A signed distance field, sphere-traced.** The sculpture has no geometry. It
-is four mathematical forms — a noise-displaced sphere, a gyroid lattice, a
-rounded box frame and a twisted torus — cross-faded as you scroll, and every
+is four mathematical forms (a noise-displaced sphere, a gyroid lattice,
+a rounded box frame and a twisted torus) cross-faded as you scroll, and every
 pixel of it walks the field until it hits the surface. It writes its own
 `gl_FragDepth`, which is how the particle cloud can be occluded by a shape
 that does not exist as triangles.
 
-**Seven materials, no textures.** The page opens on the cast crystal, and the
+**Six materials, no textures.** The page opens on the cast crystal, and the
 materials section is the one place the page demonstrates rather than asserts. GGX with height-correlated Smith visibility,
 anisotropic GGX with a tangent frame built from a procedural direction field
 (a distance field has no UVs), thin-film interference for the anodised
 titanium, three-ray dispersion for the two glasses, and multi-scatter energy
 compensation so the rough metals are not quietly too dark. The environment is an analytic function of the view
-direction — a studio written down rather than photographed. There is no HDRI
+direction: a studio written down rather than photographed. There is no HDRI
 and no BRDF lookup table.
 
 **262 144 particles, solved on the GPU.** Position and velocity live in two
@@ -75,12 +75,12 @@ step so the dark gradients do not band.
 | | |
 |---|---|
 | **click an orb** | absorb that material |
-| **1** – **7** | the same, from the keyboard |
+| **1** – **6** | the same, from the keyboard |
 | **drag** | orbit the sculpture |
-| **P** | photo mode — UI hidden, higher render scale |
+| **P** | photo mode, UI hidden, higher render scale |
 | **Enter** | save a PNG |
 | **G** | performance readout |
-| **M** | calm mode — halve the motion |
+| **M** | calm mode, half the motion |
 | **?** | the full list |
 
 `?tier=low|medium|high|ultra` in the URL overrides the auto-detected quality.
@@ -101,7 +101,7 @@ js/
   math.js           the linear algebra this actually uses
   content.js        everything the page says
   shaders/
-    lib.js          shared GLSL — hash, noise, SDF, BRDF, colour
+    lib.js          shared GLSL: hash, noise, SDF, BRDF, colour
     raymarch.js     the hero pass
     particles.js    solver + attributeless renderer
     post.js         composite, TAA, bloom, streak, grade
@@ -124,7 +124,7 @@ npm run lint      # every program: undefined functions, chunk order, uniforms
 npm run verify    # compile all 10 programs for real, in headless Chrome
 ```
 
-`lint.mjs` catches the failure mode that concatenation invites — GLSL has no
+`lint.mjs` catches the failure mode that concatenation invites. GLSL has no
 forward declarations, so getting the chunk order wrong is a compile error you
 only see on a machine with a working driver. It also cross-checks every
 uniform the renderer sets against every uniform the shaders declare, in both
@@ -140,7 +140,7 @@ translator. It can also load the site and screenshot it:
 SITE='http://localhost:8141' SECTION='#work' node tools/gputest.mjs shot out.png
 ```
 
-`GPU=1` runs the same harness on the real adapter instead — which is how the
+`GPU=1` runs the same harness on the real adapter instead, which is how the
 sixty-eight-second shader compile described below was found:
 
 ```bash
@@ -167,13 +167,14 @@ at 1920×1080 and at 390×844, on an RTX 4070 at 60 fps.
 | Dependencies | 0 |
 | Asset files | 0 |
 | Build step to run it | none |
-| Lines of GLSL | ~2 700 |
+| Lines of GLSL | ~1 500 |
 | Draw calls per frame | 19 |
 | Particles | 262 144 at ultra |
 | Render targets | ~113 MB at full scale |
 
-The performance readout in the corner reports the live figures — press **G**
-if it is hidden.
+The corner shows a small GPU chip and nothing else until you ask for more.
+Click it, or press **G**, and it opens into the live readout. A performance
+panel that is always on is a developer tool wearing a portfolio's clothes.
 
 ---
 
@@ -181,12 +182,12 @@ if it is hidden.
 
 There was a physics section: a Verlet cloth you could grab and throw, colliding
 against the same distance field. It was removed, and so was a section of live
-render statistics. Both were interesting and neither was about winch — a
+render statistics. Both were interesting and neither was about winch. A
 portfolio that spends two of its seven sections talking about the portfolio has
 lost the plot. Five sections now: who, what he builds, how it is built, the
 work, and how to reach him.
 
-The cloth is in the history if it is ever wanted back — it cost three shader
+The cloth is in the history if it is ever wanted back. It cost three shader
 programs, two float ping-pongs and nine draw calls a frame.
 
 ---
@@ -202,18 +203,18 @@ of that file and the page never touches the network at all.
 ### The material palette
 
 The materials section used to be a list of names beside a swatch. It is a
-ring of seven orbs around the sculpture now, each one wearing its own
+ring of six orbs around the sculpture now, each one wearing its own
 material, and clicking one sends it inward to be absorbed.
 
 Three things make it cheap enough to be worth doing:
 
 **The orbs are intersected, not marched.** They are spheres, so a ray meets
-one by solving a quadratic. Seven of those, once per pixel, instead of seven
+one by solving a quadratic. Six of those, once per pixel, instead of six
 more distance-field evaluations at every one of a hundred-odd march steps.
 
 **Their positions come from the CPU**, as a uniform array, rather than being
 recomputed in the shader. The click test and the pixels then cannot disagree
-about where an orb is — which they will, eventually, if the same orbit is
+about where an orb is, which they will eventually, if the same orbit is
 written down twice.
 
 **They are lit, not shaded.** No shadow march, no ambient occlusion, no second
@@ -223,18 +224,28 @@ across, and each one would otherwise have cost about what the sculpture does.
 They do get a stop and a half more light than the sculpture: a mirror in a
 dark room is a dark ball, which is correct and useless as a swatch.
 
-The absorb itself hides a hard edit. Material properties cannot be
-meaningfully interpolated — halfway between chrome and glass is not a
-material — so the switch is instantaneous, under a ring wave that crosses the
-surface and an emissive burst that peaks as it lands. The eye follows the
-ripple; the change happens beneath it.
+The flight is the one moment an orb stops being a sphere. From the instant it
+leaves the ring it is folded into the sculpture's own field through a
+polynomial smooth minimum, so the two surfaces grow a neck toward each other
+and close it, the way two drops of mercury do. The blend radius opens as the
+gap shrinks, which is what makes the sculpture appear to reach for the orb
+rather than merely swallow it where it arrives. The marcher's bounding sphere
+has to grow with the orb as well, or the fused shape gets clipped along the
+old bound.
+
+The landing hides a hard edit. Material properties cannot be meaningfully
+interpolated. Halfway between chrome and glass is not a material, so the
+switch is instantaneous, timed to the moment the two surfaces touch rather
+than to the end of the flight, and covered by a ring wave that crosses the
+surface with an emissive burst behind it. The eye follows the ripple; the
+change happens beneath it.
 
 ### Everyone starts at the lowest tier
 
 Detection gives a *ceiling*, not a starting point. Guessing a quality tier
 from core count and a renderer string and then opening at it means the very
-first frame — the one that also pays for every shader's first execution and
-every pipeline object the driver builds — is the heaviest frame the machine
+first frame, the one that also pays for every shader's first execution and
+every pipeline object the driver builds, is the heaviest frame the machine
 will ever draw. Getting that guess wrong on unfamiliar hardware is exactly
 what makes a tab stop responding.
 
@@ -245,8 +256,8 @@ and never sees a frame it could not afford. A load that starts and never
 finishes lowers the ceiling on the next visit.
 
 Headroom is measured as **dropped frames, not milliseconds**. Rendering is
-locked to the display, so the frame delta sits at the refresh interval —
-16.7 ms on a 60 Hz panel — whether the GPU finished in two milliseconds or in
+locked to the display, so the frame delta sits at the refresh interval,
+16.7 ms on a 60 Hz panel, whether the GPU finished in two milliseconds or in
 sixteen. The first version of this controller tested `msAvg < 11.5` and would
 therefore have sat at the lowest tier forever, on every machine. What vsync
 does reveal is missed frames: take the fastest frame observed as the refresh
@@ -263,15 +274,15 @@ other. The harness loads it over http and sweeps every section:
 GPU=1 VIEW=390x844 MOBILE=1 PROBE='(async()=>JSON.stringify(await import("/tools/audit.js").then(m=>m.sweep())))()' node tools/gputest.mjs shot out.png
 ```
 
-It found a stats grid overflowing its cells by up to 50px at 1366 — a
+It found a stats grid overflowing its cells by up to 50px at 1366. A
 figure like `1,572,864` set at 42px is about 200px wide and the cell's content
 box was 144px. No screenshot had shown it, because the digits simply ran under
 the neighbouring cell and looked plausible.
 
 One thing it has to get right to be useful: overlap is measured per **line
 box**, not per element. `getBoundingClientRect()` on an inline span that wraps
-returns the union of its line boxes — a rectangle covering everything between
-the two lines, including its neighbours' text — so comparing those unions
+returns the union of its line boxes, a rectangle covering everything between
+the two lines including its neighbours' text, so comparing those unions
 reports every wrapped inline as fully overlapping its siblings.
 `getClientRects()` gives the real boxes.
 
@@ -281,7 +292,7 @@ Currently clean at 2560×1440, 1920×1080, 1366×768, 768×1024, 390×844 and
 ### Composition is specified on the screen, not in the world
 
 Each section used to name a camera position in world units. That framing is
-only correct at the one aspect ratio it was tuned at — the type sits in a
+only correct at the one aspect ratio it was tuned at. The type sits in a
 centred, max-width column, so as the viewport widens the column stays put
 while a world-space offset keeps sliding the sculpture outward until it runs
 off the edge. Which it did, at 16:9.
@@ -298,21 +309,21 @@ camPos = pivot + dir·d + right·(−ndcX · d · aspect · tan(fov/2))
 
 The horizontal position is a fraction of the **content column** rather than of
 the viewport, so the sculpture tracks the type instead of the window. Portrait
-gets its own composition — top centre, using the full width — because on a
+gets its own composition, top centre using the full width, because on a
 phone there is no empty column to the right to put anything in.
 
 ### Why the distance field reads its noise from a texture
 
 The first version computed value noise analytically: eight hash calls and a
 quintic interpolant, about a hundred instructions. That is nothing at runtime,
-and it was catastrophic anyway — because the noise lives inside the distance
+and it was catastrophic anyway, because the noise lives inside the distance
 field, the distance field is inlined at every march step and at every normal
 and occlusion tap, and the compiler expands every copy of it.
 
 The raymarch program took **sixty-eight seconds to compile** on an RTX 4070.
 The entire rest of the pipeline compiled in 1.6 seconds combined. During those
 sixty-eight seconds the main thread is blocked, which the browser reports as
-an unresponsive page — the site was effectively unopenable, and no amount of
+an unresponsive page. The site was effectively unopenable, and no amount of
 reloading helped.
 
 Bisecting it by stubbing one function at a time (`tools/bisect.html`):
@@ -323,7 +334,7 @@ Bisecting it by stubbing one function at a time (`tools/bisect.html`):
 | stub `noised()` | 15.3 s |
 | stub `sculpture()` | **5.2 s** |
 
-So it was never the arithmetic — it was inlining. Reading the noise from a
+So it was never the arithmetic. It was inlining. Reading the noise from a
 64³ texture instead, where hardware trilinear filtering *is* the
 interpolation, took the program to **4.7 s**. Linking through
 `KHR_parallel_shader_compile` and collecting the result from a

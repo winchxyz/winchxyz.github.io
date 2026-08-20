@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════════════════
-   raymarch.js — the hero pass.
+   raymarch.js: the hero pass.
 
    One fullscreen triangle. Every pixel sphere-traces a signed distance field,
    shades it with a hand-written BRDF against an environment that is a
@@ -59,13 +59,22 @@ uniform vec3  uMatAbsorb[MAT_MAX];
    and the pixels on screen cannot disagree about where an orb is. */
 uniform vec3  uOrbPos[MAT_MAX];
 uniform float uOrbR[MAT_MAX];
-uniform int   uOrbCount;      // 0 outside the materials section — skips it all
+uniform int   uOrbCount;      // 0 outside the materials section; skips it all
 
 /* The absorb. A ring wave crosses the sculpture and the switch happens under
    it, so the eye follows the ripple rather than catching the change. */
 uniform float uPulse;         // 1 at impact, decaying to 0
 uniform vec3  uPulseDir;      // where on the surface it landed
 uniform float uFlash;         // emissive burst, same decay
+
+/* The orb being absorbed stops being a sphere in the list and becomes part
+   of the distance field, smooth-unioned with the sculpture. That is what
+   grows the neck between them and lets the form reach out and swallow it;
+   two separate primitives can only ever intersect. */
+uniform vec3  uFlyPos;
+uniform float uFlyR;          // 0 when nothing is being absorbed
+uniform float uFlyK;          // blend radius of the smooth union
+uniform float uBound;         // scene bounding radius, grown to cover the flight
 
 /* Every one of these is a LOOP BOUND, and every one of them is a uniform
    rather than a constant on purpose.
@@ -84,7 +93,7 @@ uniform int   uSteps;        // camera march budget, set by the quality tier
 uniform int   uTransSteps;   // interior march budget for the glass preset
 uniform int   uReflSteps;    // reflection march budget
 uniform int   uShadowSteps;  // soft shadow march budget
-uniform float uReflect;     // 0 or 1 — one-bounce reflections on/off
+uniform float uReflect;     // 0 or 1, one-bounce reflections on/off
 uniform float uRimBoost;    // section-driven lift on the accent rim light
 uniform float uExposure;
 
@@ -100,9 +109,14 @@ const float STEP_K   = 0.62;   // < 1 because the morph, the gyroid and the
 float mapS(vec3 p){
   float d = sculpture(p / uScale, uTime, uShape, uDetail) * uScale;
 
+  // the orb mid-absorb, fused rather than merely overlapping
+  if (uFlyR > 0.001){
+    d = smin(d, length(p - uFlyPos) - uFlyR, uFlyK);
+  }
+
   /* The absorb ripple. A ring wave leaves the impact point and crosses the
      form; the material switches underneath it. Angular position is measured
-     with a dot product rather than acos() — the shape of the falloff matters,
+     with a dot product rather than acos(): the shape of the falloff matters,
      its units do not, and this sits inside the march loop. */
   if (uPulse > 0.002){
     float ad = 1.0 - dot(normalize(p + 1e-5), uPulseDir);   // 0 at the impact, 2 opposite
@@ -192,14 +206,14 @@ Hit trace(vec3 ro, vec3 rd, float pixelRadius){
   h.t = MAX_DIST;
   h.id = 0;
 
-  // floor first — it is a plane, so it is one divide, not a loop
+  // floor first: it is a plane, so it is one divide, not a loop
   if (rd.y < -1e-4){
     float tp = (FLOOR_Y - ro.y) / rd.y;
     if (tp > 0.0 && tp < MAX_DIST){ h.t = tp; h.id = 2; }
   }
 
   float t0, t1;
-  if (sphereRange(ro, rd, R_BOUND * uScale, t0, t1)){
+  if (sphereRange(ro, rd, uBound, t0, t1)){
     float t = max(t0, 0.02);
     float tEnd = min(t1, h.t);
     // Dither the entry point along the ray. Costs nothing and turns the
@@ -221,7 +235,7 @@ Hit trace(vec3 ro, vec3 rd, float pixelRadius){
 
 float softShadow(vec3 ro, vec3 rd, float k){
   float t0, t1;
-  if (!sphereRange(ro, rd, R_BOUND * uScale, t0, t1)) return 1.0;
+  if (!sphereRange(ro, rd, uBound, t0, t1)) return 1.0;
 
   float res = 1.0;
   float t = max(t0, 0.03);
@@ -293,7 +307,7 @@ Mat matCurrent(){
 }
 
 // A tangent field on a surface with no UVs. Latitude lines around the local
-// Y axis, which reads as a part turned on a lathe — exactly the grain
+// Y axis, which reads as a part turned on a lathe: exactly the grain
 // direction brushed metal actually has.
 vec3 tangentField(vec3 p, vec3 n){
   vec3 axis = vec3(0.0, 1.0, 0.0);
@@ -305,8 +319,8 @@ vec3 tangentField(vec3 p, vec3 n){
   return normalize(t + w - n * dot(n, w));
 }
 
-/* The first argument is the LOCAL space the procedural detail lives in — the
-   sculpture's own coordinates, or an orb's — while the second stays world
+/* The first argument is the LOCAL space the procedural detail lives in (the
+   sculpture's own coordinates, or an orb's) while the second stays world
    space for the view-dependent terms. Without that split an orb would wear a
    slice of the sculpture's noise field rather than its own. */
 Surf describe(vec3 q, vec3 p, vec3 n, Mat m){
@@ -332,7 +346,7 @@ Surf describe(vec3 q, vec3 p, vec3 n, Mat m){
     s.albedo = mix(base, base * film * 1.9, m.film);
     s.rough  = clamp(m.rough + tfbm2(q * 6.0) * 0.10 - 0.04, 0.03, 1.0);
   }
-  else if (m.id == 2 || m.id == 6){   // the two dielectrics
+  else if (m.id == 2 || m.id == 5){   // the two dielectrics
     // Whatever colour a piece of glass has comes from absorption along the
     // path, not from an albedo, so both share one branch here and differ
     // only in uAbsorb and uDispersion.
@@ -342,23 +356,10 @@ Surf describe(vec3 q, vec3 p, vec3 n, Mat m){
   }
   else if (m.id == 3){                  // brushed alloy
     s.albedo = vec3(0.90, 0.90, 0.88);
-    // fine brush grain in the roughness, not the normal — cheaper and it
+    // fine brush grain in the roughness, not the normal: cheaper, and it
     // survives minification without aliasing into sparkle
     float grain = tfbm2(vec3(q.x * 90.0, q.y * 3.0, q.z * 90.0));
     s.rough  = clamp(m.rough + (grain - 0.5) * 0.22, 0.04, 1.0);
-  }
-  else if (m.id == 4){                  // kiln ceramic
-    /* This was a 27-iteration Worley loop. describe() is inlined at five
-       call sites now, so that loop was being compiled five times over — it
-       cost more in compile time than the cell structure was worth. A ridged
-       noise lookup pools the glaze the same way for one texture fetch. */
-    float glaze = 1.0 - abs(tnoise(q * 4.5) * 2.0 - 1.0);
-    s.albedo = mix(vec3(0.88, 0.87, 0.82), vec3(0.72, 0.75, 0.70), glaze * 0.6);
-    s.metal  = 0.0;
-    // glaze pools in the hollows: thinner (rougher) where the form is convex
-    s.rough  = clamp(m.rough - glaze * 0.26 + tfbm2(q * 9.0) * 0.12, 0.05, 1.0);
-    s.coat   = 0.35;
-    s.wrap   = 0.55;
   }
   else {                                  // molten core
     float depth = clamp(1.0 - length(q) / 1.05, 0.0, 1.0);
@@ -382,7 +383,7 @@ Surf describe(vec3 q, vec3 p, vec3 n, Mat m){
    Deliberately cheap: no shadow marches, no ambient occlusion, and above all
    no second bounce. Calling the full shading function from inside a
    reflection is how a scene that renders in four milliseconds starts taking
-   four hundred — every floor pixel would then run two soft-shadow marches and
+   four hundred; every floor pixel would then run two soft-shadow marches and
    another reflection march of its own. At this size nobody can tell. */
 vec3 shadeApprox(vec3 p, vec3 n, vec3 rd){
   Surf s = describe(p / uScale, p, n, matCurrent());
@@ -455,8 +456,8 @@ vec3 shadeSurface(vec3 p, vec3 n, vec3 rd, Surf s, float ao, float shadowScale){
   float shF = mix(1.0, softShadow(p + n * 0.012, lf,  9.0), shadowScale * 0.6);
 
   /* Written as a loop over the three sources. Measured: it makes no
-     difference to compile time — a three-iteration constant-bound loop gets
-     unrolled straight back into three copies — but it keeps the light rig in
+     difference to compile time (a three-iteration constant-bound loop gets
+     unrolled straight back into three copies) but it keeps the light rig in
      one place instead of three parallel edits. */
   vec3 lDir[3]; lDir[0] = lk; lDir[1] = lf; lDir[2] = lr;
   vec3 lCol[3]; lCol[0] = C_KEY * shK; lCol[1] = C_FILL * shF; lCol[2] = C_RIM * (1.0 + uRimBoost);
@@ -482,7 +483,7 @@ vec3 shadeSurface(vec3 p, vec3 n, vec3 rd, Surf s, float ao, float shadowScale){
   if (uReflect > 0.5 && s.rough < 0.34){
     float t0, t1;
     vec3 ro2 = p + n * 0.02;
-    if (sphereRange(ro2, R, R_BOUND * uScale, t0, t1)){
+    if (sphereRange(ro2, R, uBound, t0, t1)){
       bool hit;
       float t = marchSDF(ro2, R, max(t0, 0.01), min(t1, 8.0), 0.0015, uReflSteps, hit);
       if (hit){
@@ -527,7 +528,7 @@ vec3 exitPoint(vec3 ro, vec3 rd, out bool ok){
 
 /* A cheap floor sample, for rays that are not primary.
 
-   Without this the glass only ever refracts the sky — and the sky below the
+   Without this the glass only ever refracts the sky, and the sky below the
    horizon is nearly black, so a clear dielectric came out looking like dark
    chrome. Letting the refracted ray find the floor grid gives it something
    with structure to bend, which is the cue that reads as glass rather than
@@ -610,7 +611,7 @@ vec3 shadeOrb(vec3 q, vec3 p, vec3 n, vec3 rd, Mat m){
   for (int i = 0; i < 3; i++) col += brdfDirect(n, v, oDir[i], oCol[i], s, f0, diffCol, T, B);
 
   /* Lit a stop and a half brighter than the sculpture. A mirror in a dark
-     room is a dark ball — correct, and useless as a swatch. These are
+     room is a dark ball: correct, and useless as a swatch. These are
      previews, and a preview has to be legible before it is accurate. */
   const float ORB_GAIN = 1.55;
   vec2 ab = envBRDFApprox(NoV, s.rough);
@@ -660,7 +661,7 @@ vec3 shadeFloor(vec3 p, vec3 rd, float t){
   if (uReflect > 0.5){
     float t0, t1;
     vec3 ro2 = p + n * 0.02;
-    if (sphereRange(ro2, R, R_BOUND * uScale, t0, t1)){
+    if (sphereRange(ro2, R, uBound, t0, t1)){
       bool hit;
       float tt = marchSDF(ro2, R, max(t0, 0.01), min(t1, 10.0), 0.002, uReflSteps, hit);
       if (hit){
@@ -694,7 +695,7 @@ void main(){
   vec3 ro = uCamPos;
   vec3 rd = normalize(pFar.xyz / pFar.w - pNear.xyz / pNear.w);
 
-  // half the angular size of one pixel — the march's stopping criterion
+  // half the angular size of one pixel: the march's stopping criterion
   // scales with distance so distant geometry is not marched to a precision
   // no one can see.
   float pixelRadius = 1.2 / uRes.y;
@@ -733,7 +734,7 @@ void main(){
         float F = F_Schlick(0.04, 1.0, NoV);
         vec3 refl = envColor(reflect(rd, n), s.rough, uRimBoost);
 
-        // one interior march per channel — this is where dispersion comes
+        // one interior march per channel; this is where dispersion comes
         // from, and doing it with a single shared path is exactly the
         // shortcut that makes most real-time glass look like plastic
         float d = uDispersion;

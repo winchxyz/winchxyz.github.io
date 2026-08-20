@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════════════════
-   main.js — boot, input, and the loop.
+   main.js: boot, input, and the loop.
    ══════════════════════════════════════════════════════════════════════════ */
 
 import { Renderer, TIERS, TIER_ORDER } from './renderer.js';
@@ -69,10 +69,10 @@ async function boot() {
   setBootAttempts(failed + 1);
 
   // The wordmark is drawn into a texture with fillText, so the font has to
-  // exist first — otherwise the wordmark texture is set in Times New Roman.
+  // exist first; otherwise the wordmark texture is set in Times New Roman.
   try {
     await Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 2500))]);
-  } catch { /* no font loading API — the fallback stack is fine */ }
+  } catch { /* no font loading API; the fallback stack is fine */ }
 
   mark('opening a webgl2 context', 0.18);
 
@@ -96,7 +96,7 @@ async function boot() {
     // everyone already starts at the bottom.
     const i = TIER_ORDER.indexOf(renderer.ceiling);
     renderer.ceiling = TIER_ORDER[Math.max(0, i - failed)];
-    ui.boot(`previous load did not finish — capped at ${renderer.ceiling}`, 0.6);
+    ui.boot(`previous load did not finish, capped at ${renderer.ceiling}`, 0.6);
   }
 
   // The driver is compiling on its own threads right now; this loop just
@@ -117,12 +117,12 @@ async function boot() {
   // Deliberately at a low internal resolution. The first frame after a link
   // is also the frame that pays for every shader's first real execution, and
   // on Windows a frame that takes more than a couple of seconds is killed by
-  // the display driver's watchdog — which reads as "the tab crashed" rather
+  // the display driver's watchdog, which reads as "the tab crashed" rather
   // than "that was slow". The adaptive controller walks the scale back up
   // over the first second once there are real frame times to go on.
   // Settle on the starting resolution BEFORE the warm frames, not after.
   // Resizing reallocates every render target, which forces the driver to
-  // finish whatever is still queued — so doing it after the warm frames
+  // finish whatever is still queued, so doing it after the warm frames
   // turned their cost into one long synchronous block at the worst possible
   // moment. The adaptive controller takes it from here.
   renderer.renderScale = Math.min(renderer.tier.scale, 0.72);
@@ -147,8 +147,11 @@ async function boot() {
   mark('ready', 1.0);
   await new Promise((r) => setTimeout(r, 220));
 
-  document.documentElement.classList.add('booted', 'gl-up', 'hud-on');
-  setBootAttempts(0);      // made it — forget the previous failures
+  /* No 'hud-on'. The performance readout is developer telemetry, and it was
+     sitting permanently on top of a portfolio. The small chip in the corner
+     opens it, and so does G. */
+  document.documentElement.classList.add('booted', 'gl-up');
+  setBootAttempts(0);      // made it; forget the previous failures
   running = true;
   last = performance.now();
   requestAnimationFrame(loop);
@@ -220,7 +223,7 @@ function wireInput() {
     lastX = e.clientX; lastY = e.clientY;
     downX = e.clientX; downY = e.clientY;
 
-    // Remember what was under the cursor, but do not act yet — acting on
+    // Remember what was under the cursor, but do not act yet: acting on
     // pointerdown would fire an absorb every time a drag happens to start
     // over an orb.
     const [nx, ny] = norm(e);
@@ -267,8 +270,11 @@ function wireInput() {
 
   ui.onMaterial = (i) => {
     // In the materials section the orb flies in and the sculpture changes
-    // when it lands; anywhere else there is no orb to send, so switch now.
-    if (!director.absorb(i)) director.setMaterial(i);
+    // when it lands. Anywhere else there is no orb to send, so switch now.
+    if (director.absorb(i)) return true;
+    if (director.orbs.flyId >= 0) return false;   // one at a time
+    director.setMaterial(i);
+    return true;
   };
 
   addEventListener('resize', () => {
@@ -331,7 +337,7 @@ function wireKeys() {
    between two scales at exactly the frequency that is most visible. */
 /* ── how much headroom is there? ──────────────────────────────────────────
    Not milliseconds. Rendering is locked to the display, so the frame delta
-   sits at the refresh interval — 16.7 ms on a 60 Hz panel — whether the GPU
+   sits at the refresh interval, 16.7 ms on a 60 Hz panel, whether the GPU
    finished in two milliseconds or in sixteen. A threshold like "under 11 ms
    means promote" can therefore never be true, and the first version of this
    controller would have sat at the lowest tier forever on any machine.
@@ -368,7 +374,7 @@ function adapt(dt) {
   const atBottom = renderer.renderScale <= t.minScale + 1e-3;
   const drops = dropRate();
 
-  // resolution first — it is free to change and invisible at these steps
+  // resolution first; it is free to change and invisible at these steps
   if (drops > 0.12 && !atBottom) {
     renderer.renderScale = Math.max(t.minScale, renderer.renderScale - 0.07);
     renderer.resize(true); renderer.markCameraCut();
@@ -383,7 +389,7 @@ function adapt(dt) {
   }
 
   /* Then the tier. Promotion needs two seconds of genuine headroom at full
-     scale, not one lucky frame — stepping up costs a reallocation and a
+     scale, not one lucky frame; stepping up costs a reallocation and a
      bigger particle buffer, and thrashing between tiers is worse than
      sitting one below the best one. */
   if (atTop && drops < 0.02) {

@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════════════════
-   tools/build.mjs — flatten the whole site into one HTML file.
+   tools/build.mjs: flatten the whole site into one HTML file.
 
    Not a build step in the sense of a toolchain: the site runs perfectly well
    as plain ES modules off any static server, and that is the version to
@@ -9,7 +9,7 @@
    It resolves the module graph, topologically sorts it, strips the import and
    export syntax, and concatenates. That works here because every module is
    side-effect free apart from main.js, and no two of them declare the same
-   top-level name — which the script checks rather than assumes.
+   top-level name, which the script checks rather than assumes.
 
      node tools/build.mjs
    ══════════════════════════════════════════════════════════════════════════ */
@@ -37,7 +37,7 @@ function load(file) {
   // depth first, so dependencies land before the module that needs them
   for (const m of src.matchAll(IMPORT_RE)) {
     const spec = m[1];
-    if (!spec.startsWith('.')) throw new Error(`${abs}: bare import "${spec}" — this bundler only handles relative paths`);
+    if (!spec.startsWith('.')) throw new Error(`${abs}: bare import "${spec}"; this bundler only handles relative paths`);
     load(resolve(dirname(abs), spec));
   }
 
@@ -52,8 +52,8 @@ load(ENTRY);
 
    Only column-zero declarations count. Anything indented is inside a function
    and has its own scope, and template literals have to be stripped first or
-   every GLSL function in the shader chunks — which are perfectly happy to
-   start a line with `float foo(...)` — is mistaken for a JavaScript one. */
+   every GLSL function in the shader chunks, which are perfectly happy to
+   start a line with `float foo(...)`, is mistaken for a JavaScript one. */
 const DECL_RE = /^(?:export\s+)?(?:const|let|var|function|class)\s+([\w$]+)/gm;
 
 const topLevelOnly = (src) => src
@@ -72,7 +72,7 @@ for (const { abs, src: raw } of order) {
   }
 }
 if (clashes.length) {
-  console.error('top-level name collisions — cannot flatten:\n  ' + clashes.join('\n  '));
+  console.error('top-level name collisions, cannot flatten:\n  ' + clashes.join('\n  '));
   process.exit(1);
 }
 
@@ -89,7 +89,7 @@ let html = readFileSync(join(ROOT, 'index.html'), 'utf8');
 
 /* The replacements go through a function, not a string. A string replacement
    runs the inserted text through $-pattern substitution, which turns every
-   `$$` in the source into a single `$` — so `const $$ = ...` in ui.js quietly
+   `$$` in the source into a single `$`, so `const $$ = ...` in ui.js quietly
    became `const $ = ...` and collided with the `$` two lines above it. A
    replacer function is passed through verbatim. */
 html = html.replace(
