@@ -301,8 +301,11 @@ export class Renderer {
     // the sculpture the cloth still collides correctly, but every interesting
     // part of it — the drape, the printed wordmark — ends up hidden behind
     // the thing it is colliding with.
-    this.clothOrigin = [1.05, -1.52, -0.55];
-    this.clothSize = [2.60, 2.50];
+    // In front of the sculpture (+z is toward the camera), and clear of it at
+    // rest. The wind then presses it back onto the sculpture, so the collision
+    // is something you watch happen rather than something already resolved.
+    this.clothOrigin = [0.78, -1.45, 0.85];
+    this.clothSize = [1.95, 2.35];
 
     this.cloth = new PingPong(gl, N, N, {
       formats: [FMT.RGBA32F, FMT.RGBA32F],

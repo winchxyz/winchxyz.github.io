@@ -30,6 +30,16 @@ import { MATERIALS } from './content.js';
    the raymarch shader, or the framing solve and the marcher disagree. */
 const R_BOUND = 1.62;
 
+/* How lively the particle field is, as one dial.
+
+   The first pass had the cloud whipping around the sculpture fast enough to
+   read as agitation rather than as atmosphere — it pulled the eye off the
+   type, which is the opposite of what a background is for. Orbit speed is
+   halved; the curl flow is toned down less, because that one contributes
+   shape as much as speed. */
+const SPIN_SCALE = 0.42;
+const CURL_SCALE = 0.62;
+
 /* ── keyframes ─────────────────────────────────────────────────────────────
    yaw / pitch  direction from the subject to the camera, radians
    fov          vertical field of view, degrees
@@ -65,10 +75,17 @@ const K = [
     pGain: 0.30, pCurl: 0.55, pAttract: 1.35, pTangent: 1.00, pSpin: 0.12, pSize: 1.0, pDamp: 0.85, pLife: 0.09,
     clothOn: 0.0, bloom: 0.95, streak: 0.42, ca: 0.60, vignette: 0.78, grain: 0.026,
   },
-  { /* 03 physics — the cloth is in shot too, so frame both */
-    yaw: 0.03, pitch: 0.10, fov: 47, fill: 0.80, fillW: 0.44, fx: 0.80, fy: 0.50,
-    pivot: [0.5, -0.30, -0.30], radius: 2.45,
-    shape: 1.00, detail: 0.60, scale: 0.92, rimBoost: 0.30, sceneExposure: 0.95,
+  { /* 03 physics — the cloth is the subject here, not the sculpture.
+
+       The sculpture used to sit at full size in front of the cloth, which
+       hid the one thing this section exists to show. It is now small and
+       BEHIND the cloth, so what you see is fabric deforming around a shape
+       you can only make out through it — which is the demonstration. */
+    // A three-quarter view, not head-on: folds and the bulge where the cloth
+    // meets the sculpture read in silhouette, and face-on they do not.
+    yaw: -0.30, pitch: 0.15, fov: 46, fill: 0.62, fillW: 0.35, fx: 0.86, fy: 0.50,
+    pivot: [0.35, -0.32, 0.42], radius: 2.6,
+    shape: 1.00, detail: 0.60, scale: 0.85, rimBoost: 0.30, sceneExposure: 0.95,
     pGain: 0.22, pCurl: 0.70, pAttract: 0.60, pTangent: 0.60, pSpin: 0.10, pSize: 1.0, pDamp: 0.80, pLife: 0.10,
     clothOn: 1.0, bloom: 0.70, streak: 0.18, ca: 0.40, vignette: 0.74, grain: 0.030,
   },
@@ -127,7 +144,7 @@ export class Director {
     // user orbit, layered on top of the keyframe direction
     this.orbit = { yaw: 0, pitch: 0, vy: 0, vp: 0 };
 
-    this.cloth = { wind: 1.05, gravity: 9.81, stiff: 0.72, damp: 0.986, iters: 8, pinned: 1 };
+    this.cloth = { wind: 1.45, gravity: 9.81, stiff: 0.72, damp: 0.986, iters: 8, pinned: 1 };
     this.grab = { active: 0, pos: [0, 0, 0], idx: [0, 0] };
 
     this.out = {};
@@ -302,10 +319,10 @@ export class Director {
     o.dispersion = mp.dispersion ?? 0.017;
 
     o.pGain = c.pGain;
-    o.pCurl = c.pCurl * calmK;
+    o.pCurl = c.pCurl * calmK * CURL_SCALE;
     o.pAttract = c.pAttract;
     o.pTangent = c.pTangent;
-    o.pSpin = c.pSpin * calmK;
+    o.pSpin = c.pSpin * calmK * SPIN_SCALE;
     o.pSize = c.pSize;
     o.pDamp = c.pDamp;
     o.pLife = c.pLife;

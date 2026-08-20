@@ -254,7 +254,7 @@ float formLiquid(vec3 p, float t, float detail){
 
   if (d > AMP * 2.0) return d - AMP * detail;
 
-  vec3 q = p * 1.5 + vec3(0.0, t * 0.11, t * 0.05);
+  vec3 q = p * 1.5 + vec3(0.0, t * 0.055, t * 0.025);
   float n = tnoise(q) + 0.45 * tnoise(q * 2.03 + 7.31);   // mean ~0.725
   return d + (n - 0.725) * K * detail;
 }
@@ -262,7 +262,7 @@ float formLiquid(vec3 p, float t, float detail){
 // 1 — a gyroid lattice carved out of a hollow shell
 float formLattice(vec3 p, float t){
   vec3 q = p * 3.3;
-  q.xz = rot2(t * 0.07) * q.xz;
+  q.xz = rot2(t * 0.034) * q.xz;
   // |grad(dot(sin q, cos q.zxy))| is bounded by 2*sqrt(3); dividing by the
   // domain scale times three keeps the field an under-estimate, which is the
   // only thing sphere tracing actually requires.
@@ -275,7 +275,7 @@ float formLattice(vec3 p, float t){
 // 2 — a rounded box frame, slowly turning
 float formFrame(vec3 p, float t){
   vec3 q = p;
-  q.xz = rot2(t * 0.10) * q.xz;
+  q.xz = rot2(t * 0.048) * q.xz;
   q.xy = rot2(0.62) * q.xy;
   return sdBoxFrame(q, vec3(0.80), 0.06) - 0.035;
 }
@@ -283,7 +283,7 @@ float formFrame(vec3 p, float t){
 // 3 — a rectangular torus given three half-turns of twist
 float formRing(vec3 p, float t){
   vec3 q = p;
-  q.xz = rot2(t * 0.13) * q.xz;
+  q.xz = rot2(t * 0.060) * q.xz;
   float a = atan(q.z, q.x);
   vec2 pl = vec2(length(q.xz) - 0.82, q.y);
   pl = rot2(a * 1.5) * pl;

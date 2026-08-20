@@ -1811,7 +1811,7 @@ float formLiquid(vec3 p, float t, float detail){
 
   if (d > AMP * 2.0) return d - AMP * detail;
 
-  vec3 q = p * 1.5 + vec3(0.0, t * 0.11, t * 0.05);
+  vec3 q = p * 1.5 + vec3(0.0, t * 0.055, t * 0.025);
   float n = tnoise(q) + 0.45 * tnoise(q * 2.03 + 7.31);   // mean ~0.725
   return d + (n - 0.725) * K * detail;
 }
@@ -1819,7 +1819,7 @@ float formLiquid(vec3 p, float t, float detail){
 // 1 — a gyroid lattice carved out of a hollow shell
 float formLattice(vec3 p, float t){
   vec3 q = p * 3.3;
-  q.xz = rot2(t * 0.07) * q.xz;
+  q.xz = rot2(t * 0.034) * q.xz;
   // |grad(dot(sin q, cos q.zxy))| is bounded by 2*sqrt(3); dividing by the
   // domain scale times three keeps the field an under-estimate, which is the
   // only thing sphere tracing actually requires.
@@ -1832,7 +1832,7 @@ float formLattice(vec3 p, float t){
 // 2 — a rounded box frame, slowly turning
 float formFrame(vec3 p, float t){
   vec3 q = p;
-  q.xz = rot2(t * 0.10) * q.xz;
+  q.xz = rot2(t * 0.048) * q.xz;
   q.xy = rot2(0.62) * q.xy;
   return sdBoxFrame(q, vec3(0.80), 0.06) - 0.035;
 }
@@ -1840,7 +1840,7 @@ float formFrame(vec3 p, float t){
 // 3 — a rectangular torus given three half-turns of twist
 float formRing(vec3 p, float t){
   vec3 q = p;
-  q.xz = rot2(t * 0.13) * q.xz;
+  q.xz = rot2(t * 0.060) * q.xz;
   float a = atan(q.z, q.x);
   vec2 pl = vec2(length(q.xz) - 0.82, q.y);
   pl = rot2(a * 1.5) * pl;
@@ -2841,7 +2841,8 @@ void main(){
   v += acc * dt;
   v *= exp(-uDamp * dt);                 // frame-rate independent drag
   float sp = length(v);
-  if (sp > 6.0) v *= 6.0 / sp;           // clamp before it can tunnel
+  if (sp > 3.2) v *= 3.2 / sp;           // clamp before it can tunnel, and
+                                         // well below anything that reads as fast
   p += v * dt;
 
   life -= dt * uLifeRate * (0.55 + seed * 0.9);
@@ -2951,8 +2952,8 @@ void main(){
   a *= smoothstep(0.0, 0.14, vLife) * smoothstep(1.0, 0.80, vLife);
 
   float sp = length(vVel);
-  vec3 col = mix(vec3(0.055, 0.085, 0.030), vec3(0.78, 0.95, 0.31), smoothstep(0.05, 1.5, sp));
-  col = mix(col, vec3(1.00, 1.00, 0.93), smoothstep(1.5, 3.2, sp));
+  vec3 col = mix(vec3(0.055, 0.085, 0.030), vec3(0.78, 0.95, 0.31), smoothstep(0.03, 0.85, sp));
+  col = mix(col, vec3(1.00, 1.00, 0.93), smoothstep(0.85, 1.9, sp));
   col *= 0.72 + 0.55 * vSeed;
 
   oColor = vec4(col * a * uIntensity * uFade, a);
@@ -3047,7 +3048,7 @@ void main(){
   // Aerodynamic pressure, not a uniform push: the force is along the face
   // normal, scaled by how square-on the face is to the wind. That is what
   // makes a cloth billow and luff instead of sliding sideways as one sheet.
-  vec3 windDir = normalize(vec3(-1.0, 0.06, 0.32));   // blows it onto the sculpture
+  vec3 windDir = normalize(vec3(-0.30, 0.05, -1.0));   // presses it back onto the sculpture
   vec3 gust = curlNoise(cur * 1.1 + vec3(0.0, 0.0, uTime * 0.55)) * 0.55;
   vec3 w = (windDir + gust) * uWind;
   acc += n * dot(n, w) * 2.4;
@@ -3278,7 +3279,10 @@ void main(){
   // Real canvas has an albedo around 0.2-0.4. The first pass at this used
   // 0.05, which is closer to charcoal than to cloth, and no amount of light
   // rescues a surface that absorbs 95% of what hits it.
-  vec3 cloth = mix(vec3(0.085, 0.092, 0.080), vec3(0.125, 0.135, 0.115), lint);
+  // Canvas sits around 0.2-0.4 albedo. Dropping it to 0.09 to make the chalk
+  // print pop made the fabric itself too dark to show a fold, which is the
+  // one thing this section is for.
+  vec3 cloth = mix(vec3(0.175, 0.188, 0.162), vec3(0.235, 0.250, 0.215), lint);
   // Chalk, not lime. The accent was the obvious choice and it was wrong: the
   // rim light on this cloth IS lime, so lime ink on grey canvas renders as
   // lime on lime and the wordmark disappears into its own lighting.
@@ -4199,8 +4203,11 @@ class Renderer {
     // the sculpture the cloth still collides correctly, but every interesting
     // part of it — the drape, the printed wordmark — ends up hidden behind
     // the thing it is colliding with.
-    this.clothOrigin = [1.05, -1.52, -0.55];
-    this.clothSize = [2.60, 2.50];
+    // In front of the sculpture (+z is toward the camera), and clear of it at
+    // rest. The wind then presses it back onto the sculpture, so the collision
+    // is something you watch happen rather than something already resolved.
+    this.clothOrigin = [0.78, -1.45, 0.85];
+    this.clothSize = [1.95, 2.35];
 
     this.cloth = new PingPong(gl, N, N, {
       formats: [FMT.RGBA32F, FMT.RGBA32F],
@@ -4925,7 +4932,7 @@ const MATERIALS = [
 /* ── physics sliders ───────────────────────────────────────────────────── */
 
 const SLIDERS = [
-  { id: 'wind',    label: 'wind',        min: 0,   max: 3.0,  step: 0.01, val: 1.05, fmt: (v) => v.toFixed(2) + ' m/s' },
+  { id: 'wind',    label: 'wind',        min: 0,   max: 3.0,  step: 0.01, val: 1.45, fmt: (v) => v.toFixed(2) + ' m/s' },
   { id: 'gravity', label: 'gravity',     min: 0,   max: 24,   step: 0.1,  val: 9.81, fmt: (v) => v.toFixed(2) + ' m/s²' },
   { id: 'stiff',   label: 'stiffness',   min: 0.1, max: 1.0,  step: 0.01, val: 0.72, fmt: (v) => v.toFixed(2) },
   { id: 'damp',    label: 'damping',     min: 0.8, max: 1.0,  step: 0.002, val: 0.986, fmt: (v) => v.toFixed(3) },
@@ -4979,6 +4986,16 @@ const SHORTCUTS = [
    the raymarch shader, or the framing solve and the marcher disagree. */
 const R_BOUND = 1.62;
 
+/* How lively the particle field is, as one dial.
+
+   The first pass had the cloud whipping around the sculpture fast enough to
+   read as agitation rather than as atmosphere — it pulled the eye off the
+   type, which is the opposite of what a background is for. Orbit speed is
+   halved; the curl flow is toned down less, because that one contributes
+   shape as much as speed. */
+const SPIN_SCALE = 0.42;
+const CURL_SCALE = 0.62;
+
 /* ── keyframes ─────────────────────────────────────────────────────────────
    yaw / pitch  direction from the subject to the camera, radians
    fov          vertical field of view, degrees
@@ -5014,10 +5031,17 @@ const K = [
     pGain: 0.30, pCurl: 0.55, pAttract: 1.35, pTangent: 1.00, pSpin: 0.12, pSize: 1.0, pDamp: 0.85, pLife: 0.09,
     clothOn: 0.0, bloom: 0.95, streak: 0.42, ca: 0.60, vignette: 0.78, grain: 0.026,
   },
-  { /* 03 physics — the cloth is in shot too, so frame both */
-    yaw: 0.03, pitch: 0.10, fov: 47, fill: 0.80, fillW: 0.44, fx: 0.80, fy: 0.50,
-    pivot: [0.5, -0.30, -0.30], radius: 2.45,
-    shape: 1.00, detail: 0.60, scale: 0.92, rimBoost: 0.30, sceneExposure: 0.95,
+  { /* 03 physics — the cloth is the subject here, not the sculpture.
+
+       The sculpture used to sit at full size in front of the cloth, which
+       hid the one thing this section exists to show. It is now small and
+       BEHIND the cloth, so what you see is fabric deforming around a shape
+       you can only make out through it — which is the demonstration. */
+    // A three-quarter view, not head-on: folds and the bulge where the cloth
+    // meets the sculpture read in silhouette, and face-on they do not.
+    yaw: -0.30, pitch: 0.15, fov: 46, fill: 0.62, fillW: 0.35, fx: 0.86, fy: 0.50,
+    pivot: [0.35, -0.32, 0.42], radius: 2.6,
+    shape: 1.00, detail: 0.60, scale: 0.85, rimBoost: 0.30, sceneExposure: 0.95,
     pGain: 0.22, pCurl: 0.70, pAttract: 0.60, pTangent: 0.60, pSpin: 0.10, pSize: 1.0, pDamp: 0.80, pLife: 0.10,
     clothOn: 1.0, bloom: 0.70, streak: 0.18, ca: 0.40, vignette: 0.74, grain: 0.030,
   },
@@ -5076,7 +5100,7 @@ class Director {
     // user orbit, layered on top of the keyframe direction
     this.orbit = { yaw: 0, pitch: 0, vy: 0, vp: 0 };
 
-    this.cloth = { wind: 1.05, gravity: 9.81, stiff: 0.72, damp: 0.986, iters: 8, pinned: 1 };
+    this.cloth = { wind: 1.45, gravity: 9.81, stiff: 0.72, damp: 0.986, iters: 8, pinned: 1 };
     this.grab = { active: 0, pos: [0, 0, 0], idx: [0, 0] };
 
     this.out = {};
@@ -5251,10 +5275,10 @@ class Director {
     o.dispersion = mp.dispersion ?? 0.017;
 
     o.pGain = c.pGain;
-    o.pCurl = c.pCurl * calmK;
+    o.pCurl = c.pCurl * calmK * CURL_SCALE;
     o.pAttract = c.pAttract;
     o.pTangent = c.pTangent;
-    o.pSpin = c.pSpin * calmK;
+    o.pSpin = c.pSpin * calmK * SPIN_SCALE;
     o.pSize = c.pSize;
     o.pDamp = c.pDamp;
     o.pLife = c.pLife;

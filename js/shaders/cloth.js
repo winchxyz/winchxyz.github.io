@@ -85,7 +85,7 @@ void main(){
   // Aerodynamic pressure, not a uniform push: the force is along the face
   // normal, scaled by how square-on the face is to the wind. That is what
   // makes a cloth billow and luff instead of sliding sideways as one sheet.
-  vec3 windDir = normalize(vec3(-1.0, 0.06, 0.32));   // blows it onto the sculpture
+  vec3 windDir = normalize(vec3(-0.30, 0.05, -1.0));   // presses it back onto the sculpture
   vec3 gust = curlNoise(cur * 1.1 + vec3(0.0, 0.0, uTime * 0.55)) * 0.55;
   vec3 w = (windDir + gust) * uWind;
   acc += n * dot(n, w) * 2.4;
@@ -316,7 +316,10 @@ void main(){
   // Real canvas has an albedo around 0.2-0.4. The first pass at this used
   // 0.05, which is closer to charcoal than to cloth, and no amount of light
   // rescues a surface that absorbs 95% of what hits it.
-  vec3 cloth = mix(vec3(0.085, 0.092, 0.080), vec3(0.125, 0.135, 0.115), lint);
+  // Canvas sits around 0.2-0.4 albedo. Dropping it to 0.09 to make the chalk
+  // print pop made the fabric itself too dark to show a fold, which is the
+  // one thing this section is for.
+  vec3 cloth = mix(vec3(0.175, 0.188, 0.162), vec3(0.235, 0.250, 0.215), lint);
   // Chalk, not lime. The accent was the obvious choice and it was wrong: the
   // rim light on this cloth IS lime, so lime ink on grey canvas renders as
   // lime on lime and the wordmark disappears into its own lighting.

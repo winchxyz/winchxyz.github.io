@@ -231,7 +231,7 @@ export const MATERIALS = [
 /* ── physics sliders ───────────────────────────────────────────────────── */
 
 export const SLIDERS = [
-  { id: 'wind',    label: 'wind',        min: 0,   max: 3.0,  step: 0.01, val: 1.05, fmt: (v) => v.toFixed(2) + ' m/s' },
+  { id: 'wind',    label: 'wind',        min: 0,   max: 3.0,  step: 0.01, val: 1.45, fmt: (v) => v.toFixed(2) + ' m/s' },
   { id: 'gravity', label: 'gravity',     min: 0,   max: 24,   step: 0.1,  val: 9.81, fmt: (v) => v.toFixed(2) + ' m/s²' },
   { id: 'stiff',   label: 'stiffness',   min: 0.1, max: 1.0,  step: 0.01, val: 0.72, fmt: (v) => v.toFixed(2) },
   { id: 'damp',    label: 'damping',     min: 0.8, max: 1.0,  step: 0.002, val: 0.986, fmt: (v) => v.toFixed(3) },

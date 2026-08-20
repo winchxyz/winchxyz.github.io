@@ -119,7 +119,8 @@ void main(){
   v += acc * dt;
   v *= exp(-uDamp * dt);                 // frame-rate independent drag
   float sp = length(v);
-  if (sp > 6.0) v *= 6.0 / sp;           // clamp before it can tunnel
+  if (sp > 3.2) v *= 3.2 / sp;           // clamp before it can tunnel, and
+                                         // well below anything that reads as fast
   p += v * dt;
 
   life -= dt * uLifeRate * (0.55 + seed * 0.9);
@@ -229,8 +230,8 @@ void main(){
   a *= smoothstep(0.0, 0.14, vLife) * smoothstep(1.0, 0.80, vLife);
 
   float sp = length(vVel);
-  vec3 col = mix(vec3(0.055, 0.085, 0.030), vec3(0.78, 0.95, 0.31), smoothstep(0.05, 1.5, sp));
-  col = mix(col, vec3(1.00, 1.00, 0.93), smoothstep(1.5, 3.2, sp));
+  vec3 col = mix(vec3(0.055, 0.085, 0.030), vec3(0.78, 0.95, 0.31), smoothstep(0.03, 0.85, sp));
+  col = mix(col, vec3(1.00, 1.00, 0.93), smoothstep(0.85, 1.9, sp));
   col *= 0.72 + 0.55 * vSeed;
 
   oColor = vec4(col * a * uIntensity * uFade, a);
