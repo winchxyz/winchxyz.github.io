@@ -106,6 +106,7 @@ async function boot() {
   });
   mark(`shaders ready in ${compileMs} ms`, 0.72);
 
+  renderer.setPalette(MATERIALS);
   ui.initHud(renderer);
   wireInput();
   wireKeys();
@@ -183,6 +184,7 @@ function wireInput() {
 
   let dragging = false;
   let lastX = 0, lastY = 0;
+  let downX = 0, downY = 0, downOrb = -1;
 
   const norm = (e) => [(e.clientX / innerWidth) * 2 - 1, -((e.clientY / innerHeight) * 2 - 1)];
 
@@ -197,6 +199,17 @@ function wireInput() {
       orbit.vp += (e.clientY - lastY) * 0.0035;
       lastX = e.clientX; lastY = e.clientY;
     }
+
+    // hovering a material orb lifts it and names it under the cursor
+    if (!dragging && renderer) {
+      const r = renderer.mouseRay(nx, ny);
+      const k = director.pickOrb(r.ro, r.rd);
+      if (k !== director.orbs.hover) {
+        director.orbs.hover = k;
+        document.body.classList.toggle('cur-hot', k >= 0);
+        ui.setCursorLabel(k >= 0 ? MATERIALS[k].name : '');
+      }
+    }
   }, { passive: true });
 
   addEventListener('pointerdown', (e) => {
@@ -205,16 +218,38 @@ function wireInput() {
     dragging = true;
     director.mouse.down = true;
     lastX = e.clientX; lastY = e.clientY;
-    document.body.classList.add('cur-drag');
-    ui.setCursorLabel('orbit');
+    downX = e.clientX; downY = e.clientY;
+
+    // Remember what was under the cursor, but do not act yet — acting on
+    // pointerdown would fire an absorb every time a drag happens to start
+    // over an orb.
+    const [nx, ny] = norm(e);
+    const r = renderer ? renderer.mouseRay(nx, ny) : null;
+    downOrb = r ? director.pickOrb(r.ro, r.rd) : -1;
+
+    if (downOrb < 0) {
+      document.body.classList.add('cur-drag');
+      ui.setCursorLabel('orbit');
+    }
   });
 
   const end = () => {
     dragging = false;
     director.mouse.down = false;
+    downOrb = -1;
     document.body.classList.remove('cur-drag');
   };
-  addEventListener('pointerup', end);
+
+  addEventListener('pointerup', (e) => {
+    // a click, not a drag: within a few pixels of where it went down
+    const moved = Math.hypot(e.clientX - downX, e.clientY - downY);
+    if (downOrb >= 0 && moved < 7) {
+      const [nx, ny] = norm(e);
+      const r = renderer.mouseRay(nx, ny);
+      if (director.pickOrb(r.ro, r.rd) === downOrb) ui.selectMaterial(downOrb);
+    }
+    end();
+  });
   addEventListener('pointercancel', end);
   addEventListener('blur', end);
 
@@ -231,8 +266,9 @@ function wireInput() {
   }, { passive: true });
 
   ui.onMaterial = (i) => {
-    director.setMaterial(i);
-    ui.flash(`material <b>${String(i + 1).padStart(2, '0')}</b> · ${MATERIALS[i].name.toLowerCase()}`);
+    // In the materials section the orb flies in and the sculpture changes
+    // when it lands; anywhere else there is no orb to send, so switch now.
+    if (!director.absorb(i)) director.setMaterial(i);
   };
 
   addEventListener('resize', () => {

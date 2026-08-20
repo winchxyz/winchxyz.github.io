@@ -169,11 +169,13 @@ export class Program {
     if (!e) return this;
     const gl = this.gl, { loc, type } = e;
     switch (type) {
-      case gl.FLOAT:       gl.uniform1f(loc, v); break;
+      // size > 1 means it was declared as an array, and the scalar setter
+      // silently does nothing for those
+      case gl.FLOAT:       e.size > 1 ? gl.uniform1fv(loc, v) : gl.uniform1f(loc, v); break;
       case gl.FLOAT_VEC2:  gl.uniform2fv(loc, v); break;
       case gl.FLOAT_VEC3:  gl.uniform3fv(loc, v); break;
       case gl.FLOAT_VEC4:  gl.uniform4fv(loc, v); break;
-      case gl.INT: case gl.BOOL: gl.uniform1i(loc, v); break;
+      case gl.INT: case gl.BOOL: e.size > 1 ? gl.uniform1iv(loc, v) : gl.uniform1i(loc, v); break;
       case gl.INT_VEC2: case gl.BOOL_VEC2: gl.uniform2iv(loc, v); break;
       case gl.INT_VEC3: case gl.BOOL_VEC3: gl.uniform3iv(loc, v); break;
       case gl.INT_VEC4: case gl.BOOL_VEC4: gl.uniform4iv(loc, v); break;

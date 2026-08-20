@@ -391,6 +391,29 @@ export class Renderer {
     return tex;
   }
 
+  /* Flatten the material list into the uniform arrays the shader indexes.
+     Called once — the palette never changes at runtime. */
+  setPalette(materials) {
+    const N = 8;
+    const f = () => new Float32Array(N);
+    this.pal = {
+      rough: f(), metal: f(), ior: f(), aniso: f(), film: f(),
+      trans: f(), emis: f(), disp: f(), absorb: new Float32Array(N * 3),
+    };
+    materials.slice(0, N).forEach((m, i) => {
+      const q = m.p;
+      this.pal.rough[i] = q.rough; this.pal.metal[i] = q.metal;
+      this.pal.ior[i] = q.ior;     this.pal.aniso[i] = q.aniso;
+      this.pal.film[i] = q.film;   this.pal.trans[i] = q.trans;
+      this.pal.emis[i] = q.emissive ?? 0;
+      this.pal.disp[i] = q.dispersion ?? 0.017;
+      const a = q.absorb ?? [0.62, 0.42, 0.36];
+      this.pal.absorb[i * 3] = a[0]; this.pal.absorb[i * 3 + 1] = a[1]; this.pal.absorb[i * 3 + 2] = a[2];
+    });
+    this.orbPosBuf = new Float32Array(N * 3);
+    this.orbRadBuf = new Float32Array(N);
+  }
+
   /* ── camera ────────────────────────────────────────────────────────── */
 
   updateCamera(p) {
@@ -473,9 +496,25 @@ export class Renderer {
     gl.depthMask(true);
     gl.depthFunc(gl.ALWAYS);   // a fullscreen pass that supplies its own depth
     {
+      // orb transforms, straight from the director — the same array the
+      // click test in main.js reads
+      const oc = Math.min(p.orbCount | 0, 8);
+      this.orbPosBuf.fill(0); this.orbRadBuf.fill(0);
+      for (let k = 0; k < oc; k++) {
+        this.orbPosBuf[k * 3] = p.orbPos[k][0];
+        this.orbPosBuf[k * 3 + 1] = p.orbPos[k][1];
+        this.orbPosBuf[k * 3 + 2] = p.orbPos[k][2];
+        this.orbRadBuf[k] = p.orbRad[k];
+      }
+
       const s = this.pRaymarch.use();
       s.tex('uNoise', this.noiseTex, gl.TEXTURE_3D);
       s.setAll({
+        uMatRough: this.pal.rough, uMatMetal: this.pal.metal, uMatIor: this.pal.ior,
+        uMatAniso: this.pal.aniso, uMatFilm: this.pal.film, uMatTrans: this.pal.trans,
+        uMatEmis: this.pal.emis, uMatDisp: this.pal.disp, uMatAbsorb: this.pal.absorb,
+        uOrbPos: this.orbPosBuf, uOrbR: this.orbRadBuf, uOrbCount: oc,
+        uPulse: p.pulse, uPulseDir: p.pulseDir, uFlash: p.flash,
         uRes: [this.iw, this.ih],
         uTime: this.simTime, uFrame: this.frame,
         uInvViewProj: this.invViewProjJ, uViewProj: this.viewProjJ,

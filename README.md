@@ -74,7 +74,8 @@ step so the dark gradients do not band.
 
 | | |
 |---|---|
-| **1** – **7** | material preset |
+| **click an orb** | absorb that material |
+| **1** – **7** | the same, from the keyboard |
 | **drag** | orbit the sculpture |
 | **P** | photo mode — UI hidden, higher render scale |
 | **Enter** | save a PNG |
@@ -197,6 +198,36 @@ on load. If it is rate-limited, blocked or offline, nothing breaks: the
 numbers baked into `js/content.js` are a verified snapshot and the badge next
 to them says `snapshot` instead of `live`. Set `LIVE_STATS = false` at the top
 of that file and the page never touches the network at all.
+
+### The material palette
+
+The materials section used to be a list of names beside a swatch. It is a
+ring of seven orbs around the sculpture now, each one wearing its own
+material, and clicking one sends it inward to be absorbed.
+
+Three things make it cheap enough to be worth doing:
+
+**The orbs are intersected, not marched.** They are spheres, so a ray meets
+one by solving a quadratic. Seven of those, once per pixel, instead of seven
+more distance-field evaluations at every one of a hundred-odd march steps.
+
+**Their positions come from the CPU**, as a uniform array, rather than being
+recomputed in the shader. The click test and the pixels then cannot disagree
+about where an orb is — which they will, eventually, if the same orbit is
+written down twice.
+
+**They are lit, not shaded.** No shadow march, no ambient occlusion, no second
+bounce, and a single refraction for the dielectrics instead of an interior
+march per wavelength. Everything cut would be invisible at forty pixels
+across, and each one would otherwise have cost about what the sculpture does.
+They do get a stop and a half more light than the sculpture: a mirror in a
+dark room is a dark ball, which is correct and useless as a swatch.
+
+The absorb itself hides a hard edit. Material properties cannot be
+meaningfully interpolated — halfway between chrome and glass is not a
+material — so the switch is instantaneous, under a ring wave that crosses the
+surface and an emissive burst that peaks as it lands. The eye follows the
+ripple; the change happens beneath it.
 
 ### Everyone starts at the lowest tier
 

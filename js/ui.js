@@ -55,8 +55,7 @@ export class UI {
       const li = el('li');
       const b = el('button', '', `
         <span class="num">${String(i + 1).padStart(2, '0')}</span>
-        <span class="nm">${m.name}</span>
-        <span class="sw" style="background:${m.sw};color:${m.sw}"></span>`);
+        <span class="nm">${m.name}</span>`);
       b.type = 'button';
       b.setAttribute('role', 'tab');
       b.addEventListener('click', () => this.selectMaterial(i));

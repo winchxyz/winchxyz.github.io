@@ -39,6 +39,34 @@ uniform float uEmissive;
 uniform vec3  uAbsorb;       // Beer-Lambert coefficient, per channel
 uniform float uDispersion;   // IOR spread between red and blue
 
+/* ── the palette ───────────────────────────────────────────────────────────
+   Every material, so the preview orbs can each wear a different one. The
+   scalar uniforms above stay: they carry the sculpture's CURRENT material,
+   which is a blend during an absorb and therefore not any one array entry. */
+#define MAT_MAX 8
+uniform float uMatRough[MAT_MAX];
+uniform float uMatMetal[MAT_MAX];
+uniform float uMatIor[MAT_MAX];
+uniform float uMatAniso[MAT_MAX];
+uniform float uMatFilm[MAT_MAX];
+uniform float uMatTrans[MAT_MAX];
+uniform float uMatEmis[MAT_MAX];
+uniform float uMatDisp[MAT_MAX];
+uniform vec3  uMatAbsorb[MAT_MAX];
+
+/* Orb positions and radii come from the CPU rather than being recomputed
+   here. One source of truth is the whole point: the click test in main.js
+   and the pixels on screen cannot disagree about where an orb is. */
+uniform vec3  uOrbPos[MAT_MAX];
+uniform float uOrbR[MAT_MAX];
+uniform int   uOrbCount;      // 0 outside the materials section — skips it all
+
+/* The absorb. A ring wave crosses the sculpture and the switch happens under
+   it, so the eye follows the ripple rather than catching the change. */
+uniform float uPulse;         // 1 at impact, decaying to 0
+uniform vec3  uPulseDir;      // where on the surface it landed
+uniform float uFlash;         // emissive burst, same decay
+
 /* Every one of these is a LOOP BOUND, and every one of them is a uniform
    rather than a constant on purpose.
 
@@ -69,7 +97,20 @@ const float STEP_K   = 0.62;   // < 1 because the morph, the gyroid and the
 
 /* ── local wrappers so the SDF chunk's uniforms stay explicit ───────────── */
 
-float mapS(vec3 p){ return sculpture(p / uScale, uTime, uShape, uDetail) * uScale; }
+float mapS(vec3 p){
+  float d = sculpture(p / uScale, uTime, uShape, uDetail) * uScale;
+
+  /* The absorb ripple. A ring wave leaves the impact point and crosses the
+     form; the material switches underneath it. Angular position is measured
+     with a dot product rather than acos() — the shape of the falloff matters,
+     its units do not, and this sits inside the march loop. */
+  if (uPulse > 0.002){
+    float ad = 1.0 - dot(normalize(p + 1e-5), uPulseDir);   // 0 at the impact, 2 opposite
+    float w  = (1.0 - uPulse) * 2.6;
+    d += sin((ad - w) * 7.0) * exp(-abs(ad - w) * 4.5) * 0.05 * uPulse;
+  }
+  return d;
+}
 
 /* The tetrahedron normal, written as a loop rather than four unrolled taps.
    Each textual mapS() is another whole copy of the distance field in the
@@ -101,6 +142,29 @@ bool sphereRange(vec3 ro, vec3 rd, float r, out float t0, out float t1){
   t1 = -b + h;
   return t1 > 0.0;
 }
+
+/* ── the preview orbs ──────────────────────────────────────────────────────
+   Spheres, so they are intersected rather than marched: seven ray-sphere
+   tests once per pixel instead of seven more distance evaluations at every
+   one of a hundred-odd march steps. Exact, and effectively free. */
+float orbHit(vec3 ro, vec3 rd, float tMax, out int id){
+  float best = tMax;
+  id = -1;
+  for (int k = 0; k < uOrbCount; k++){
+    float r = uOrbR[k];
+    if (r < 1e-3) continue;
+    vec3 oc = ro - uOrbPos[k];
+    float b = dot(oc, rd);
+    float c = dot(oc, oc) - r * r;
+    float h = b * b - c;
+    if (h < 0.0) continue;
+    float t = -b - sqrt(h);
+    if (t > 0.02 && t < best){ best = t; id = k; }
+  }
+  return best;
+}
+
+// A tangent
 
 /* One marcher, shared by the camera ray and by both reflection rays.
 
@@ -146,6 +210,12 @@ Hit trace(vec3 ro, vec3 rd, float pixelRadius){
     float tHit = marchSDF(ro, rd, t, tEnd, pixelRadius, uSteps, hit);
     if (hit){ h.t = tHit; h.id = 1; }
   }
+
+  // the preview orbs, intersected rather than marched
+  int oid;
+  float to = orbHit(ro, rd, h.t, oid);
+  if (oid >= 0){ h.t = to; h.id = 10 + oid; }
+
   return h;
 }
 
@@ -193,7 +263,34 @@ struct Surf {
   vec3  emis;
   float aniso;
   float coat;
+  float wrap;     // wrapped-diffuse amount, standing in for subsurface
 };
+
+/* One material, whether it came from the palette array or from the blended
+   scalars the sculpture is currently wearing. */
+struct Mat {
+  int   id;
+  float rough, metal, ior, aniso, film, trans, emis, disp;
+  vec3  absorb;
+};
+
+Mat matAt(int i){
+  Mat m;
+  m.id = i;
+  m.rough = uMatRough[i]; m.metal  = uMatMetal[i]; m.ior    = uMatIor[i];
+  m.aniso = uMatAniso[i]; m.film   = uMatFilm[i];  m.trans  = uMatTrans[i];
+  m.emis  = uMatEmis[i];  m.disp   = uMatDisp[i];  m.absorb = uMatAbsorb[i];
+  return m;
+}
+
+Mat matCurrent(){
+  Mat m;
+  m.id = uMatId;
+  m.rough = uRough; m.metal = uMetal; m.ior   = uIor;   m.aniso  = uAniso;
+  m.film  = uFilm;  m.trans = uTrans; m.emis  = uEmissive;
+  m.disp  = uDispersion; m.absorb = uAbsorb;
+  return m;
+}
 
 // A tangent field on a surface with no UVs. Latitude lines around the local
 // Y axis, which reads as a part turned on a lathe — exactly the grain
@@ -208,52 +305,60 @@ vec3 tangentField(vec3 p, vec3 n){
   return normalize(t + w - n * dot(n, w));
 }
 
-Surf describe(vec3 p, vec3 n){
+/* The first argument is the LOCAL space the procedural detail lives in — the
+   sculpture's own coordinates, or an orb's — while the second stays world
+   space for the view-dependent terms. Without that split an orb would wear a
+   slice of the sculpture's noise field rather than its own. */
+Surf describe(vec3 q, vec3 p, vec3 n, Mat m){
   Surf s;
   s.albedo = vec3(0.9);
-  s.rough  = uRough;
-  s.metal  = uMetal;
+  s.rough  = m.rough;
+  s.metal  = m.metal;
   s.emis   = vec3(0.0);
-  s.aniso  = uAniso;
+  s.aniso  = m.aniso;
   s.coat   = 0.0;
+  s.wrap   = 0.0;
 
-  vec3 q = p / uScale;
-
-  if (uMatId == 0){                       // liquid chrome
+  if (m.id == 0){                       // liquid chrome
     s.albedo = vec3(0.955, 0.960, 0.965);
-    s.rough  = clamp(uRough + tfbm3(q * 5.0) * 0.09 - 0.03, 0.012, 1.0);
+    s.rough  = clamp(m.rough + tfbm3(q * 5.0) * 0.09 - 0.03, 0.012, 1.0);
   }
-  else if (uMatId == 1){                  // anodised titanium
+  else if (m.id == 1){                  // anodised titanium
     float thickness = 300.0 + 260.0 * tfbm3(q * 2.2 + uTime * 0.03)
                             + 90.0 * sin(q.y * 5.0 + uTime * 0.25);
     float cosT = clamp(dot(n, normalize(uCamPos - p)), 0.0, 1.0);
     vec3 film = thinFilm(cosT, thickness, 2.20);
     vec3 base = vec3(0.62, 0.60, 0.58);   // titanium F0
-    s.albedo = mix(base, base * film * 1.9, uFilm);
-    s.rough  = clamp(uRough + tfbm2(q * 6.0) * 0.10 - 0.04, 0.03, 1.0);
+    s.albedo = mix(base, base * film * 1.9, m.film);
+    s.rough  = clamp(m.rough + tfbm2(q * 6.0) * 0.10 - 0.04, 0.03, 1.0);
   }
-  else if (uMatId == 2 || uMatId == 6){   // the two dielectrics
+  else if (m.id == 2 || m.id == 6){   // the two dielectrics
     // Whatever colour a piece of glass has comes from absorption along the
     // path, not from an albedo, so both share one branch here and differ
     // only in uAbsorb and uDispersion.
     s.albedo = vec3(0.03);
     s.metal  = 0.0;
-    s.rough  = uRough;
+    s.rough  = m.rough;
   }
-  else if (uMatId == 3){                  // brushed alloy
+  else if (m.id == 3){                  // brushed alloy
     s.albedo = vec3(0.90, 0.90, 0.88);
     // fine brush grain in the roughness, not the normal — cheaper and it
     // survives minification without aliasing into sparkle
     float grain = tfbm2(vec3(q.x * 90.0, q.y * 3.0, q.z * 90.0));
-    s.rough  = clamp(uRough + (grain - 0.5) * 0.22, 0.04, 1.0);
+    s.rough  = clamp(m.rough + (grain - 0.5) * 0.22, 0.04, 1.0);
   }
-  else if (uMatId == 4){                  // kiln ceramic
-    float glaze = worley(q * 4.5);   // the one place a cell structure is worth its cost
+  else if (m.id == 4){                  // kiln ceramic
+    /* This was a 27-iteration Worley loop. describe() is inlined at five
+       call sites now, so that loop was being compiled five times over — it
+       cost more in compile time than the cell structure was worth. A ridged
+       noise lookup pools the glaze the same way for one texture fetch. */
+    float glaze = 1.0 - abs(tnoise(q * 4.5) * 2.0 - 1.0);
     s.albedo = mix(vec3(0.88, 0.87, 0.82), vec3(0.72, 0.75, 0.70), glaze * 0.6);
     s.metal  = 0.0;
     // glaze pools in the hollows: thinner (rougher) where the form is convex
-    s.rough  = clamp(uRough - glaze * 0.26 + tfbm2(q * 9.0) * 0.12, 0.05, 1.0);
+    s.rough  = clamp(m.rough - glaze * 0.26 + tfbm2(q * 9.0) * 0.12, 0.05, 1.0);
     s.coat   = 0.35;
+    s.wrap   = 0.55;
   }
   else {                                  // molten core
     float depth = clamp(1.0 - length(q) / 1.05, 0.0, 1.0);
@@ -262,10 +367,11 @@ Surf describe(vec3 p, vec3 n){
     float kelvin = mix(1100.0, 2400.0, heat);
     s.albedo = vec3(0.10, 0.085, 0.08);
     s.metal  = 0.15;
-    s.rough  = clamp(uRough + veins * 0.2, 0.1, 1.0);
-    s.emis   = blackbody(kelvin) * pow(heat, 3.0) * 7.5 * uEmissive
+    s.rough  = clamp(m.rough + veins * 0.2, 0.1, 1.0);
+    s.emis   = blackbody(kelvin) * pow(heat, 3.0) * 7.5 * m.emis
              * (0.85 + 0.15 * sin(uTime * 1.7 + veins * 9.0));
   }
+
   return s;
 }
 
@@ -279,7 +385,7 @@ Surf describe(vec3 p, vec3 n){
    four hundred — every floor pixel would then run two soft-shadow marches and
    another reflection march of its own. At this size nobody can tell. */
 vec3 shadeApprox(vec3 p, vec3 n, vec3 rd){
-  Surf s = describe(p, n);
+  Surf s = describe(p / uScale, p, n, matCurrent());
   vec3 f0 = mix(vec3(0.04), s.albedo, s.metal);
   float NoV = clamp(dot(n, -rd), 1e-4, 1.0);
   vec2 ab = envBRDFApprox(NoV, max(s.rough, 0.20));
@@ -317,7 +423,7 @@ vec3 brdfDirect(vec3 n, vec3 v, vec3 l, vec3 lcol, Surf s, vec3 f0, vec3 diffCol
   vec3 spec = D * V * F;
 
   // Wrapped diffuse. Half a subsurface term for the price of a max().
-  float wrap = (uMatId == 4) ? 0.55 : 0.0;
+  float wrap = s.wrap;
   float diffN = clamp((dot(n, l) + wrap) / (1.0 + wrap), 0.0, 1.0);
   vec3 diff = diffCol * INV_PI * diffN;
 
@@ -348,9 +454,13 @@ vec3 shadeSurface(vec3 p, vec3 n, vec3 rd, Surf s, float ao, float shadowScale){
   float shK = mix(1.0, softShadow(p + n * 0.012, lk, 12.0), shadowScale);
   float shF = mix(1.0, softShadow(p + n * 0.012, lf,  9.0), shadowScale * 0.6);
 
-  col += brdfDirect(n, v, lk, C_KEY  * shK, s, f0, diffCol, T, B);
-  col += brdfDirect(n, v, lf, C_FILL * shF, s, f0, diffCol, T, B);
-  col += brdfDirect(n, v, lr, C_RIM * (1.0 + uRimBoost), s, f0, diffCol, T, B);
+  /* Written as a loop over the three sources. Measured: it makes no
+     difference to compile time — a three-iteration constant-bound loop gets
+     unrolled straight back into three copies — but it keeps the light rig in
+     one place instead of three parallel edits. */
+  vec3 lDir[3]; lDir[0] = lk; lDir[1] = lf; lDir[2] = lr;
+  vec3 lCol[3]; lCol[0] = C_KEY * shK; lCol[1] = C_FILL * shF; lCol[2] = C_RIM * (1.0 + uRimBoost);
+  for (int i = 0; i < 3; i++) col += brdfDirect(n, v, lDir[i], lCol[i], s, f0, diffCol, T, B);
 
   // ── image based ────────────────────────────────────────────────────────
   vec2 ab = envBRDFApprox(NoV, s.rough);
@@ -471,6 +581,46 @@ vec3 refractChannel(vec3 p, vec3 n, vec3 rd, float ior){
   return backdropFor(p2, normalize(out2), 0.03) * absorb;
 }
 
+/* ── the preview orbs ──────────────────────────────────────────────────────
+   Same BRDF as the sculpture, none of the expensive parts: no shadow march,
+   no ambient occlusion, no second bounce, and for the dielectrics a single
+   refraction instead of an interior march per wavelength. They are 40 pixels
+   across. Everything that got cut would be invisible at that size and each
+   one of them would have cost as much as the sculpture itself. */
+vec3 shadeOrb(vec3 q, vec3 p, vec3 n, vec3 rd, Mat m){
+  Surf s = describe(q, p, n, m);
+  vec3 v = -rd;
+  float NoV = clamp(dot(n, v), 1e-4, 1.0);
+
+  if (m.trans > 0.5){
+    vec3 dir = refract(rd, n, 1.0 / m.ior);
+    vec3 back = backdropFor(p + dir * 0.55, dir, 0.05) * exp(-m.absorb * 0.9);
+    float F = F_Schlick(0.04, 1.0, NoV);
+    return mix(back, envColor(reflect(rd, n), m.rough, uRimBoost), clamp(F * 3.1, 0.06, 1.0)) * 1.55;
+  }
+
+  vec3 f0 = mix(vec3(0.04), s.albedo, s.metal);
+  vec3 diffCol = s.albedo * (1.0 - s.metal);
+  vec3 T = normalize(cross(n, vec3(0.0, 1.0, 0.0)) + vec3(1e-4, 0.0, 0.0));
+  vec3 B = normalize(cross(n, T));
+
+  vec3 col = vec3(0.0);
+  vec3 oDir[3]; oDir[0] = normalize(L_KEY); oDir[1] = normalize(L_FILL); oDir[2] = normalize(L_RIM);
+  vec3 oCol[3]; oCol[0] = C_KEY; oCol[1] = C_FILL; oCol[2] = C_RIM * (1.0 + uRimBoost);
+  for (int i = 0; i < 3; i++) col += brdfDirect(n, v, oDir[i], oCol[i], s, f0, diffCol, T, B);
+
+  /* Lit a stop and a half brighter than the sculpture. A mirror in a dark
+     room is a dark ball — correct, and useless as a swatch. These are
+     previews, and a preview has to be legible before it is accurate. */
+  const float ORB_GAIN = 1.55;
+  vec2 ab = envBRDFApprox(NoV, s.rough);
+  col += envColor(reflect(rd, n), s.rough, uRimBoost) * (f0 * ab.x + ab.y) * ORB_GAIN;
+  col += diffCol * envColor(n, 0.92, uRimBoost) * 0.60 * ORB_GAIN;
+  col *= ORB_GAIN;
+  col += s.emis;
+  return col;
+}
+
 /* ── the floor ─────────────────────────────────────────────────────────── */
 
 vec3 shadeFloor(vec3 p, vec3 rd, float t){
@@ -567,9 +717,14 @@ void main(){
 
     if (h.id == 2){
       col = shadeFloor(p, rd, h.t);
+    } else if (h.id >= 10){
+      int k = h.id - 10;
+      vec3 c = uOrbPos[k];
+      vec3 n = normalize(p - c);
+      col = shadeOrb((p - c) / max(uOrbR[k], 1e-3), p, n, rd, matAt(k));
     } else {
       vec3 n = nrmS(p, max(0.0009, 0.0012 * h.t));
-      Surf s = describe(p, n);
+      Surf s = describe(p / uScale, p, n, matCurrent());
       float ao = calcAO(p, n);
 
       if (uTrans > 0.5){
@@ -592,6 +747,8 @@ void main(){
       } else {
         col = shadeSurface(p, n, rd, s, ao, 1.0);
       }
+      // the absorb burst, bright enough to cover the switch happening under it
+      col += vec3(0.80, 0.94, 0.52) * uFlash * uFlash * 4.5;
     }
 
     vec4 clip = uViewProj * vec4(p, 1.0);

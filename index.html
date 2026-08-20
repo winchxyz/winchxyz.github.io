@@ -175,13 +175,15 @@
     </header>
 
     <div class="mat-lab" data-reveal data-reveal-delay="2">
-      <ul class="mat-list" role="tablist" aria-label="Material presets" id="mat-list"></ul>
       <div class="mat-detail" id="mat-detail" role="tabpanel">
         <h3 class="mat-name" id="mat-name">—</h3>
         <p class="mat-desc" id="mat-desc">—</p>
         <dl class="mat-params mono" id="mat-params"></dl>
-        <p class="mat-hint mono">press <kbd>1</kbd>–<kbd>7</kbd> · drag to orbit · <kbd>P</kbd> photo mode</p>
       </div>
+      <!-- The orbs are the control. This row is the keyboard and touch path
+           to the same thing, and it is what a screen reader reads. -->
+      <ul class="mat-chips mono" role="tablist" aria-label="Material presets" id="mat-list"></ul>
+      <p class="mat-hint mono">click an orb · or press <kbd>1</kbd>–<kbd>7</kbd> · drag to orbit</p>
     </div>
   </div>
 </section>

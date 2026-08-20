@@ -556,35 +556,30 @@ html.scrolled .scroll-cue{ opacity:0; pointer-events:none; }
 
 /* ══ MATERIALS ═══════════════════════════════════════════════════════════ */
 
-.mat-lab{
-  display:grid; grid-template-columns:minmax(220px,300px) 1fr;
-  gap:clamp(20px,4vw,56px); align-items:start;
-}
-@media (max-width:820px){ .mat-lab{ grid-template-columns:1fr; } }
+/* The palette is in the scene now — seven orbs on a ring around the
+   sculpture, clicked to be absorbed. This column is the panel that names
+   whichever one is on, plus a row of chips that does the same job for a
+   keyboard, a screen reader, and a thumb. */
+.mat-lab{ max-width:min(52ch, 100%); }
 
-.mat-list{ list-style:none; margin:0; padding:0; display:grid; gap:1px;
-  border-top:1px solid var(--line-2); }
-.mat-list li{ border-bottom:1px solid var(--line-2); }
-.mat-list button{
-  width:100%; display:flex; align-items:center; gap:12px;
-  padding:13px 4px; background:none; border:0; cursor:pointer;
-  font-family:var(--mono); font-size:14px; letter-spacing:.03em;
-  color:var(--muted); text-align:left;
-  transition:color .28s var(--ease), padding-left .3s var(--ease);
+.mat-chips{
+  list-style:none; display:flex; flex-wrap:wrap; gap:8px;
+  margin:26px 0 14px; padding:0;
 }
-.mat-list button:hover{ color:var(--bone); padding-left:9px; }
-.mat-list button .num{ color:var(--dim); font-size:11.5px; min-width:1.6em; }
-.mat-list button .sw{
-  width:16px; height:16px; border-radius:50%; margin-left:auto; flex:none;
-  border:1px solid var(--line); transition:transform .3s var(--ease), box-shadow .3s;
+.mat-chips button{
+  display:flex; align-items:center; gap:8px;
+  padding:9px 14px; border-radius:22px; cursor:pointer;
+  background:transparent; border:1px solid var(--line); color:var(--muted);
+  font-family:var(--mono); font-size:12px; letter-spacing:.03em;
+  transition:color .25s var(--ease), border-color .25s var(--ease), background .25s var(--ease);
 }
-.mat-list li.is-on button{ color:var(--lime); padding-left:9px; }
-.mat-list li.is-on button .num{ color:var(--lime); }
-.mat-list li.is-on .sw{ transform:scale(1.25); box-shadow:0 0 0 1px rgba(198,242,78,.5), 0 0 16px -2px currentColor; }
+.mat-chips button:hover{ color:var(--bone); border-color:var(--muted); }
+.mat-chips .num{ opacity:.5; }
+.mat-chips li.is-on button{
+  color:var(--ink); background:var(--lime); border-color:var(--lime); font-weight:700;
+}
+.mat-chips li.is-on .num{ opacity:.65; }
 
-/* Cap the detail column. It sits in a `1fr` track, so on a wide viewport it
-   stretched the whole way across — which left the stats grid with an empty
-   trailing cell and pushed the copy under the sculpture. */
 .mat-detail{ min-height:220px; max-width:620px; }
 .mat-name{
   margin:0 0 10px;
@@ -836,7 +831,7 @@ body.cur-drag .c-lbl{ opacity:1; }
   }
 
   .chip{ padding:11px 16px; }
-  .mat-list button{ padding:16px 4px; }
+  .mat-chips button{ padding:12px 16px; }
   #nav nav a:not(.cta){ display:none; }
   #hud{ display:none; }
   .sec{ padding:clamp(86px,11vh,132px) 0; }
@@ -1006,13 +1001,15 @@ body.cur-drag .c-lbl{ opacity:1; }
     </header>
 
     <div class="mat-lab" data-reveal data-reveal-delay="2">
-      <ul class="mat-list" role="tablist" aria-label="Material presets" id="mat-list"></ul>
       <div class="mat-detail" id="mat-detail" role="tabpanel">
         <h3 class="mat-name" id="mat-name">—</h3>
         <p class="mat-desc" id="mat-desc">—</p>
         <dl class="mat-params mono" id="mat-params"></dl>
-        <p class="mat-hint mono">press <kbd>1</kbd>–<kbd>7</kbd> · drag to orbit · <kbd>P</kbd> photo mode</p>
       </div>
+      <!-- The orbs are the control. This row is the keyboard and touch path
+           to the same thing, and it is what a screen reader reads. -->
+      <ul class="mat-chips mono" role="tablist" aria-label="Material presets" id="mat-list"></ul>
+      <p class="mat-hint mono">click an orb · or press <kbd>1</kbd>–<kbd>7</kbd> · drag to orbit</p>
     </div>
   </div>
 </section>
@@ -1279,11 +1276,13 @@ class Program {
     if (!e) return this;
     const gl = this.gl, { loc, type } = e;
     switch (type) {
-      case gl.FLOAT:       gl.uniform1f(loc, v); break;
+      // size > 1 means it was declared as an array, and the scalar setter
+      // silently does nothing for those
+      case gl.FLOAT:       e.size > 1 ? gl.uniform1fv(loc, v) : gl.uniform1f(loc, v); break;
       case gl.FLOAT_VEC2:  gl.uniform2fv(loc, v); break;
       case gl.FLOAT_VEC3:  gl.uniform3fv(loc, v); break;
       case gl.FLOAT_VEC4:  gl.uniform4fv(loc, v); break;
-      case gl.INT: case gl.BOOL: gl.uniform1i(loc, v); break;
+      case gl.INT: case gl.BOOL: e.size > 1 ? gl.uniform1iv(loc, v) : gl.uniform1i(loc, v); break;
       case gl.INT_VEC2: case gl.BOOL_VEC2: gl.uniform2iv(loc, v); break;
       case gl.INT_VEC3: case gl.BOOL_VEC3: gl.uniform3iv(loc, v); break;
       case gl.INT_VEC4: case gl.BOOL_VEC4: gl.uniform4iv(loc, v); break;
@@ -2126,6 +2125,34 @@ uniform float uEmissive;
 uniform vec3  uAbsorb;       // Beer-Lambert coefficient, per channel
 uniform float uDispersion;   // IOR spread between red and blue
 
+/* ── the palette ───────────────────────────────────────────────────────────
+   Every material, so the preview orbs can each wear a different one. The
+   scalar uniforms above stay: they carry the sculpture's CURRENT material,
+   which is a blend during an absorb and therefore not any one array entry. */
+#define MAT_MAX 8
+uniform float uMatRough[MAT_MAX];
+uniform float uMatMetal[MAT_MAX];
+uniform float uMatIor[MAT_MAX];
+uniform float uMatAniso[MAT_MAX];
+uniform float uMatFilm[MAT_MAX];
+uniform float uMatTrans[MAT_MAX];
+uniform float uMatEmis[MAT_MAX];
+uniform float uMatDisp[MAT_MAX];
+uniform vec3  uMatAbsorb[MAT_MAX];
+
+/* Orb positions and radii come from the CPU rather than being recomputed
+   here. One source of truth is the whole point: the click test in main.js
+   and the pixels on screen cannot disagree about where an orb is. */
+uniform vec3  uOrbPos[MAT_MAX];
+uniform float uOrbR[MAT_MAX];
+uniform int   uOrbCount;      // 0 outside the materials section — skips it all
+
+/* The absorb. A ring wave crosses the sculpture and the switch happens under
+   it, so the eye follows the ripple rather than catching the change. */
+uniform float uPulse;         // 1 at impact, decaying to 0
+uniform vec3  uPulseDir;      // where on the surface it landed
+uniform float uFlash;         // emissive burst, same decay
+
 /* Every one of these is a LOOP BOUND, and every one of them is a uniform
    rather than a constant on purpose.
 
@@ -2156,7 +2183,20 @@ const float STEP_K   = 0.62;   // < 1 because the morph, the gyroid and the
 
 /* ── local wrappers so the SDF chunk's uniforms stay explicit ───────────── */
 
-float mapS(vec3 p){ return sculpture(p / uScale, uTime, uShape, uDetail) * uScale; }
+float mapS(vec3 p){
+  float d = sculpture(p / uScale, uTime, uShape, uDetail) * uScale;
+
+  /* The absorb ripple. A ring wave leaves the impact point and crosses the
+     form; the material switches underneath it. Angular position is measured
+     with a dot product rather than acos() — the shape of the falloff matters,
+     its units do not, and this sits inside the march loop. */
+  if (uPulse > 0.002){
+    float ad = 1.0 - dot(normalize(p + 1e-5), uPulseDir);   // 0 at the impact, 2 opposite
+    float w  = (1.0 - uPulse) * 2.6;
+    d += sin((ad - w) * 7.0) * exp(-abs(ad - w) * 4.5) * 0.05 * uPulse;
+  }
+  return d;
+}
 
 /* The tetrahedron normal, written as a loop rather than four unrolled taps.
    Each textual mapS() is another whole copy of the distance field in the
@@ -2188,6 +2228,29 @@ bool sphereRange(vec3 ro, vec3 rd, float r, out float t0, out float t1){
   t1 = -b + h;
   return t1 > 0.0;
 }
+
+/* ── the preview orbs ──────────────────────────────────────────────────────
+   Spheres, so they are intersected rather than marched: seven ray-sphere
+   tests once per pixel instead of seven more distance evaluations at every
+   one of a hundred-odd march steps. Exact, and effectively free. */
+float orbHit(vec3 ro, vec3 rd, float tMax, out int id){
+  float best = tMax;
+  id = -1;
+  for (int k = 0; k < uOrbCount; k++){
+    float r = uOrbR[k];
+    if (r < 1e-3) continue;
+    vec3 oc = ro - uOrbPos[k];
+    float b = dot(oc, rd);
+    float c = dot(oc, oc) - r * r;
+    float h = b * b - c;
+    if (h < 0.0) continue;
+    float t = -b - sqrt(h);
+    if (t > 0.02 && t < best){ best = t; id = k; }
+  }
+  return best;
+}
+
+// A tangent
 
 /* One marcher, shared by the camera ray and by both reflection rays.
 
@@ -2233,6 +2296,12 @@ Hit trace(vec3 ro, vec3 rd, float pixelRadius){
     float tHit = marchSDF(ro, rd, t, tEnd, pixelRadius, uSteps, hit);
     if (hit){ h.t = tHit; h.id = 1; }
   }
+
+  // the preview orbs, intersected rather than marched
+  int oid;
+  float to = orbHit(ro, rd, h.t, oid);
+  if (oid >= 0){ h.t = to; h.id = 10 + oid; }
+
   return h;
 }
 
@@ -2280,7 +2349,34 @@ struct Surf {
   vec3  emis;
   float aniso;
   float coat;
+  float wrap;     // wrapped-diffuse amount, standing in for subsurface
 };
+
+/* One material, whether it came from the palette array or from the blended
+   scalars the sculpture is currently wearing. */
+struct Mat {
+  int   id;
+  float rough, metal, ior, aniso, film, trans, emis, disp;
+  vec3  absorb;
+};
+
+Mat matAt(int i){
+  Mat m;
+  m.id = i;
+  m.rough = uMatRough[i]; m.metal  = uMatMetal[i]; m.ior    = uMatIor[i];
+  m.aniso = uMatAniso[i]; m.film   = uMatFilm[i];  m.trans  = uMatTrans[i];
+  m.emis  = uMatEmis[i];  m.disp   = uMatDisp[i];  m.absorb = uMatAbsorb[i];
+  return m;
+}
+
+Mat matCurrent(){
+  Mat m;
+  m.id = uMatId;
+  m.rough = uRough; m.metal = uMetal; m.ior   = uIor;   m.aniso  = uAniso;
+  m.film  = uFilm;  m.trans = uTrans; m.emis  = uEmissive;
+  m.disp  = uDispersion; m.absorb = uAbsorb;
+  return m;
+}
 
 // A tangent field on a surface with no UVs. Latitude lines around the local
 // Y axis, which reads as a part turned on a lathe — exactly the grain
@@ -2295,52 +2391,60 @@ vec3 tangentField(vec3 p, vec3 n){
   return normalize(t + w - n * dot(n, w));
 }
 
-Surf describe(vec3 p, vec3 n){
+/* The first argument is the LOCAL space the procedural detail lives in — the
+   sculpture's own coordinates, or an orb's — while the second stays world
+   space for the view-dependent terms. Without that split an orb would wear a
+   slice of the sculpture's noise field rather than its own. */
+Surf describe(vec3 q, vec3 p, vec3 n, Mat m){
   Surf s;
   s.albedo = vec3(0.9);
-  s.rough  = uRough;
-  s.metal  = uMetal;
+  s.rough  = m.rough;
+  s.metal  = m.metal;
   s.emis   = vec3(0.0);
-  s.aniso  = uAniso;
+  s.aniso  = m.aniso;
   s.coat   = 0.0;
+  s.wrap   = 0.0;
 
-  vec3 q = p / uScale;
-
-  if (uMatId == 0){                       // liquid chrome
+  if (m.id == 0){                       // liquid chrome
     s.albedo = vec3(0.955, 0.960, 0.965);
-    s.rough  = clamp(uRough + tfbm3(q * 5.0) * 0.09 - 0.03, 0.012, 1.0);
+    s.rough  = clamp(m.rough + tfbm3(q * 5.0) * 0.09 - 0.03, 0.012, 1.0);
   }
-  else if (uMatId == 1){                  // anodised titanium
+  else if (m.id == 1){                  // anodised titanium
     float thickness = 300.0 + 260.0 * tfbm3(q * 2.2 + uTime * 0.03)
                             + 90.0 * sin(q.y * 5.0 + uTime * 0.25);
     float cosT = clamp(dot(n, normalize(uCamPos - p)), 0.0, 1.0);
     vec3 film = thinFilm(cosT, thickness, 2.20);
     vec3 base = vec3(0.62, 0.60, 0.58);   // titanium F0
-    s.albedo = mix(base, base * film * 1.9, uFilm);
-    s.rough  = clamp(uRough + tfbm2(q * 6.0) * 0.10 - 0.04, 0.03, 1.0);
+    s.albedo = mix(base, base * film * 1.9, m.film);
+    s.rough  = clamp(m.rough + tfbm2(q * 6.0) * 0.10 - 0.04, 0.03, 1.0);
   }
-  else if (uMatId == 2 || uMatId == 6){   // the two dielectrics
+  else if (m.id == 2 || m.id == 6){   // the two dielectrics
     // Whatever colour a piece of glass has comes from absorption along the
     // path, not from an albedo, so both share one branch here and differ
     // only in uAbsorb and uDispersion.
     s.albedo = vec3(0.03);
     s.metal  = 0.0;
-    s.rough  = uRough;
+    s.rough  = m.rough;
   }
-  else if (uMatId == 3){                  // brushed alloy
+  else if (m.id == 3){                  // brushed alloy
     s.albedo = vec3(0.90, 0.90, 0.88);
     // fine brush grain in the roughness, not the normal — cheaper and it
     // survives minification without aliasing into sparkle
     float grain = tfbm2(vec3(q.x * 90.0, q.y * 3.0, q.z * 90.0));
-    s.rough  = clamp(uRough + (grain - 0.5) * 0.22, 0.04, 1.0);
+    s.rough  = clamp(m.rough + (grain - 0.5) * 0.22, 0.04, 1.0);
   }
-  else if (uMatId == 4){                  // kiln ceramic
-    float glaze = worley(q * 4.5);   // the one place a cell structure is worth its cost
+  else if (m.id == 4){                  // kiln ceramic
+    /* This was a 27-iteration Worley loop. describe() is inlined at five
+       call sites now, so that loop was being compiled five times over — it
+       cost more in compile time than the cell structure was worth. A ridged
+       noise lookup pools the glaze the same way for one texture fetch. */
+    float glaze = 1.0 - abs(tnoise(q * 4.5) * 2.0 - 1.0);
     s.albedo = mix(vec3(0.88, 0.87, 0.82), vec3(0.72, 0.75, 0.70), glaze * 0.6);
     s.metal  = 0.0;
     // glaze pools in the hollows: thinner (rougher) where the form is convex
-    s.rough  = clamp(uRough - glaze * 0.26 + tfbm2(q * 9.0) * 0.12, 0.05, 1.0);
+    s.rough  = clamp(m.rough - glaze * 0.26 + tfbm2(q * 9.0) * 0.12, 0.05, 1.0);
     s.coat   = 0.35;
+    s.wrap   = 0.55;
   }
   else {                                  // molten core
     float depth = clamp(1.0 - length(q) / 1.05, 0.0, 1.0);
@@ -2349,10 +2453,11 @@ Surf describe(vec3 p, vec3 n){
     float kelvin = mix(1100.0, 2400.0, heat);
     s.albedo = vec3(0.10, 0.085, 0.08);
     s.metal  = 0.15;
-    s.rough  = clamp(uRough + veins * 0.2, 0.1, 1.0);
-    s.emis   = blackbody(kelvin) * pow(heat, 3.0) * 7.5 * uEmissive
+    s.rough  = clamp(m.rough + veins * 0.2, 0.1, 1.0);
+    s.emis   = blackbody(kelvin) * pow(heat, 3.0) * 7.5 * m.emis
              * (0.85 + 0.15 * sin(uTime * 1.7 + veins * 9.0));
   }
+
   return s;
 }
 
@@ -2366,7 +2471,7 @@ Surf describe(vec3 p, vec3 n){
    four hundred — every floor pixel would then run two soft-shadow marches and
    another reflection march of its own. At this size nobody can tell. */
 vec3 shadeApprox(vec3 p, vec3 n, vec3 rd){
-  Surf s = describe(p, n);
+  Surf s = describe(p / uScale, p, n, matCurrent());
   vec3 f0 = mix(vec3(0.04), s.albedo, s.metal);
   float NoV = clamp(dot(n, -rd), 1e-4, 1.0);
   vec2 ab = envBRDFApprox(NoV, max(s.rough, 0.20));
@@ -2404,7 +2509,7 @@ vec3 brdfDirect(vec3 n, vec3 v, vec3 l, vec3 lcol, Surf s, vec3 f0, vec3 diffCol
   vec3 spec = D * V * F;
 
   // Wrapped diffuse. Half a subsurface term for the price of a max().
-  float wrap = (uMatId == 4) ? 0.55 : 0.0;
+  float wrap = s.wrap;
   float diffN = clamp((dot(n, l) + wrap) / (1.0 + wrap), 0.0, 1.0);
   vec3 diff = diffCol * INV_PI * diffN;
 
@@ -2435,9 +2540,13 @@ vec3 shadeSurface(vec3 p, vec3 n, vec3 rd, Surf s, float ao, float shadowScale){
   float shK = mix(1.0, softShadow(p + n * 0.012, lk, 12.0), shadowScale);
   float shF = mix(1.0, softShadow(p + n * 0.012, lf,  9.0), shadowScale * 0.6);
 
-  col += brdfDirect(n, v, lk, C_KEY  * shK, s, f0, diffCol, T, B);
-  col += brdfDirect(n, v, lf, C_FILL * shF, s, f0, diffCol, T, B);
-  col += brdfDirect(n, v, lr, C_RIM * (1.0 + uRimBoost), s, f0, diffCol, T, B);
+  /* Written as a loop over the three sources. Measured: it makes no
+     difference to compile time — a three-iteration constant-bound loop gets
+     unrolled straight back into three copies — but it keeps the light rig in
+     one place instead of three parallel edits. */
+  vec3 lDir[3]; lDir[0] = lk; lDir[1] = lf; lDir[2] = lr;
+  vec3 lCol[3]; lCol[0] = C_KEY * shK; lCol[1] = C_FILL * shF; lCol[2] = C_RIM * (1.0 + uRimBoost);
+  for (int i = 0; i < 3; i++) col += brdfDirect(n, v, lDir[i], lCol[i], s, f0, diffCol, T, B);
 
   // ── image based ────────────────────────────────────────────────────────
   vec2 ab = envBRDFApprox(NoV, s.rough);
@@ -2558,6 +2667,46 @@ vec3 refractChannel(vec3 p, vec3 n, vec3 rd, float ior){
   return backdropFor(p2, normalize(out2), 0.03) * absorb;
 }
 
+/* ── the preview orbs ──────────────────────────────────────────────────────
+   Same BRDF as the sculpture, none of the expensive parts: no shadow march,
+   no ambient occlusion, no second bounce, and for the dielectrics a single
+   refraction instead of an interior march per wavelength. They are 40 pixels
+   across. Everything that got cut would be invisible at that size and each
+   one of them would have cost as much as the sculpture itself. */
+vec3 shadeOrb(vec3 q, vec3 p, vec3 n, vec3 rd, Mat m){
+  Surf s = describe(q, p, n, m);
+  vec3 v = -rd;
+  float NoV = clamp(dot(n, v), 1e-4, 1.0);
+
+  if (m.trans > 0.5){
+    vec3 dir = refract(rd, n, 1.0 / m.ior);
+    vec3 back = backdropFor(p + dir * 0.55, dir, 0.05) * exp(-m.absorb * 0.9);
+    float F = F_Schlick(0.04, 1.0, NoV);
+    return mix(back, envColor(reflect(rd, n), m.rough, uRimBoost), clamp(F * 3.1, 0.06, 1.0)) * 1.55;
+  }
+
+  vec3 f0 = mix(vec3(0.04), s.albedo, s.metal);
+  vec3 diffCol = s.albedo * (1.0 - s.metal);
+  vec3 T = normalize(cross(n, vec3(0.0, 1.0, 0.0)) + vec3(1e-4, 0.0, 0.0));
+  vec3 B = normalize(cross(n, T));
+
+  vec3 col = vec3(0.0);
+  vec3 oDir[3]; oDir[0] = normalize(L_KEY); oDir[1] = normalize(L_FILL); oDir[2] = normalize(L_RIM);
+  vec3 oCol[3]; oCol[0] = C_KEY; oCol[1] = C_FILL; oCol[2] = C_RIM * (1.0 + uRimBoost);
+  for (int i = 0; i < 3; i++) col += brdfDirect(n, v, oDir[i], oCol[i], s, f0, diffCol, T, B);
+
+  /* Lit a stop and a half brighter than the sculpture. A mirror in a dark
+     room is a dark ball — correct, and useless as a swatch. These are
+     previews, and a preview has to be legible before it is accurate. */
+  const float ORB_GAIN = 1.55;
+  vec2 ab = envBRDFApprox(NoV, s.rough);
+  col += envColor(reflect(rd, n), s.rough, uRimBoost) * (f0 * ab.x + ab.y) * ORB_GAIN;
+  col += diffCol * envColor(n, 0.92, uRimBoost) * 0.60 * ORB_GAIN;
+  col *= ORB_GAIN;
+  col += s.emis;
+  return col;
+}
+
 /* ── the floor ─────────────────────────────────────────────────────────── */
 
 vec3 shadeFloor(vec3 p, vec3 rd, float t){
@@ -2654,9 +2803,14 @@ void main(){
 
     if (h.id == 2){
       col = shadeFloor(p, rd, h.t);
+    } else if (h.id >= 10){
+      int k = h.id - 10;
+      vec3 c = uOrbPos[k];
+      vec3 n = normalize(p - c);
+      col = shadeOrb((p - c) / max(uOrbR[k], 1e-3), p, n, rd, matAt(k));
     } else {
       vec3 n = nrmS(p, max(0.0009, 0.0012 * h.t));
-      Surf s = describe(p, n);
+      Surf s = describe(p / uScale, p, n, matCurrent());
       float ao = calcAO(p, n);
 
       if (uTrans > 0.5){
@@ -2679,6 +2833,8 @@ void main(){
       } else {
         col = shadeSurface(p, n, rd, s, ao, 1.0);
       }
+      // the absorb burst, bright enough to cover the switch happening under it
+      col += vec3(0.80, 0.94, 0.52) * uFlash * uFlash * 4.5;
     }
 
     vec4 clip = uViewProj * vec4(p, 1.0);
@@ -3896,6 +4052,29 @@ class Renderer {
     return tex;
   }
 
+  /* Flatten the material list into the uniform arrays the shader indexes.
+     Called once — the palette never changes at runtime. */
+  setPalette(materials) {
+    const N = 8;
+    const f = () => new Float32Array(N);
+    this.pal = {
+      rough: f(), metal: f(), ior: f(), aniso: f(), film: f(),
+      trans: f(), emis: f(), disp: f(), absorb: new Float32Array(N * 3),
+    };
+    materials.slice(0, N).forEach((m, i) => {
+      const q = m.p;
+      this.pal.rough[i] = q.rough; this.pal.metal[i] = q.metal;
+      this.pal.ior[i] = q.ior;     this.pal.aniso[i] = q.aniso;
+      this.pal.film[i] = q.film;   this.pal.trans[i] = q.trans;
+      this.pal.emis[i] = q.emissive ?? 0;
+      this.pal.disp[i] = q.dispersion ?? 0.017;
+      const a = q.absorb ?? [0.62, 0.42, 0.36];
+      this.pal.absorb[i * 3] = a[0]; this.pal.absorb[i * 3 + 1] = a[1]; this.pal.absorb[i * 3 + 2] = a[2];
+    });
+    this.orbPosBuf = new Float32Array(N * 3);
+    this.orbRadBuf = new Float32Array(N);
+  }
+
   /* ── camera ────────────────────────────────────────────────────────── */
 
   updateCamera(p) {
@@ -3978,9 +4157,25 @@ class Renderer {
     gl.depthMask(true);
     gl.depthFunc(gl.ALWAYS);   // a fullscreen pass that supplies its own depth
     {
+      // orb transforms, straight from the director — the same array the
+      // click test in main.js reads
+      const oc = Math.min(p.orbCount | 0, 8);
+      this.orbPosBuf.fill(0); this.orbRadBuf.fill(0);
+      for (let k = 0; k < oc; k++) {
+        this.orbPosBuf[k * 3] = p.orbPos[k][0];
+        this.orbPosBuf[k * 3 + 1] = p.orbPos[k][1];
+        this.orbPosBuf[k * 3 + 2] = p.orbPos[k][2];
+        this.orbRadBuf[k] = p.orbRad[k];
+      }
+
       const s = this.pRaymarch.use();
       s.tex('uNoise', this.noiseTex, gl.TEXTURE_3D);
       s.setAll({
+        uMatRough: this.pal.rough, uMatMetal: this.pal.metal, uMatIor: this.pal.ior,
+        uMatAniso: this.pal.aniso, uMatFilm: this.pal.film, uMatTrans: this.pal.trans,
+        uMatEmis: this.pal.emis, uMatDisp: this.pal.disp, uMatAbsorb: this.pal.absorb,
+        uOrbPos: this.orbPosBuf, uOrbR: this.orbRadBuf, uOrbCount: oc,
+        uPulse: p.pulse, uPulseDir: p.pulseDir, uFlash: p.flash,
         uRes: [this.iw, this.ih],
         uTime: this.simTime, uFrame: this.frame,
         uInvViewProj: this.invViewProjJ, uViewProj: this.viewProjJ,
@@ -4471,6 +4666,20 @@ const R_BOUND = 1.62;
 const SPIN_SCALE = 0.18;
 const CURL_SCALE = 0.34;
 
+/* ── the material palette ──────────────────────────────────────────────────
+   Seven orbs on a tilted ring around the sculpture, each wearing one of the
+   materials. Click one and it falls inward; the sculpture takes the material
+   as it lands. Positions are computed here and handed to the shader, so the
+   click test and the pixels are reading the same numbers. */
+const ORB_RING = 2.15;    // ring radius, world units
+/* Tilt reads as an ellipse and gives the ring depth, but every degree of it
+   also spreads the orbs in Z — and a near orb sits at half the camera
+   distance of a far one, so it projects twice the size. Too much tilt and the
+   near ones grow out of frame while the far ones shrink to specks. */
+const ORB_TILT = 0.34;    // tilt about X, radians
+const ORB_R    = 0.34;    // orb radius
+const FLY_TIME = 0.52;    // seconds from click to impact
+
 /* ── keyframes ─────────────────────────────────────────────────────────────
    yaw / pitch  direction from the subject to the camera, radians
    fov          vertical field of view, degrees
@@ -4487,35 +4696,36 @@ const CURL_SCALE = 0.34;
 const K = [
   { /* 00 hero */
     yaw: -0.03, pitch: 0.06, fov: 42, fill: 0.50, fillW: 0.30, fx: 1.06, fy: 0.44,
-    pivot: [0, 0, 0], radius: R_BOUND,
+    orbShow: 0, pivot: [0, 0, 0], radius: R_BOUND,
     shape: 0.00, detail: 1.00, scale: 1.00, rimBoost: 0.0, sceneExposure: 1.0,
     pGain: 1.00, pCurl: 1.15, pAttract: 0.85, pTangent: 0.85, pSpin: 0.30, pSize: 1.6, pDamp: 0.55, pLife: 0.13,
     bloom: 0.85, streak: 0.30, ca: 0.55, vignette: 0.72, grain: 0.030,
   },
   { /* 01 whoami */
     yaw: -0.60, pitch: 0.17, fov: 39, fill: 0.66, fillW: 0.38, fx: 0.80, fy: 0.52,
-    pivot: [0, 0, 0], radius: R_BOUND,
+    orbShow: 0, pivot: [0, 0, 0], radius: R_BOUND,
     shape: 0.85, detail: 0.75, scale: 0.98, rimBoost: 0.25, sceneExposure: 0.98,
     pGain: 0.62, pCurl: 0.85, pAttract: 1.15, pTangent: 0.95, pSpin: 0.20, pSize: 1.3, pDamp: 0.70, pLife: 0.11,
     bloom: 0.72, streak: 0.22, ca: 0.45, vignette: 0.80, grain: 0.030,
   },
   { /* 02 materials */
-    yaw: -0.52, pitch: 0.08, fov: 38, fill: 0.52, fillW: 0.30, fx: 0.97, fy: 0.50,
-    pivot: [0, 0, 0], radius: R_BOUND,
-    shape: 0.06, detail: 0.55, scale: 1.06, rimBoost: 0.55, sceneExposure: 1.05,
+    // framed to hold the whole ring, not just the sculpture
+    yaw: -0.40, pitch: 0.22, fov: 40, fill: 0.60, fillW: 0.38, fx: 0.86, fy: 0.50,
+    orbShow: 1, pivot: [0, 0, 0], radius: 2.55,
+    shape: 0.06, detail: 0.55, scale: 0.86, rimBoost: 0.55, sceneExposure: 1.05,
     pGain: 0.30, pCurl: 0.55, pAttract: 1.35, pTangent: 1.00, pSpin: 0.12, pSize: 1.0, pDamp: 0.85, pLife: 0.09,
     bloom: 0.95, streak: 0.42, ca: 0.60, vignette: 0.78, grain: 0.026,
   },
   { /* 03 work — the grid owns the page, so the sculpture sits high and small */
     yaw: -0.68, pitch: 0.40, fov: 35, fill: 0.46, fillW: 0.28, fx: 0.74, fy: 0.24,
-    pivot: [0, 0, 0], radius: R_BOUND,
+    orbShow: 0, pivot: [0, 0, 0], radius: R_BOUND,
     shape: 2.00, detail: 0.45, scale: 1.00, rimBoost: 0.15, sceneExposure: 0.92,
     pGain: 0.48, pCurl: 0.95, pAttract: 0.95, pTangent: 0.80, pSpin: 0.26, pSize: 1.2, pDamp: 0.65, pLife: 0.12,
     bloom: 0.62, streak: 0.20, ca: 0.42, vignette: 0.86, grain: 0.032,
   },
   { /* 04 contact */
     yaw: -0.26, pitch: 0.05, fov: 46, fill: 0.66, fillW: 0.38, fx: 0.80, fy: 0.52,
-    pivot: [0, 0, 0], radius: R_BOUND,
+    orbShow: 0, pivot: [0, 0, 0], radius: R_BOUND,
     shape: 3.00, detail: 0.55, scale: 1.02, rimBoost: 1.05, sceneExposure: 1.08,
     pGain: 1.25, pCurl: 1.45, pAttract: 1.25, pTangent: 0.95, pSpin: 0.44, pSize: 1.8, pDamp: 0.50, pLife: 0.16,
     bloom: 1.05, streak: 0.55, ca: 0.70, vignette: 0.66, grain: 0.028,
@@ -4554,6 +4764,14 @@ class Director {
     // user orbit, layered on top of the keyframe direction
     this.orbit = { yaw: 0, pitch: 0, vy: 0, vp: 0 };
 
+    this.orbs = {
+      show: 0, spin: 0, hover: -1,
+      fly: 0, flyId: -1, pending: -1,
+      pulse: 0, pulseDir: [0, 1, 0], flash: 0,
+      pos: MATERIALS.map(() => [0, 0, 0]),
+      rad: MATERIALS.map(() => 0),
+    };
+
 
     this.out = {};
   }
@@ -4568,6 +4786,80 @@ class Director {
     if (i === this.materialIndex) return;
     this.materialIndex = clamp(i, 0, MATERIALS.length - 1);
     this.burst = 0.65;
+  }
+
+  /* Send an orb into the sculpture. The material does not change now — it
+     changes when the orb lands, under the ripple. */
+  absorb(i) {
+    const o = this.orbs;
+    if (i === this.materialIndex || o.flyId >= 0 || o.show < 0.35) return false;
+    o.flyId = clamp(i, 0, MATERIALS.length - 1);
+    o.pending = o.flyId;
+    o.fly = 0;
+    const p = o.pos[o.flyId] || [0, 1, 0];
+    const l = Math.hypot(p[0], p[1], p[2]) || 1;
+    o.pulseDir = [p[0] / l, p[1] / l, p[2] / l];
+    return true;
+  }
+
+  /* Ray against every orb. Same numbers the shader draws with, so what you
+     click is what you saw. */
+  pickOrb(ro, rdv) {
+    const o = this.orbs;
+    if (o.show < 0.35) return -1;
+    let best = 1e9, id = -1;
+    for (let k = 0; k < o.pos.length; k++) {
+      const r = o.rad[k] * 1.35;           // a forgiving hit radius
+      if (r < 0.02) continue;
+      const c = o.pos[k];
+      const ox = ro[0] - c[0], oy = ro[1] - c[1], oz = ro[2] - c[2];
+      const b = ox * rdv[0] + oy * rdv[1] + oz * rdv[2];
+      const cc = ox * ox + oy * oy + oz * oz - r * r;
+      const h = b * b - cc;
+      if (h < 0) continue;
+      const t = -b - Math.sqrt(h);
+      if (t > 0.05 && t < best) { best = t; id = k; }
+    }
+    return id;
+  }
+
+  updateOrbs(dt) {
+    const o = this.orbs;
+    o.show = damp(o.show, this.current.orbShow, 3.2, dt);
+    o.spin += dt * 0.085;
+
+    if (o.flyId >= 0) {
+      o.fly = Math.min(1, o.fly + dt / FLY_TIME);
+      if (o.fly >= 1) {
+        this.materialIndex = o.pending;
+        o.flyId = -1; o.fly = 0; o.pending = -1;
+        o.pulse = 1; o.flash = 1;
+        this.burst = 0.7;
+      }
+    }
+    o.pulse = Math.max(0, o.pulse - dt / 0.85);
+    o.flash = Math.max(0, o.flash - dt / 0.32);
+
+    const n = o.pos.length;
+    const ct = Math.cos(ORB_TILT), st = Math.sin(ORB_TILT);
+    for (let k = 0; k < n; k++) {
+      const a = o.spin + (Math.PI * 2 * k) / n;
+      const x = Math.cos(a) * ORB_RING;
+      const z0 = Math.sin(a) * ORB_RING;
+      let px = x, py = -z0 * st, pz = z0 * ct;
+
+      let r = ORB_R * o.show;
+      if (k === this.materialIndex) r *= 1.16;   // the one in use sits proud
+      if (k === o.hover) r *= 1.18;
+
+      if (k === o.flyId) {
+        const e = o.fly * o.fly;                 // accelerates inward
+        px *= 1 - e; py *= 1 - e; pz *= 1 - e;
+        r *= 1 - o.fly * 0.9;
+      }
+      o.pos[k][0] = px; o.pos[k][1] = py; o.pos[k][2] = pz;
+      o.rad[k] = r;
+    }
   }
 
   computeTarget() {
@@ -4662,8 +4954,14 @@ class Director {
     const lo = margin + rFrac, hi = 1 - margin - rFrac;
     screenX = lo > hi ? 0.5 : clamp(screenX, lo, hi);
 
+    // the same clamp vertically, so a tall subject cannot run off the top or
+    // bottom either
+    const rFracY = R / (2.0 * d * tanV);
+    const loY = margin + rFracY, hiY = 1 - margin - rFracY;
+    const screenY = loY > hiY ? 0.5 : clamp(fy, loY, hiY);
+
     const ndcX = screenX * 2 - 1;
-    const ndcY = (1 - fy) * 2 - 1;
+    const ndcY = (1 - screenY) * 2 - 1;
 
     // translating the camera by L along right moves the subject by -L/(d·tan)
     const L = -ndcX * d * aspect * tanV;
@@ -4709,6 +5007,7 @@ class Director {
     const cam = this.solveCamera(c, aspect, renderer.canvas.clientWidth || innerWidth);
     this.orbit.yaw = saveYaw; this.orbit.pitch = savePitch;
 
+    this.updateOrbs(d);
     this.burst = damp(this.burst, 0, 6.0, d);
 
     const wantForce = this.mouse.inside ? (this.mouse.down ? -3.4 : 1.9) : 0;
@@ -4769,6 +5068,13 @@ class Director {
     o.gain = [1.00, 1.005, 0.995];
     o.exposure = 1.0;
     o.scanline = 0;
+    o.orbPos = this.orbs.pos;
+    o.orbRad = this.orbs.rad;
+    o.orbCount = this.orbs.show > 0.01 ? this.orbs.pos.length : 0;
+    o.pulse = this.orbs.pulse;
+    o.pulseDir = this.orbs.pulseDir;
+    o.flash = this.orbs.flash;
+
     o.fade = this.fade;
     o.taaFeedback = this.calm ? 0.93 : 0.90;
 
@@ -4836,8 +5142,7 @@ class UI {
       const li = el('li');
       const b = el('button', '', `
         <span class="num">${String(i + 1).padStart(2, '0')}</span>
-        <span class="nm">${m.name}</span>
-        <span class="sw" style="background:${m.sw};color:${m.sw}"></span>`);
+        <span class="nm">${m.name}</span>`);
       b.type = 'button';
       b.setAttribute('role', 'tab');
       b.addEventListener('click', () => this.selectMaterial(i));
@@ -5320,6 +5625,7 @@ async function boot() {
   });
   mark(`shaders ready in ${compileMs} ms`, 0.72);
 
+  renderer.setPalette(MATERIALS);
   ui.initHud(renderer);
   wireInput();
   wireKeys();
@@ -5397,6 +5703,7 @@ function wireInput() {
 
   let dragging = false;
   let lastX = 0, lastY = 0;
+  let downX = 0, downY = 0, downOrb = -1;
 
   const norm = (e) => [(e.clientX / innerWidth) * 2 - 1, -((e.clientY / innerHeight) * 2 - 1)];
 
@@ -5411,6 +5718,17 @@ function wireInput() {
       orbit.vp += (e.clientY - lastY) * 0.0035;
       lastX = e.clientX; lastY = e.clientY;
     }
+
+    // hovering a material orb lifts it and names it under the cursor
+    if (!dragging && renderer) {
+      const r = renderer.mouseRay(nx, ny);
+      const k = director.pickOrb(r.ro, r.rd);
+      if (k !== director.orbs.hover) {
+        director.orbs.hover = k;
+        document.body.classList.toggle('cur-hot', k >= 0);
+        ui.setCursorLabel(k >= 0 ? MATERIALS[k].name : '');
+      }
+    }
   }, { passive: true });
 
   addEventListener('pointerdown', (e) => {
@@ -5419,16 +5737,38 @@ function wireInput() {
     dragging = true;
     director.mouse.down = true;
     lastX = e.clientX; lastY = e.clientY;
-    document.body.classList.add('cur-drag');
-    ui.setCursorLabel('orbit');
+    downX = e.clientX; downY = e.clientY;
+
+    // Remember what was under the cursor, but do not act yet — acting on
+    // pointerdown would fire an absorb every time a drag happens to start
+    // over an orb.
+    const [nx, ny] = norm(e);
+    const r = renderer ? renderer.mouseRay(nx, ny) : null;
+    downOrb = r ? director.pickOrb(r.ro, r.rd) : -1;
+
+    if (downOrb < 0) {
+      document.body.classList.add('cur-drag');
+      ui.setCursorLabel('orbit');
+    }
   });
 
   const end = () => {
     dragging = false;
     director.mouse.down = false;
+    downOrb = -1;
     document.body.classList.remove('cur-drag');
   };
-  addEventListener('pointerup', end);
+
+  addEventListener('pointerup', (e) => {
+    // a click, not a drag: within a few pixels of where it went down
+    const moved = Math.hypot(e.clientX - downX, e.clientY - downY);
+    if (downOrb >= 0 && moved < 7) {
+      const [nx, ny] = norm(e);
+      const r = renderer.mouseRay(nx, ny);
+      if (director.pickOrb(r.ro, r.rd) === downOrb) ui.selectMaterial(downOrb);
+    }
+    end();
+  });
   addEventListener('pointercancel', end);
   addEventListener('blur', end);
 
@@ -5445,8 +5785,9 @@ function wireInput() {
   }, { passive: true });
 
   ui.onMaterial = (i) => {
-    director.setMaterial(i);
-    ui.flash(`material <b>${String(i + 1).padStart(2, '0')}</b> · ${MATERIALS[i].name.toLowerCase()}`);
+    // In the materials section the orb flies in and the sculpture changes
+    // when it lands; anywhere else there is no orb to send, so switch now.
+    if (!director.absorb(i)) director.setMaterial(i);
   };
 
   addEventListener('resize', () => {
