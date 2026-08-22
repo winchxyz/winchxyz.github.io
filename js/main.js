@@ -23,6 +23,18 @@ const GLSL_LINES = [
 const ui = new UI();
 const director = new Director();
 
+/* Somebody who has told their operating system to reduce motion has told this
+   page too. The DOM side already listened: reveals fire at once, scrolling
+   jumps rather than glides, the rotator stops rotating. The 3D did not, which
+   made the listening fairly cosmetic, because the thing moving on this page
+   is a full-screen sculpture with a quarter of a million particles around it.
+
+   Calm mode already existed for the M key and does the right things: half the
+   rotation rate, no parallax, curl and spin at a bit under half. It just was
+   not wired to the one signal that asks for it. M still toggles, so this is a
+   default and not a decision taken away. */
+director.calm = ui.reduced;
+
 let renderer = null;
 let running = false;
 let last = performance.now();

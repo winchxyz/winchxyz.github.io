@@ -86,6 +86,14 @@ so the dark gradients do not band.
 
 `?tier=low|medium|high|ultra` in the URL overrides the auto-detected quality.
 
+Calm mode is the default for anyone whose system asks for reduced motion. The
+DOM side of the page had listened to that setting for a while: reveals fire at
+once, scrolling jumps rather than glides, the rotator stops rotating. The 3D
+did not, which made the listening close to cosmetic, given that the thing
+moving on this page is a full-screen sculpture with a quarter of a million
+particles around it. **M** still toggles, so it is a default rather than a
+decision taken away.
+
 ---
 
 ## Layout
@@ -156,6 +164,13 @@ real reason, every reveal fires so the writing is readable, and the two pieces
 of chrome that only make sense with a renderer behind them (the readout chip,
 and a line beginning "everything you see moving") take themselves off the
 page. `FLAGS` passes extra flags to Chrome for the cases where that is enough.
+
+`MEDIA` sets media features, and it exists because headless Chrome reports
+`prefers-reduced-motion: reduce` by default. Every capture ever taken through
+this harness was therefore of the calm, reveal-instantly version of the page
+rather than the one a visitor gets, which is a quiet way to test something
+other than what ships. The images here are taken with
+`MEDIA=prefers-reduced-motion=no-preference` now.
 
 `GPU=1` runs the same harness on the real adapter instead, which is how the
 sixty-eight-second shader compile described below was found:

@@ -252,6 +252,19 @@ try {
      the time PRE could run, the context has been created and the decision has
      been made. Chrome's own flags for this were no help, either ignored or in
      conflict with the ones this harness already passes. */
+  /* Headless Chrome reports prefers-reduced-motion: reduce by default, which
+     means every capture ever taken through this harness was of the calm,
+     reveal-instantly version of the page rather than the one a visitor sees.
+     MEDIA says which it should be, as name=value pairs. */
+  if (process.env.MEDIA) {
+    await cdp.send('Emulation.setEmulatedMedia', {
+      features: process.env.MEDIA.split(',').map((pair) => {
+        const [name, value] = pair.split('=').map((x) => x.trim());
+        return { name, value };
+      }),
+    });
+  }
+
   if (process.env.INJECT) {
     await cdp.send('Page.addScriptToEvaluateOnNewDocument', { source: process.env.INJECT });
   }
