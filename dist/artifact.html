@@ -237,7 +237,11 @@ html.booted #boot{ opacity:0; visibility:hidden; pointer-events:none; }
   opacity:0; transform:translateY(8px) scale(.985); pointer-events:none;
   transition:opacity .35s var(--ease), transform .35s var(--ease);
 }
-html.hud-on #hud{ opacity:1; transform:none; }
+/* pointer-events has to come back, and it never did. The panel was opaque,
+   readable and completely inert: every click went through it to the canvas,
+   which is why the quality row looked like a control and behaved like a
+   picture of one. */
+html.hud-on #hud{ opacity:1; transform:none; pointer-events:auto; bottom:74px; }
 html.photo #hud, html.photo #hud-toggle, html.photo #nav,
 html.photo #rail, html.photo .scroll-cue{ opacity:0 !important; pointer-events:none; }
 
@@ -249,6 +253,36 @@ html.photo #rail, html.photo .scroll-cue{ opacity:0 !important; pointer-events:n
 .hud-head .v{ max-width:170px; }
 .hud-foot{ border-top:1px solid var(--line-2); padding-top:6px; margin-top:5px; }
 .hud-graph{ margin:7px 0 3px; }
+
+#hud-close{
+  font:inherit; font-size:14px; line-height:1; padding:0 0 0 10px; margin-left:auto;
+  background:none; border:0; color:var(--dim); cursor:pointer; transition:color .18s;
+}
+#hud-close:hover{ color:var(--lime); }
+
+/* Four tiers and an auto. Picking one pins it: the controller stops arguing,
+   and the resolution goes on adapting underneath, because pinning is a
+   statement about quality and not a request to drop frames. */
+.hud-tiers{ display:flex; gap:4px; margin-top:8px; }
+.hud-tiers button{
+  flex:1 1 0; min-width:0; font:inherit; font-size:9.5px;
+  letter-spacing:.08em; text-transform:uppercase;
+  padding:5px 0; border-radius:5px; cursor:pointer;
+  background:transparent; border:1px solid var(--line-2); color:var(--dim);
+  transition:color .18s var(--ease), border-color .18s var(--ease), background .18s var(--ease);
+}
+.hud-tiers button:hover{ color:var(--bone); border-color:var(--line); }
+.hud-tiers button.is-on{
+  color:var(--ink); background:var(--lime); border-color:var(--lime); font-weight:600;
+}
+.hud-hint{ margin:8px 0 0; color:var(--dim); font-size:9.5px; letter-spacing:.06em; text-align:right; }
+.hud-hint b{ color:var(--ash); font-weight:400; }
+
+/* Every control in here is reachable by keyboard, so every one of them has
+   to show where the focus is. */
+#hud-close:focus-visible,
+.hud-tiers button:focus-visible,
+#hud-toggle:focus-visible{ outline:2px solid var(--lime); outline-offset:2px; }
 #hud-graph{ display:block; width:100%; height:34px; opacity:.9; }
 
 #hud-toggle{
@@ -261,7 +295,14 @@ html.photo #rail, html.photo .scroll-cue{ opacity:0 !important; pointer-events:n
   border:1px solid var(--line); color:var(--muted);
   transition:opacity .3s var(--ease), color .25s, border-color .25s;
 }
-html.hud-on #hud-toggle{ opacity:0; pointer-events:none; }
+/* The chip is the toggle, so it has to stay reachable while the thing it
+   opened is on screen. Fading it out left the readout with no way to close
+   it but a keyboard shortcut nobody had been told about. It moves out from
+   under the panel instead, and says what it will do. */
+html.hud-on #hud-toggle{ color:var(--lime); border-color:rgba(198,242,78,.45); }
+#hud-toggle .lbl-on{ display:none; }
+html.hud-on #hud-toggle .lbl{ display:none; }
+html.hud-on #hud-toggle .lbl-on{ display:inline; }
 #hud-toggle:hover{ color:var(--lime); border-color:rgba(198,242,78,.4); }
 #hud-toggle .dot{
   width:6px; height:6px; border-radius:50%; background:var(--lime);
@@ -922,17 +963,25 @@ body.cur-drag .c-lbl{ opacity:1; }
 
 <!-- ══ HUD ══════════════════════════════════════════════════════════════════ -->
 <aside id="hud" aria-hidden="true">
-  <div class="hud-row hud-head"><span class="k">renderer</span><span class="v" id="hud-gpu">—</span></div>
+  <div class="hud-row hud-head"><span class="k">renderer</span><span class="v" id="hud-gpu">—</span><button id="hud-close" type="button" aria-label="Close performance readout">&times;</button></div>
   <div class="hud-row"><span class="k">frame</span><span class="v"><b id="hud-fps">—</b> fps · <b id="hud-ms">—</b> ms</span></div>
   <div class="hud-row"><span class="k">internal</span><span class="v" id="hud-res">—</span></div>
   <div class="hud-row"><span class="k">particles</span><span class="v" id="hud-parts">—</span></div>
   <div class="hud-row"><span class="k">passes</span><span class="v" id="hud-passes">—</span></div>
   <div class="hud-graph"><canvas id="hud-graph" width="220" height="34"></canvas></div>
   <div class="hud-row hud-foot"><span class="k">quality</span><span class="v" id="hud-tier">—</span></div>
+  <div class="hud-tiers" id="hud-tiers" role="group" aria-label="Render quality">
+    <button type="button" data-tier="auto">auto</button>
+    <button type="button" data-tier="low">low</button>
+    <button type="button" data-tier="medium">med</button>
+    <button type="button" data-tier="high">high</button>
+    <button type="button" data-tier="ultra">ultra</button>
+  </div>
+  <p class="hud-hint"><b>G</b> or <b>esc</b> to close</p>
 </aside>
 
 <button id="hud-toggle" type="button" aria-label="Toggle performance readout">
-  <span class="dot"></span><span class="lbl">gpu</span>
+  <span class="dot"></span><span class="lbl">gpu</span><span class="lbl-on">close</span>
 </button>
 
 <!-- ══ NAV ══════════════════════════════════════════════════════════════════ -->
@@ -3793,6 +3842,7 @@ class Renderer {
        machine reaches ultra within a few seconds and nobody ever sees a
        first frame it could not afford. */
     this.ceiling = this.detectTier();
+    this.pinned = false;      // set when the URL or the readout chooses a tier
     this.tier = TIERS.low;
     this.renderScale = this.tier.scale;
     this.dprCap = 2.0;
@@ -3854,6 +3904,7 @@ class Renderer {
   /* One step toward the ceiling, or one step back. Returns the new name if
      it actually moved, so the caller can reset its counters. */
   stepTier(dir) {
+    if (this.pinned) return null;      // somebody chose; stop arguing with them
     const i = TIER_ORDER.indexOf(this.tier.name);
     const capped = TIER_ORDER.indexOf(this.ceiling);
     const next = Math.max(0, Math.min(dir > 0 ? capped : TIER_ORDER.length - 1, i + dir));
@@ -3862,8 +3913,14 @@ class Renderer {
     return this.tier.name;
   }
 
-  setTier(name) {
-    if (!TIERS[name] || this.tier.name === name) return;
+  /* pin marks the tier as chosen rather than inferred, by the URL or by the
+     readout. The controller then leaves it alone. Resolution goes on adapting
+     underneath either way: pinning ultra on a machine that cannot hold it
+     should cost sharpness, not frames. */
+  setTier(name, pin = false) {
+    if (!TIERS[name]) return;
+    if (pin) this.pinned = true;
+    if (this.tier.name === name) return;
     const old = this.tier;
     this.tier = TIERS[name];
     this.renderScale = this.tier.scale;
@@ -4675,7 +4732,7 @@ const SHORTCUTS = [
   ['drag',   'orbit the sculpture'],
   ['P',      'photo mode, UI off, 2x render scale'],
   ['Enter',  'save a PNG'],
-  ['G',      'performance readout'],
+  ['G',      'performance readout · esc closes'],
   ['M',      'calm mode, half the motion'],
   ['?',      'this list'],
 ];
@@ -5617,11 +5674,33 @@ class UI {
 
     $('#hud-gpu').textContent = renderer.caps.renderer.replace(/^ANGLE \((.*)\)$/, '$1').slice(0, 44);
     $('#hud-toggle').addEventListener('click', () => this.toggleHud());
+    $('#hud-close').addEventListener('click', () => this.toggleHud());
+
+    /* The quality row named a tier and did nothing about it. It is a control
+       now: pick one and the adaptive controller stops moving it, pick auto
+       and it starts again. */
+    this.tierBtns = $$('#hud-tiers button');
+    this.tierBtns.forEach((b) => b.addEventListener('click', () => {
+      const t = b.dataset.tier;
+      if (t === 'auto') { renderer.pinned = false; this.flash('quality <b>auto</b>'); }
+      else { renderer.setTier(t, true); this.flash(`quality <b>${t}</b>`); }
+      this.syncTierBtns(renderer);
+    }));
+    this.syncTierBtns(renderer);
+  }
+
+  /* Which one is lit: the pinned tier, or auto when nothing is pinned. The
+     readout above still says what is actually running, which is the useful
+     pair when auto has settled somewhere you did not choose. */
+  syncTierBtns(renderer) {
+    const on = renderer.pinned ? renderer.tier.name : 'auto';
+    this.tierBtns?.forEach((b) => b.classList.toggle('is-on', b.dataset.tier === on));
   }
 
   toggleHud() {
     const on = document.documentElement.classList.toggle('hud-on');
     document.documentElement.classList.toggle('hud-off', !on);
+    $('#hud').setAttribute('aria-hidden', String(!on));
     return on;
   }
 
@@ -5632,7 +5711,10 @@ class UI {
     $('#hud-res').textContent = `${renderer.iw}×${renderer.ih} · ${(renderer.renderScale * 100).toFixed(0)}%`;
     $('#hud-parts').textContent = fmt(renderer.particleCount);
     $('#hud-passes').textContent = `${renderer.drawCalls} draws · ${(renderer.vramBytes() / 1048576).toFixed(0)} MB`;
-    $('#hud-tier').textContent = renderer.tier.name;
+    $('#hud-tier').textContent = renderer.pinned
+      ? renderer.tier.name
+      : `${renderer.tier.name} · auto`;
+    this.syncTierBtns(renderer);
 
     const h = this.hudHist;
     h[this.hudI % h.length] = ms;
@@ -5827,7 +5909,8 @@ async function boot() {
   // the software rasteriser in the headless harness finish a frame.
   const forced = new URLSearchParams(location.search).get('tier');
   if (forced && TIERS[forced]) {
-    renderer.setTier(forced);
+    // pinned, or the controller promotes straight back off it within seconds
+    renderer.setTier(forced, true);
     ui.boot(`forced tier: ${forced}`, 0.6);
   } else if (failed > 0) {
     // A load that never finished lowers the ceiling, not the starting tier —
@@ -6028,7 +6111,10 @@ function wireInput() {
 
 function wireKeys() {
   addEventListener('keydown', (e) => {
-    if (e.target.matches('input, textarea')) return;
+    // optional-call because not every keydown target is an Element: one
+    // dispatched at the window has no matches() and this used to throw before
+    // it reached the switch, silently killing every shortcut on the page
+    if (e.target?.matches?.('input, textarea')) return;
     const k = e.key;
 
     if (k >= '1' && k <= '9' && +k <= MATERIALS.length) { ui.selectMaterial(+k - 1); return; }
@@ -6051,7 +6137,10 @@ function wireKeys() {
         break;
       }
       case '?': case '/': ui.toggleSheet(); e.preventDefault(); break;
-      case 'escape': $('#sheet').hidden = true; break;
+      case 'escape':
+        if (!$('#sheet').hidden) { $('#sheet').hidden = true; break; }
+        if (document.documentElement.classList.contains('hud-on')) ui.toggleHud();
+        break;
       case 'enter': {
         e.preventDefault();
         ui.flash('saving…', 900);

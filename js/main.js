@@ -89,7 +89,8 @@ async function boot() {
   // the software rasteriser in the headless harness finish a frame.
   const forced = new URLSearchParams(location.search).get('tier');
   if (forced && TIERS[forced]) {
-    renderer.setTier(forced);
+    // pinned, or the controller promotes straight back off it within seconds
+    renderer.setTier(forced, true);
     ui.boot(`forced tier: ${forced}`, 0.6);
   } else if (failed > 0) {
     // A load that never finished lowers the ceiling, not the starting tier —
@@ -290,7 +291,10 @@ function wireInput() {
 
 function wireKeys() {
   addEventListener('keydown', (e) => {
-    if (e.target.matches('input, textarea')) return;
+    // optional-call because not every keydown target is an Element: one
+    // dispatched at the window has no matches() and this used to throw before
+    // it reached the switch, silently killing every shortcut on the page
+    if (e.target?.matches?.('input, textarea')) return;
     const k = e.key;
 
     if (k >= '1' && k <= '9' && +k <= MATERIALS.length) { ui.selectMaterial(+k - 1); return; }
@@ -313,7 +317,10 @@ function wireKeys() {
         break;
       }
       case '?': case '/': ui.toggleSheet(); e.preventDefault(); break;
-      case 'escape': $('#sheet').hidden = true; break;
+      case 'escape':
+        if (!$('#sheet').hidden) { $('#sheet').hidden = true; break; }
+        if (document.documentElement.classList.contains('hud-on')) ui.toggleHud();
+        break;
       case 'enter': {
         e.preventDefault();
         ui.flash('saving…', 900);

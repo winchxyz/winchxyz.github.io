@@ -217,7 +217,11 @@ html.booted #boot{ opacity:0; visibility:hidden; pointer-events:none; }
   opacity:0; transform:translateY(8px) scale(.985); pointer-events:none;
   transition:opacity .35s var(--ease), transform .35s var(--ease);
 }
-html.hud-on #hud{ opacity:1; transform:none; }
+/* pointer-events has to come back, and it never did. The panel was opaque,
+   readable and completely inert: every click went through it to the canvas,
+   which is why the quality row looked like a control and behaved like a
+   picture of one. */
+html.hud-on #hud{ opacity:1; transform:none; pointer-events:auto; bottom:74px; }
 html.photo #hud, html.photo #hud-toggle, html.photo #nav,
 html.photo #rail, html.photo .scroll-cue{ opacity:0 !important; pointer-events:none; }
 
@@ -229,6 +233,36 @@ html.photo #rail, html.photo .scroll-cue{ opacity:0 !important; pointer-events:n
 .hud-head .v{ max-width:170px; }
 .hud-foot{ border-top:1px solid var(--line-2); padding-top:6px; margin-top:5px; }
 .hud-graph{ margin:7px 0 3px; }
+
+#hud-close{
+  font:inherit; font-size:14px; line-height:1; padding:0 0 0 10px; margin-left:auto;
+  background:none; border:0; color:var(--dim); cursor:pointer; transition:color .18s;
+}
+#hud-close:hover{ color:var(--lime); }
+
+/* Four tiers and an auto. Picking one pins it: the controller stops arguing,
+   and the resolution goes on adapting underneath, because pinning is a
+   statement about quality and not a request to drop frames. */
+.hud-tiers{ display:flex; gap:4px; margin-top:8px; }
+.hud-tiers button{
+  flex:1 1 0; min-width:0; font:inherit; font-size:9.5px;
+  letter-spacing:.08em; text-transform:uppercase;
+  padding:5px 0; border-radius:5px; cursor:pointer;
+  background:transparent; border:1px solid var(--line-2); color:var(--dim);
+  transition:color .18s var(--ease), border-color .18s var(--ease), background .18s var(--ease);
+}
+.hud-tiers button:hover{ color:var(--bone); border-color:var(--line); }
+.hud-tiers button.is-on{
+  color:var(--ink); background:var(--lime); border-color:var(--lime); font-weight:600;
+}
+.hud-hint{ margin:8px 0 0; color:var(--dim); font-size:9.5px; letter-spacing:.06em; text-align:right; }
+.hud-hint b{ color:var(--ash); font-weight:400; }
+
+/* Every control in here is reachable by keyboard, so every one of them has
+   to show where the focus is. */
+#hud-close:focus-visible,
+.hud-tiers button:focus-visible,
+#hud-toggle:focus-visible{ outline:2px solid var(--lime); outline-offset:2px; }
 #hud-graph{ display:block; width:100%; height:34px; opacity:.9; }
 
 #hud-toggle{
@@ -241,7 +275,14 @@ html.photo #rail, html.photo .scroll-cue{ opacity:0 !important; pointer-events:n
   border:1px solid var(--line); color:var(--muted);
   transition:opacity .3s var(--ease), color .25s, border-color .25s;
 }
-html.hud-on #hud-toggle{ opacity:0; pointer-events:none; }
+/* The chip is the toggle, so it has to stay reachable while the thing it
+   opened is on screen. Fading it out left the readout with no way to close
+   it but a keyboard shortcut nobody had been told about. It moves out from
+   under the panel instead, and says what it will do. */
+html.hud-on #hud-toggle{ color:var(--lime); border-color:rgba(198,242,78,.45); }
+#hud-toggle .lbl-on{ display:none; }
+html.hud-on #hud-toggle .lbl{ display:none; }
+html.hud-on #hud-toggle .lbl-on{ display:inline; }
 #hud-toggle:hover{ color:var(--lime); border-color:rgba(198,242,78,.4); }
 #hud-toggle .dot{
   width:6px; height:6px; border-radius:50%; background:var(--lime);

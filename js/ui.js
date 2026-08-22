@@ -316,11 +316,33 @@ export class UI {
 
     $('#hud-gpu').textContent = renderer.caps.renderer.replace(/^ANGLE \((.*)\)$/, '$1').slice(0, 44);
     $('#hud-toggle').addEventListener('click', () => this.toggleHud());
+    $('#hud-close').addEventListener('click', () => this.toggleHud());
+
+    /* The quality row named a tier and did nothing about it. It is a control
+       now: pick one and the adaptive controller stops moving it, pick auto
+       and it starts again. */
+    this.tierBtns = $$('#hud-tiers button');
+    this.tierBtns.forEach((b) => b.addEventListener('click', () => {
+      const t = b.dataset.tier;
+      if (t === 'auto') { renderer.pinned = false; this.flash('quality <b>auto</b>'); }
+      else { renderer.setTier(t, true); this.flash(`quality <b>${t}</b>`); }
+      this.syncTierBtns(renderer);
+    }));
+    this.syncTierBtns(renderer);
+  }
+
+  /* Which one is lit: the pinned tier, or auto when nothing is pinned. The
+     readout above still says what is actually running, which is the useful
+     pair when auto has settled somewhere you did not choose. */
+  syncTierBtns(renderer) {
+    const on = renderer.pinned ? renderer.tier.name : 'auto';
+    this.tierBtns?.forEach((b) => b.classList.toggle('is-on', b.dataset.tier === on));
   }
 
   toggleHud() {
     const on = document.documentElement.classList.toggle('hud-on');
     document.documentElement.classList.toggle('hud-off', !on);
+    $('#hud').setAttribute('aria-hidden', String(!on));
     return on;
   }
 
@@ -331,7 +353,10 @@ export class UI {
     $('#hud-res').textContent = `${renderer.iw}×${renderer.ih} · ${(renderer.renderScale * 100).toFixed(0)}%`;
     $('#hud-parts').textContent = fmt(renderer.particleCount);
     $('#hud-passes').textContent = `${renderer.drawCalls} draws · ${(renderer.vramBytes() / 1048576).toFixed(0)} MB`;
-    $('#hud-tier').textContent = renderer.tier.name;
+    $('#hud-tier').textContent = renderer.pinned
+      ? renderer.tier.name
+      : `${renderer.tier.name} · auto`;
+    this.syncTierBtns(renderer);
 
     const h = this.hudHist;
     h[this.hudI % h.length] = ms;

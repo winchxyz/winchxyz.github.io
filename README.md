@@ -80,7 +80,7 @@ so the dark gradients do not band.
 | **drag** | orbit the sculpture |
 | **P** | photo mode, UI hidden, higher render scale |
 | **Enter** | save a PNG |
-| **G** | performance readout |
+| **G** | open the performance readout; **esc** or the chip closes it |
 | **M** | calm mode, half the motion |
 | **?** | the full list |
 

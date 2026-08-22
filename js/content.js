@@ -233,7 +233,7 @@ export const SHORTCUTS = [
   ['drag',   'orbit the sculpture'],
   ['P',      'photo mode, UI off, 2x render scale'],
   ['Enter',  'save a PNG'],
-  ['G',      'performance readout'],
+  ['G',      'performance readout · esc closes'],
   ['M',      'calm mode, half the motion'],
   ['?',      'this list'],
 ];

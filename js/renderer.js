@@ -68,6 +68,7 @@ export class Renderer {
        machine reaches ultra within a few seconds and nobody ever sees a
        first frame it could not afford. */
     this.ceiling = this.detectTier();
+    this.pinned = false;      // set when the URL or the readout chooses a tier
     this.tier = TIERS.low;
     this.renderScale = this.tier.scale;
     this.dprCap = 2.0;
@@ -129,6 +130,7 @@ export class Renderer {
   /* One step toward the ceiling, or one step back. Returns the new name if
      it actually moved, so the caller can reset its counters. */
   stepTier(dir) {
+    if (this.pinned) return null;      // somebody chose; stop arguing with them
     const i = TIER_ORDER.indexOf(this.tier.name);
     const capped = TIER_ORDER.indexOf(this.ceiling);
     const next = Math.max(0, Math.min(dir > 0 ? capped : TIER_ORDER.length - 1, i + dir));
@@ -137,8 +139,14 @@ export class Renderer {
     return this.tier.name;
   }
 
-  setTier(name) {
-    if (!TIERS[name] || this.tier.name === name) return;
+  /* pin marks the tier as chosen rather than inferred, by the URL or by the
+     readout. The controller then leaves it alone. Resolution goes on adapting
+     underneath either way: pinning ultra on a machine that cannot hold it
+     should cost sharpness, not frames. */
+  setTier(name, pin = false) {
+    if (!TIERS[name]) return;
+    if (pin) this.pinned = true;
+    if (this.tier.name === name) return;
     const old = this.tier;
     this.tier = TIERS[name];
     this.renderScale = this.tier.scale;
