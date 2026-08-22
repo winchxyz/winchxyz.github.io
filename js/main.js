@@ -199,6 +199,7 @@ function wireInput() {
   const orbit = director.orbit;   // the director owns it; drag just adds velocity
 
   let dragging = false;
+  let dragAxis = null;   // 'x', 'y', or undecided; touch only
   let lastX = 0, lastY = 0;
   let downX = 0, downY = 0, downOrb = -1;
 
@@ -211,8 +212,29 @@ function wireInput() {
     director.mouse.inside = true;
 
     if (dragging) {
-      orbit.vy += (e.clientX - lastX) * 0.0045;
-      orbit.vp += (e.clientY - lastY) * 0.0035;
+      const dx = e.clientX - lastX, dy = e.clientY - lastY;
+      const touch = e.pointerType === 'touch';
+
+      /* On a touch screen a vertical drag is the page scrolling and nothing
+         else. Both used to happen at once: one ordinary scroll swipe drove
+         the pitch straight into its clamp, so reading this page on a phone
+         threw the scene to its extreme tilt and let it drift back, over and
+         over. Horizontal still orbits, because a horizontal swipe is a gesture
+         the page has no other use for.
+
+         The axis is decided once, on the first movement worth calling a
+         direction, and then held. Deciding per event makes a diagonal swipe
+         flicker between scrolling and orbiting. */
+      if (touch && dragAxis === null && Math.hypot(dx, dy) > 3) {
+        dragAxis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
+      }
+      if (!touch || dragAxis === 'x') {
+        // and a thumb travels much further than a mouse for the same intent
+        // a swipe across the whole screen should turn the view about a
+        // quarter turn, not a third of the way round the sculpture
+        orbit.vy += dx * (touch ? 0.0009 : 0.0045);
+        if (!touch) orbit.vp += dy * 0.0035;
+      }
       lastX = e.clientX; lastY = e.clientY;
     }
 
@@ -232,6 +254,7 @@ function wireInput() {
     // let the DOM have its clicks; only bare canvas starts a drag
     if (e.target.closest('a, button, input, #sheet, #hud')) return;
     dragging = true;
+    dragAxis = null;
     director.mouse.down = true;
     lastX = e.clientX; lastY = e.clientY;
     downX = e.clientX; downY = e.clientY;

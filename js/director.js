@@ -458,8 +458,14 @@ export class Director {
 
   integrateOrbit(dt) {
     const o = this.orbit;
-    o.yaw += o.vy;
-    o.pitch = clamp(o.pitch + o.vp, -0.7, 1.0);
+    /* Scaled by dt, which it was not. Everything else in this file goes
+       through damp() precisely so it behaves the same at 30 fps and at 144;
+       these two lines added a whole frame's velocity per frame regardless,
+       so the same drag turned the camera two and a half times further on a
+       144 Hz panel than on a 60. The 60 keeps the tuning the constants were
+       chosen for. */
+    o.yaw += o.vy * dt * 60;
+    o.pitch = clamp(o.pitch + o.vp * dt * 60, -0.7, 1.0);
     o.vy = damp(o.vy, 0, 9, dt);
     o.vp = damp(o.vp, 0, 9, dt);
     // ease back toward the directed framing, slowly enough not to fight a drag

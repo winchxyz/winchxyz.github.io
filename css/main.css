@@ -900,8 +900,37 @@ body.cur-drag .c-lbl{ opacity:1; }
 
   .chip{ padding:11px 16px; }
   .mat-chips button{ padding:12px 16px; }
-  #nav nav a:not(.cta){ display:none; }
-  #hud{ display:none; }
+  /* These used to be hidden, which left a phone with no way to reach a
+     section short of scrolling past everything in front of it: the rail is
+     display:none here too, so the only thing left in the bar was the contact
+     button. They fit. At 11px with a tighter gap the row measures 270px
+     inside 390 and clears the wordmark by twenty.
+
+     The type is small, so the tap target is made out of padding rather than
+     out of font size: 44px tall inside a 58px bar, while the letters stay
+     where the design wants them. */
+  #nav nav{ gap:12px; }
+  #nav nav a:not(.cta){
+    display:inline-flex; align-items:center;
+    font-size:11px; padding:14px 0; min-height:44px;
+  }
+  @media (max-width:400px){
+    #nav nav{ gap:10px; }
+    #nav nav a:not(.cta){ font-size:10px; }
+  }
+  /* The readout is a 262px developer panel with a graph in it, and this is a
+     390px screen with no keyboard to press G on, so it does not come here.
+     The chip that opens it went on being drawn though: a control that does
+     nothing, sitting in the corner over whatever the page put there, eating
+     the tap meant for a material. Both go. */
+  #hud, #hud-toggle{ display:none; }
+
+  /* Two tap targets came in under the 24px floor: the wordmark at 22 and the
+     shortcuts button at 20. Padding, not type size, again. And the shortcuts
+     sheet lists keys, which is a strange offer to make to a device with no
+     keyboard, so on a phone it stops being offered. */
+  .nav-mark{ display:inline-flex; align-items:center; min-height:44px; }
+  .linkish[data-action="shortcuts"]{ display:none; }
   .sec{ padding:clamp(86px,11vh,132px) 0; }
 }
 

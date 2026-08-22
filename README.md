@@ -375,8 +375,41 @@ the two lines including its neighbours' text, so comparing those unions
 reports every wrapped inline as fully overlapping its siblings.
 `getClientRects()` gives the real boxes.
 
-Currently clean at 2560×1440, 1920×1080, 1366×768, 768×1024, 390×844 and
-360×740.
+Currently clean at 2560×1440, 1920×1080, 1366×768, 768×1024, 430×932, 390×844
+and 360×740, with no tap target under 24px on any of the phone sizes.
+
+### What a phone was actually getting
+
+Auditing the layout on a phone is not the same as using one, and the
+difference turned out to be most of the experience.
+
+Every scroll swung the camera. A vertical drag is how you scroll a page, and
+the same handler was reading it as a drag to orbit: one ordinary swipe drove
+the pitch to 0.697 against a limit of 0.7, so reading this page on a phone
+threw the scene to its extreme tilt and let it drift back, over and over. The
+gesture's axis is decided once now, on the first movement worth calling a
+direction, and held: vertical belongs to the page, horizontal orbits. Touch
+sensitivity came down with it, because a thumb travels much further than a
+mouse for the same intent.
+
+There was no navigation. The rail is `display:none` on a phone and so were all
+three section links, which left the bar holding one contact button and nothing
+else: five sections reachable only by scrolling past everything in front of
+them. They fit, as it turns out. At 11px the row measures 270px inside 390 and
+clears the wordmark by twenty, and the tap target is built out of padding
+rather than font size, so the letters stay where the design wants them and the
+target is 44px tall.
+
+And there was a button that did nothing. The readout panel is hidden below
+760px, being 262 pixels of developer telemetry with a graph in it. The chip
+that opens it was not hidden, so tapping it toggled a class and produced no
+visible result, while sitting in the corner over whatever the page had put
+there and eating the tap meant for a material.
+
+The camera integration was also frame-rate dependent, which this codebase
+elsewhere goes to some trouble to avoid: `o.yaw += o.vy` with no `dt` in it
+turns the view two and a half times further on a 144 Hz panel than on a 60 for
+the same drag.
 
 ### The harness was timing its own leftovers
 
