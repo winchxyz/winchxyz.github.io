@@ -11,10 +11,10 @@
    difference between "the shaders compile" and "the page draws something".
    ══════════════════════════════════════════════════════════════════════════ */
 
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { mkdtempSync, rmSync, writeFileSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 
 const MODE = process.argv[2] === 'shot' ? 'shot' : 'compile';
 const OUT = process.argv[3] || 'docs/headless.png';
@@ -44,7 +44,41 @@ const chrome = spawn(CHROME, [
     : ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader']),
   `--window-size=${process.env.WIN || '1280,800'}`,
   'about:blank',
-], { stdio: ['ignore', 'pipe', 'pipe'] });
+], { stdio: ['ignore', 'pipe', 'pipe'], detached: process.platform !== 'win32' });
+
+/* Shutting this browser down is harder than it looks, and getting it wrong
+   quietly corrupts every timing the harness reports.
+
+   chrome.kill() signals the process Node spawned and nothing else. Chrome's
+   renderer, GPU and utility processes are its children and survive it. Worse,
+   the process actually spawned is a launcher that exits almost immediately
+   after handing off, so by the time a run ends there is no tree left for
+   `taskkill /T` to walk either: the browser has been reparented away.
+
+   The symptom was the same unchanged shader measuring 5.8 s on a clean
+   machine and 18.2 s on the fifth consecutive run: a monotonic climb that
+   looks exactly like a real regression and is not one.
+
+   So match on the one thing that is unique to this run and survives
+   reparenting: its throwaway profile directory, which every process in the
+   browser carries on its command line. That kills this run's browser and
+   provably nothing else, which matters because the blunt version of this
+   takes the user's own Chrome down with it. */
+const PROFILE_TAG = basename(profile);
+
+function shutdown(cdp) {
+  try { cdp?.close(); } catch { /* already closed */ }
+  try { chrome.kill('SIGKILL'); } catch { /* already gone */ }
+  if (process.platform === 'win32') {
+    spawnSync('powershell', ['-NoProfile', '-Command',
+      `Get-CimInstance Win32_Process -Filter "Name='chrome.exe'" | ` +
+      `Where-Object { $_.CommandLine -like '*${PROFILE_TAG}*' } | ` +
+      `ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }`,
+    ], { stdio: 'ignore' });
+  } else {
+    spawnSync('pkill', ['-9', '-f', PROFILE_TAG], { stdio: 'ignore' });
+  }
+}
 
 let chromeErr = '';
 chrome.stderr.on('data', (d) => { chromeErr += d.toString(); });
@@ -172,7 +206,7 @@ try {
       console.log(RED(`\ngave up after ${(budget / 1000).toFixed(0)}s, stuck on: `)
         + (await evaluate(cdp, 'window.__CURRENT').catch(() => '?')));
       consoleErrors.forEach((e) => console.log('  ' + e));
-      cdp.close(); chrome.kill();
+      shutdown(cdp);
       process.exit(4);
     }
     const res = await evaluate(cdp, 'JSON.stringify(window.__RESULT)');
@@ -194,7 +228,7 @@ try {
     if (r.fatal) { console.log('\n  ' + RED('fatal: ') + r.fatal); bad++; }
     if (consoleErrors.length) { console.log('\n  page errors:'); consoleErrors.forEach((e) => console.log('    ' + e)); }
     console.log('');
-    cdp.close(); chrome.kill();
+    shutdown(cdp);
     process.exit(bad ? 1 : 0);
   }
 
@@ -211,8 +245,13 @@ try {
   });
   await cdp.send('Page.navigate', { url: SITE });
 
+  /* READY overrides what counts as loaded, so this harness can screenshot a
+     page that is not the site: a prototype, a bisect page, anything with its
+     own idea of when it is up. */
+  const READY = process.env.READY || 'document.documentElement.classList.contains("booted")';
+
   try {
-    await waitFor(cdp, 'document.documentElement.classList.contains("booted")',
+    await waitFor(cdp, READY,
       Number(process.env.BOOT_TIMEOUT || 180000), 'boot',
       'document.querySelector("#boot-log")?.textContent + " | cls=" + document.documentElement.className');
   } catch (e) {
@@ -220,7 +259,7 @@ try {
     console.log('BOOT FAILED: ' + e.message);
     if (consoleErrors.length) consoleErrors.forEach((x) => console.log('  ' + x));
     console.log('chrome stderr tail: ' + chromeErr.slice(-2000));
-    cdp.close(); chrome.kill();
+    shutdown(cdp);
     process.exit(3);
   }
   const diag = await evaluate(cdp, `JSON.stringify({
@@ -228,7 +267,7 @@ try {
     gl: !!window.__winch?.renderer,
     tier: window.__winch?.renderer?.tier?.name,
     renderer: window.__winch?.renderer?.caps?.renderer,
-    nogl: !document.querySelector('#nogl').hidden,
+    nogl: !(document.querySelector('#nogl')?.hidden ?? true),
     msg: document.querySelector('#nogl')?.innerText?.slice(0,200)
   })`);
   console.log('boot: ' + diag);
@@ -276,7 +315,7 @@ try {
       writeFileSync(path, Buffer.from(s2.data, 'base64'));
       console.log('wrote ' + path);
     }
-    cdp.close(); chrome.kill();
+    shutdown(cdp);
     process.exit(0);
   }
 
@@ -284,11 +323,11 @@ try {
   writeFileSync(OUT, Buffer.from(shot.data, 'base64'));
   console.log('wrote ' + OUT);
 
-  cdp.close(); chrome.kill();
+  shutdown(cdp);
   process.exit(0);
 } catch (e) {
   console.error(RED('harness failed: ') + e.message);
-  try { chrome.kill(); } catch { /* already gone */ }
+  shutdown();
   process.exit(2);
 } finally {
   setTimeout(() => { try { rmSync(profile, { recursive: true, force: true }); } catch { /* windows lock */ } }, 500);

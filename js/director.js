@@ -52,7 +52,29 @@ const ORB_RING = 2.15;    // ring radius, world units
    near ones grow out of frame while the far ones shrink to specks. */
 const ORB_TILT = 0.34;    // tilt about X, radians
 const ORB_R    = 0.34;    // orb radius
-const FLY_TIME = 0.52;    // seconds from click to impact
+/* ── the exchange ──────────────────────────────────────────────────────────
+   Clicking an orb used to fly it in and end there, which read as an arrival
+   rather than an absorption. Now the sculpture gives something back: the
+   material it was wearing leaves as a droplet and takes the slot the
+   arriving one vacated.
+
+   That only adds up because a ring slot is empty exactly while its material
+   is on the sculpture. One orb leaves the ring, one returns, and the count
+   never changes. It also means the empty slot is always the one about to be
+   filled, so nothing has to be renumbered.
+
+   Phases as fractions of one exchange. Every boundary is joined by curves
+   that reach it with zero velocity, so no frame of this can snap. */
+const EX_TIME = 2.35;     // seconds, click to settled
+const P_TOUCH = 0.32;     // surfaces meet; the material switches here
+const P_EATEN = 0.52;     // the arriving orb is all the way in
+const P_PUSH  = 0.56;     // the replacement starts out
+const P_PINCH = 0.86;     // the neck gives; it is an orb again
+
+const c01 = (t) => (t < 0 ? 0 : t > 1 ? 1 : t);
+// zero velocity AND zero acceleration at both ends
+const smoother = (t) => t * t * t * (t * (t * 6 - 15) + 10);
+const easeIO = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 
 /* ── keyframes ─────────────────────────────────────────────────────────────
    yaw / pitch  direction from the subject to the camera, radians
@@ -140,7 +162,8 @@ export class Director {
 
     this.orbs = {
       show: 0, spin: 0, hover: -1,
-      fly: 0, flyId: -1, pending: -1, merged: false,
+      fly: 0, flyId: -1, pending: -1, outMat: -1, switched: false, parted: false,
+      partAt: 0, partD: 0, partR: 0,
       flyPos: [0, 0, 0], flyR: 0, flyK: 0.3, bound: R_BOUND,
       pulse: 0, pulseDir: [0, 1, 0], flash: 0,
       pos: MATERIALS.map(() => [0, 0, 0]),
@@ -163,14 +186,18 @@ export class Director {
     this.burst = 0.65;
   }
 
-  /* Send an orb into the sculpture. The material does not change now; it
-     changes when the orb lands, under the ripple. */
+  /* Start an exchange. The material does not change now; it changes when the
+     surfaces meet, under the ripple, and the one being replaced leaves
+     afterwards on a thread of its own. */
   absorb(i) {
     const o = this.orbs;
     if (i === this.materialIndex || o.flyId >= 0 || o.show < 0.35) return false;
     o.flyId = clamp(i, 0, MATERIALS.length - 1);
     o.pending = o.flyId;
+    o.outMat = this.materialIndex;
     o.fly = 0;
+    o.switched = false;
+    o.parted = false;
     const p = o.pos[o.flyId] || [0, 1, 0];
     const l = Math.hypot(p[0], p[1], p[2]) || 1;
     o.pulseDir = [p[0] / l, p[1] / l, p[2] / l];
@@ -203,25 +230,38 @@ export class Director {
     o.show = damp(o.show, this.current.orbShow, 3.2, dt);
     o.spin += dt * 0.085;
 
-    if (o.flyId >= 0) {
-      o.fly = Math.min(1, o.fly + dt / FLY_TIME);
+    const flying = o.flyId >= 0;
+    if (flying) {
+      o.fly = Math.min(1, o.fly + dt / EX_TIME);
 
-      /* The switch happens when the two forms actually touch, not when the
-         orb reaches the centre. Everything after that is the sculpture
-         swallowing a lump that is already the new material, which is what
-         makes it read as becoming rather than as replacing. */
-      if (!o.merged && o.fly >= 0.52) {
-        o.merged = true;
+      /* The switch happens when the two forms actually touch. Everything
+         after it is the sculpture closing over something that is already
+         wearing the new material, which is what makes it read as becoming
+         rather than as replacing. */
+      if (!o.switched && o.fly >= P_TOUCH) {
+        o.switched = true;
         this.materialIndex = o.pending;
         o.pulse = 1; o.flash = 1;
         this.burst = 0.7;
       }
       if (o.fly >= 1) {
-        o.flyId = -1; o.fly = 0; o.pending = -1; o.merged = false;
+        o.flyId = -1; o.fly = 0; o.pending = -1;
+        o.outMat = -1; o.switched = false; o.parted = false;
       }
     }
     o.pulse = Math.max(0, o.pulse - dt / 0.85);
     o.flash = Math.max(0, o.flash - dt / 0.32);
+
+    const f = o.fly;
+    const sculptR = this.current.scale * 1.02;      // nominal surface radius
+    const contact = sculptR + ORB_R * 0.92;         // centre distance at touch
+    /* Where the neck gives. Chosen so the geometry breaks on its own within
+       a frame or two of P_PINCH: the head has to clear the body by slightly
+       more than the blend radius left at that moment, and no more, or there
+       is a stretch of detached ball still wearing the body's material. */
+    const apart = sculptR + ORB_R + 0.035;
+
+    o.flyR = 0;
 
     const n = o.pos.length;
     const ct = Math.cos(ORB_TILT), st = Math.sin(ORB_TILT);
@@ -230,35 +270,123 @@ export class Director {
       const x = Math.cos(a) * ORB_RING;
       const z0 = Math.sin(a) * ORB_RING;
       let px = x, py = -z0 * st, pz = z0 * ct;
+      const ux = px / ORB_RING, uy = py / ORB_RING, uz = pz / ORB_RING;
 
       let r = ORB_R * o.show;
-      if (k === this.materialIndex) r *= 1.16;   // the one in use sits proud
       if (k === o.hover) r *= 1.18;
 
-      if (k === o.flyId) {
-        const e = o.fly * o.fly;                 // accelerates inward
-        px *= 1 - e; py *= 1 - e; pz *= 1 - e;
-        r *= 1 - o.fly * 0.55;
+      if (!flying) {
+        // a slot stands empty exactly while its material is on the sculpture
+        if (k === this.materialIndex) r = 0;
 
-        if (o.merged) {
-          // handed to the distance field; drawn there, not here
-          o.flyPos[0] = px; o.flyPos[1] = py; o.flyPos[2] = pz;
-          o.flyR = r;
-          o.flyK = 0.22 + 0.34 * (1 - o.fly);    // the neck thins as it closes
-          r = 0;
+      } else if (k === o.flyId) {
+        /* Coming in. It decelerates to a stop as the surfaces meet and only
+           then sinks, so contact has no step in it. The blob is handed to
+           the distance field from the first frame rather than at impact,
+           which is what lets the neck grow while there is still a gap.
+
+           The drawn orb rides on top of that blob wearing its own material,
+           so what you see is the arriving material as a ball and the old one
+           as the neck reaching for it: two liquids meeting, for free, with no
+           second material anywhere in the shader. */
+        let d, rr;
+        if (f < P_TOUCH) {
+          d = lerp(ORB_RING, contact, smoother(f / P_TOUCH));
+          rr = r;
+        } else {
+          const q = c01((f - P_TOUCH) / (P_EATEN - P_TOUCH));
+          d = lerp(contact, sculptR * 0.18, easeIO(q));
+          rr = r * Math.cbrt(Math.max(0, 1 - q));
         }
+        px = ux * d; py = uy * d; pz = uz * d;
+        if (f < P_EATEN) {
+          o.flyPos[0] = px; o.flyPos[1] = py; o.flyPos[2] = pz;
+          o.flyR = rr;
+          /* The blend follows a curve with no corner in it, so the neck
+             swells rather than appearing. This used to jump from 0.03 to
+             0.56 on the frame of impact, which is the whole reason the old
+             version read as a collision. */
+          /* Capped well below the radius of the body. Past about 0.4 the
+             blend spreads far enough to soften the whole field, and the
+             dielectrics cannot survive that: their interior march wanders in
+             the low-gradient region and the cast crystal came back crumpled
+             and speckled. The metals never showed it, which is what made it
+             worth checking every material rather than the default one. */
+          o.flyK = 0.02 + 0.38 * Math.pow(smoother(c01(f / P_TOUCH)), 1.6);
+        }
+        /* The drawn orb hands over to the field at contact. It rides a
+           little proud of the blob underneath so the two never fight over a
+           pixel, and the blob it hands over to is the same size in the same
+           place wearing the same material, because the sculpture became that
+           material on this very frame. */
+        r = f < P_TOUCH ? rr * 1.015 : 0;
+
+      } else if (k === o.outMat) {
+        r = 0;
+        if (f >= P_PUSH) {
+          const s2 = c01((f - P_PUSH) / (P_PINCH - P_PUSH));
+          /* It starts just under the surface rather than at the middle. Time
+             spent animating a head that is still buried is time the departure
+             is not visible, and this one only clears the body for the last
+             half of its push. */
+          const dOut = lerp(sculptR * 0.55, apart, easeIO(s2));
+          const rOut = ORB_R * o.show * easeIO(Math.min(1, s2 * 1.3));
+
+          /* The neck is this number. It starts wide enough to bridge the
+             gap the head is opening and falls away faster than the gap grows,
+             so the two stop being joined without anything deciding that they
+             should. */
+          const kOut = 0.02 + 0.46 * Math.pow(1 - s2, 1.35);
+
+          /* And the pinch is that moment, found rather than scheduled. A
+             smooth minimum bridges a gap only while its blend radius is wider
+             than the gap; the frame that stops being true is the frame the
+             thread gives. Testing for it instead of picking a time means the
+             handover from field to orb lands exactly on the break at any
+             scale, which a hand-tuned constant only managed at one. */
+          if (!o.parted && kOut < dOut - rOut - sculptR) {
+            o.parted = true;
+            o.partAt = f; o.partD = dOut; o.partR = rOut;
+            o.flash = Math.max(o.flash, 0.5);
+          }
+
+          if (!o.parted) {
+            o.flyPos[0] = ux * dOut; o.flyPos[1] = uy * dOut; o.flyPos[2] = uz * dOut;
+            o.flyR = rOut;
+            o.flyK = kOut;
+
+            /* And it is drawn as an orb at the same place, in the material it
+               is carrying away, one and a half per cent proud of the blob so
+               the two cannot fight over which owns a pixel. While it is still
+               inside the body the orb is hidden, because orbs are only drawn
+               nearer than the sculpture; as it clears the surface it appears
+               already wearing the old material. So the ball is the material
+               leaving and the neck is the material staying, and nothing has
+               to change colour at the break. */
+            px = ux * dOut; py = uy * dOut; pz = uz * dOut;
+            r = rOut * 1.015;
+          } else {
+            // parted: an orb again, wearing the material it carried away
+            const g = c01((f - o.partAt) / Math.max(0.08, 1 - o.partAt));
+            const dr = lerp(o.partD, ORB_RING, easeIO(g));
+            px = ux * dr; py = uy * dr; pz = uz * dr;
+            r = lerp(o.partR, ORB_R * o.show, easeIO(g));
+          }
+        }
+
+      } else if (k === this.materialIndex) {
+        r = 0;
       }
+
       o.pos[k][0] = px; o.pos[k][1] = py; o.pos[k][2] = pz;
       o.rad[k] = r;
     }
 
-    if (!o.merged) { o.flyR = 0; }
-
-    // the marcher's bounding sphere has to reach whatever is being absorbed
-    const reach = o.flyR > 0
+    // the marcher's bounding sphere has to reach whatever has left the body
+    const blob = o.flyR > 0
       ? Math.hypot(o.flyPos[0], o.flyPos[1], o.flyPos[2]) + o.flyR + o.flyK
       : 0;
-    o.bound = Math.max(R_BOUND * this.current.scale, reach) + 0.02;
+    o.bound = Math.max(R_BOUND * this.current.scale, blob) + 0.02;
   }
 
   computeTarget() {

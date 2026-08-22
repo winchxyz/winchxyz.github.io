@@ -1,0 +1,873 @@
+<meta charset="utf-8">
+<title>Absorb lab</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root{
+    --ink:#07090a; --panel:#0d1011; --line:#1e2422; --line-2:#161b19;
+    --bone:#f2f6ec; --chalk:#dfe6d8; --ash:#9aa694; --muted:#7c8878; --dim:#5a6356;
+    --lime:#c6f24e; --lime-lt:#e4ff9b;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--ink); color:var(--chalk); font-family:var(--mono);
+    overflow:hidden; user-select:none; -webkit-user-select:none;
+  }
+  #gl{position:fixed; inset:0; width:100%; height:100%; display:block}
+
+  .tile{
+    position:fixed; pointer-events:auto; cursor:pointer;
+    border:1px solid var(--line-2); transition:border-color .18s ease;
+  }
+  .tile:hover{ border-color:var(--lime) }
+  .tile.focus{ cursor:default }
+  .tag{
+    position:absolute; left:14px; top:12px; pointer-events:none;
+    font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--dim);
+  }
+  .name{
+    position:absolute; left:14px; top:30px; pointer-events:none;
+    font-size:15px; letter-spacing:-.01em; color:var(--bone);
+  }
+  .desc{
+    position:absolute; left:14px; bottom:26px; right:14px; pointer-events:none;
+    font-size:11.5px; line-height:1.55; color:var(--muted); max-width:44ch;
+    opacity:0; transition:opacity .2s ease;
+  }
+  .tile:hover .desc, .tile.focus .desc{ opacity:1 }
+  .bar{
+    position:absolute; left:14px; right:14px; bottom:14px; height:1px;
+    background:var(--line-2); pointer-events:none;
+  }
+  .bar i{ position:absolute; inset:0 auto 0 0; background:var(--lime); width:0 }
+
+  /* strip mode: the tile becomes a labelled row, and the label column is
+     reserved in the canvas layout so the stills never sit under the text */
+  .tile.row .tag{ top:14px }
+  .tile.row .name{ top:32px; font-size:14px; max-width:118px; line-height:1.25 }
+  .tile.row .desc, .tile.row .bar{ display:none }
+  .tile.row{ border-left:none; border-right:none }
+
+  #hud{
+    position:fixed; left:0; right:0; bottom:0; padding:10px 16px;
+    display:flex; gap:18px; align-items:center; flex-wrap:wrap;
+    background:linear-gradient(0deg,rgba(7,9,10,.94),rgba(7,9,10,0));
+    font-size:11.5px; color:var(--dim); letter-spacing:.06em; pointer-events:none;
+  }
+  #hud b{ color:var(--ash); font-weight:400 }
+  kbd{
+    font:inherit; border:1px solid var(--line); border-radius:4px;
+    padding:1px 5px; color:var(--ash);
+  }
+  #err{
+    position:fixed; inset:0; display:none; place-items:center; padding:40px;
+    text-align:center; color:var(--ash); font-size:14px; line-height:1.7;
+  }
+</style>
+
+<canvas id="gl"></canvas>
+<div id="hud">
+  <span><b>click</b> a tile to enlarge</span>
+  <span><kbd>1</kbd>–<kbd>7</kbd> focus · <kbd>0</kbd> grid · <kbd>F</kbd> filmstrip</span>
+  <span><kbd>R</kbd> replay · <kbd>space</kbd> pause · <kbd>S</kbd> slow · <kbd>,</kbd> <kbd>.</kbd> step</span>
+</div>
+<div id="err">This prototype needs WebGL2.</div>
+
+<script type="module">
+/* ───────────────────────────────────────────────────────────────────────────
+   absorb lab
+
+   Six ways for one sphere to take in another, side by side and in sync, so
+   they can be judged against each other rather than one at a time.
+
+   All six drive the same distance field. The field is a host sphere plus up
+   to three blobs, every one smooth-unioned into it, with an optional
+   travelling surface ripple and an optional crater carved back out. What
+   makes the variants different is not the shader, it is the small amount of
+   arithmetic in each `stage()` below that decides, for a given moment,
+   where the blobs are, how large they are, and how eagerly the field lets
+   them fuse.
+
+   The blend radius k is the whole story. Two spheres with k near zero pass
+   through each other and read as two objects. The same two spheres with a
+   large k grow a neck between them while they are still apart, and read as
+   one liquid. Animating k is what turns an arrival into a coalescence.
+   ─────────────────────────────────────────────────────────────────────── */
+
+const VERT = `#version 300 es
+void main(){
+  vec2 p = vec2((gl_VertexID << 1) & 2, gl_VertexID & 2);
+  gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0);
+}`;
+
+const FRAG = `#version 300 es
+precision highp float;
+out vec4 fragColor;
+
+uniform vec4  uTile;          // x, y, w, h of this tile in device pixels
+uniform float uHostR;
+uniform float uProlate;       // stretch of the host along uAxis
+uniform vec3  uAxis;          // the line the incoming blob travels on
+uniform vec3  uBlobPos[5];
+uniform float uBlobR[5];
+uniform float uBlobK[5];
+uniform int   uBlobCount;
+uniform float uRipple;        // amplitude of the travelling surface wave
+uniform float uRipplePhase;
+uniform vec3  uT0;            // thread: base, waist, head
+uniform vec3  uT1;
+uniform vec3  uT2;
+uniform vec3  uTR;            // radius at each of the three
+uniform float uThreadK;
+uniform vec3  uCraterPos;
+uniform float uCraterR;
+uniform float uTint;          // 0 cool steel, 1 warm honey
+
+/* IQ's polynomial smooth minimum. The k term is the width of the region in
+   which the two fields are allowed to negotiate, which is exactly the width
+   of the neck they grow between them. */
+float smin(float a, float b, float k){
+  float h = clamp(0.5 + 0.5 * (b - a) / k, 0.0, 1.0);
+  return mix(b, a, h) - k * h * (1.0 - h);
+}
+float smax(float a, float b, float k){
+  float h = clamp(0.5 - 0.5 * (b - a) / k, 0.0, 1.0);
+  return mix(b, a, h) + k * h * (1.0 - h);
+}
+
+/* IQ's round cone: a capsule whose two ends have different radii, which is
+   the only primitive that draws a liquid thread honestly. Beads along a line
+   look like beads; this looks like a thread, and it can be made as thin as
+   the pinch needs without falling apart into a string of pearls. */
+float sdRoundCone(vec3 p, vec3 a, vec3 b, float r1, float r2){
+  vec3  ba = b - a;
+  float l2 = dot(ba, ba);
+  if (l2 < 1e-7) return length(p - a) - max(r1, r2);
+  float rr = r1 - r2;
+  float a2 = l2 - rr * rr;
+  float il2 = 1.0 / l2;
+  vec3 pa = p - a;
+  float y = dot(pa, ba);
+  float z = y - l2;
+  vec3  w = pa * l2 - ba * y;
+  float x2 = dot(w, w);
+  float y2 = y * y * l2;
+  float z2 = z * z * l2;
+  float k = sign(rr) * rr * rr * x2;
+  if (sign(z) * a2 * z2 > k) return sqrt(x2 + z2) * il2 - r2;
+  if (sign(y) * a2 * y2 < k) return sqrt(x2 + y2) * il2 - r1;
+  return (sqrt(x2 * a2 * il2) + y * rr) * il2 - r1;
+}
+
+float map(vec3 p){
+  // the host, optionally drawn out along the axis the blob arrives on
+  vec3 q = p;
+  float s = 1.0 + uProlate;
+  q -= uAxis * dot(q, uAxis) * (1.0 - 1.0 / s);
+  float d = (length(q) - uHostR) / max(s, 1.0);
+
+  /* A capillary wave crossing the surface, measured as an angle from the
+     impact. At seven cycles under a tight envelope this rendered as a single
+     hard crease rather than a wave; wider and slower it reads as water. */
+  if (uRipple > 0.0001){
+    float a = 1.0 - dot(normalize(p + 1e-5), uAxis);
+    float w = uRipplePhase;
+    d += sin((a - w) * 4.2) * exp(-abs(a - w) * 2.4) * uRipple;
+  }
+
+  for (int i = 0; i < 5; i++){
+    if (i >= uBlobCount) break;
+    float b = length(p - uBlobPos[i]) - uBlobR[i];
+    d = smin(d, b, max(uBlobK[i], 0.0015));
+  }
+
+  /* Two cones sharing the waist point: thick where it leaves the body,
+     thinnest in the middle, thick again at the head. When the waist radius
+     reaches zero the thread is gone, and nothing had to script the break. */
+  if (uTR.y > 0.00005){
+    float th = min(sdRoundCone(p, uT0, uT1, uTR.x, uTR.y),
+                   sdRoundCone(p, uT1, uT2, uTR.y, uTR.z));
+    d = smin(d, th, max(uThreadK, 0.0015));
+  }
+
+  // the dent an arriving drop presses into a pool before it sinks
+  if (uCraterR > 0.0001){
+    d = smax(d, uCraterR - length(p - uCraterPos), 0.14);
+  }
+  return d;
+}
+
+vec3 normalAt(vec3 p){
+  const vec2 e = vec2(1.0, -1.0) * 0.0012;
+  return normalize(
+    e.xyy * map(p + e.xyy) + e.yyx * map(p + e.yyx) +
+    e.yxy * map(p + e.yxy) + e.xxx * map(p + e.xxx));
+}
+
+/* Two softboxes and a rim, written down rather than photographed. The
+   exponents are high on purpose: small, hard sources make a small, hard
+   highlight, and it is the way that highlight bends across a neck that
+   tells you the two bodies have actually joined. A broad soft light would
+   read the merge as a smudge. */
+vec3 env(vec3 d){
+  vec3 c = mix(vec3(0.010, 0.013, 0.013), vec3(0.030, 0.036, 0.031),
+               smoothstep(-0.6, 0.9, d.y));
+  float key = pow(max(dot(d, normalize(vec3(-0.42, 0.70, 0.45))), 0.0), 90.0);
+  float fil = pow(max(dot(d, normalize(vec3( 0.82, 0.12, 0.30))), 0.0), 34.0);
+  float rim = pow(max(dot(d, normalize(vec3( 0.30, 0.10,-0.92))), 0.0), 55.0);
+  c += vec3(1.00, 0.98, 0.93) * key * 11.0;
+  c += vec3(0.38, 0.52, 0.70) * fil * 1.60;
+  c += vec3(0.78, 0.95, 0.31) * rim * 7.0;
+  return c;
+}
+
+/* What fills the frame where nothing was hit. Deliberately not env(): the
+   softboxes belong in the reflection, not behind the subject. */
+vec3 backdrop(vec3 rd){
+  float v = smoothstep(0.75, -0.55, rd.y);
+  return mix(vec3(0.020, 0.024, 0.025), vec3(0.030, 0.035, 0.032), v) * 0.55;
+}
+
+void main(){
+  vec2 frag = gl_FragCoord.xy - uTile.xy;
+  vec2 uv = (frag - 0.5 * uTile.zw) / uTile.w;
+
+  /* Framed so the blob is fully in shot at its farthest, in the narrowest
+     tile the grid produces. A merge you cannot see begin is not a merge you
+     can judge. */
+  vec3 ro = vec3(0.0, 0.50, 5.00);
+  vec3 ta = vec3(0.0, 0.02, 0.0);
+  vec3 fw = normalize(ta - ro);
+  vec3 rt = normalize(cross(fw, vec3(0.0, 1.0, 0.0)));
+  vec3 up = cross(rt, fw);
+  vec3 rd = normalize(uv.x * rt + uv.y * up + 1.70 * fw);
+
+  vec3 col = backdrop(rd);
+
+  // the whole scene lives well inside this, so start the march at its shell
+  float t = 0.0, hit = 0.0;
+  {
+    float b = dot(ro, rd), c = dot(ro, ro) - 9.0;
+    float h = b * b - c;
+    if (h > 0.0) t = max(0.0, -b - sqrt(h));
+    else t = 1e9;
+  }
+  for (int i = 0; i < 96; i++){
+    if (t > 9.0) break;
+    vec3 p = ro + rd * t;
+    float d = map(p);
+    if (d < 0.0009 * t){ hit = 1.0; break; }
+    /* The ripple displaces the field without renormalising it, so the value
+       returned is no longer a true distance and a full step can punch through
+       the surface. Take a shorter one while a wave is running. */
+    t += d * (uRipple > 0.0001 ? 0.72 : 0.92);
+  }
+
+  if (hit > 0.5){
+    vec3 p = ro + rd * t;
+    vec3 n = normalAt(p);
+    vec3 v = -rd;
+
+    float NoV = max(dot(n, v), 0.0);
+    float fres = pow(1.0 - NoV, 5.0);
+
+    // a dark liquid metal, warm when the variant is honey
+    vec3 F0 = mix(vec3(0.52, 0.56, 0.55), vec3(0.60, 0.42, 0.17), uTint);
+    vec3 F  = F0 + (1.0 - F0) * fres;
+    vec3 spec = env(reflect(rd, n)) * F;
+
+    // metals owe almost nothing to diffuse, but a trace of it keeps the
+    // inside of a concave neck from going to pure black
+    float lam = max(dot(n, normalize(vec3(-0.42, 0.68, 0.55))), 0.0);
+    vec3 dif = mix(vec3(0.017, 0.020, 0.019), vec3(0.032, 0.021, 0.008), uTint)
+             * (0.30 + 0.70 * lam);
+
+    // the lime edge is what actually draws the silhouette, and the silhouette
+    // is the whole thing being judged here
+    vec3 rim = vec3(0.78, 0.95, 0.31) * pow(1.0 - NoV, 3.2) * 0.62;
+
+    col = dif + spec + rim;
+  }
+
+  col = col / (col + 0.86);                       // reinhard, gently
+  col = pow(max(col, 0.0), vec3(1.0 / 2.2));
+  col += (fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453) - 0.5) / 255.0;
+  fragColor = vec4(col, 1.0);
+}`;
+
+/* ── the six ─────────────────────────────────────────────────────────────
+   Each stage(t) is handed a normalised time in [0,1] and returns the state
+   of the field at that moment. Distances are in host radii; the host starts
+   at R0 and grows as it takes volume on, because a sphere that swallows
+   another sphere and stays the same size is the thing that reads as fake. */
+
+const R0 = 0.86;                 // host radius at rest
+const RB = 0.34;                 // incoming blob radius
+/* Tilted toward the camera as much as across it, so the approach foreshortens
+   and the blob stays in frame from the first moment to the last. */
+const AXIS = norm([0.50, 0.38, 0.78]);
+const D0 = 2.05;                 // where the blob starts, along AXIS
+
+function norm(v){ const l = Math.hypot(...v); return v.map((x) => x / l); }
+const clamp01 = (x) => x < 0 ? 0 : x > 1 ? 1 : x;
+const mix = (a, b, t) => a + (b - a) * t;
+const easeIn = (t) => t * t * t;
+const easeOut = (t) => 1 - Math.pow(1 - t, 3);
+const easeInOut = (t) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+// zero velocity AND zero acceleration at both ends: nothing enters or leaves
+// the frame with a speed it did not build up to
+const smoother = (t) => t * t * t * (t * (t * 6 - 15) + 10);
+const at = (d) => AXIS.map((x) => x * d);
+
+/* Volume in, radius out. Absorbing all of the blob grows the host by about
+   five per cent, which is small but not nothing, and the eye reads it. */
+const grow = (frac) => Math.cbrt(R0 ** 3 + clamp01(frac) * RB ** 3);
+
+const blank = () => ({
+  hostR: R0, prolate: 0, blobs: [], ripple: 0, ripplePhase: 0,
+  crater: null, tint: 0, thread: null,
+});
+
+/* A thread from d0 to d2 along the axis, waisted at the midpoint. Radii are
+   given at the body end, the waist and the head; a waist of zero is a thread
+   that has already broken. */
+const thread = (d0, d2, r0, rw, r2, k = 0.03) => ({
+  a: at(d0), b: at(mix(d0, d2, 0.52)), c: at(d2),
+  r: [r0, rw, r2], k,
+});
+
+const VARIANTS = [
+  {
+    key: 'flyin',
+    name: 'Fly-in',
+    tag: 'A · current',
+    desc: 'What the site does now. The blob crosses at a constant rate and the '
+        + 'blend radius falls as it goes, so the fusing is over before the two '
+        + 'surfaces are close enough for anyone to see it happen.',
+    stage(t){
+      const s = blank();
+      const f = clamp01(t / 0.62);
+      s.blobs.push({
+        p: at(mix(D0, 0, easeInOut(f))),
+        r: RB * (1 - f * 0.55) * (1 - clamp01((f - 0.52) / 0.48)),
+        k: 0.22 + 0.34 * (1 - f),
+      });
+      return s;
+    },
+  },
+
+  {
+    key: 'bridge',
+    name: 'Capillary bridge',
+    tag: 'B · surface tension',
+    desc: 'The blob decelerates and stops the instant the surfaces meet. Then '
+        + 'the neck does the work: the blend radius spikes and decays, which is '
+        + 'how a real liquid bridge grows, and the host rings once as it settles.',
+    stage(t){
+      const s = blank();
+      const touch = 0.42;
+      const a = easeOut(clamp01(t / touch));
+      const u = clamp01((t - touch) / 0.44);            // how much is taken in
+      const contact = Math.max(0, t - touch);
+
+      s.hostR = grow(u) * (1 + 0.055 * Math.sin(contact * 24) * Math.exp(-contact * 5.5));
+      s.blobs.push({
+        p: at(mix(D0, R0 + RB * 0.86, a) - u * (RB * 0.9)),
+        r: RB * Math.cbrt(1 - u),
+        k: t < touch ? 0.03 : 0.10 + 0.62 * Math.exp(-contact * 7.0),
+      });
+      return s;
+    },
+  },
+
+  {
+    key: 'honey',
+    name: 'Honey',
+    tag: 'C · viscous',
+    desc: 'The host reaches first. A thread runs out to meet the blob, they '
+        + 'join thickly, and the thread thins and retracts over a long tail. '
+        + 'Nothing snaps, because at this viscosity nothing ever does.',
+    stage(t){
+      const s = blank();
+      s.tint = 1;
+      const meet = 0.50;
+      const reachOut = clamp01((t - 0.06) / (meet - 0.06));
+      const app = clamp01(t / meet);
+      const u = clamp01((t - meet) / 0.50);
+
+      s.hostR = grow(u);
+      s.prolate = 0.20 * Math.sin(Math.PI * clamp01(t / 0.8));
+
+      const blobD = mix(D0, R0 + RB * 0.55, easeInOut(app) * 0.92 + app * 0.08);
+      s.blobs.push({
+        p: at(blobD - u * (RB * 0.75)),
+        r: RB * Math.cbrt(1 - u * 0.98),
+        k: t < meet ? 0.06 + 0.30 * reachOut : 0.52 * (1 - u * 0.55),
+      });
+      /* The thread the host runs out to meet it. Thick, because this is the
+         viscous one: honey does not neck down to nothing, it thins and
+         thickens back up as the two bodies settle into one. */
+      const far = mix(R0 * 1.02, blobD - RB * 0.55, easeOut(reachOut));
+      s.thread = thread(R0 * 0.74, far,
+                        0.19, Math.max(0, 0.105 * (1 - u * 0.85)), 0.135 * (1 - u * 0.6), 0.06);
+      return s;
+    },
+  },
+
+  {
+    key: 'partial',
+    name: 'Partial coalescence',
+    tag: 'D · water',
+    desc: 'What a water drop actually does on a pool. It merges, the collapse '
+        + 'throws a smaller daughter back out, that one merges and throws a '
+        + 'smaller one again. Three joins and two separations, each half the last.',
+    stage(t){
+      const s = blank();
+      // three merges, each with a daughter thrown out of the one before
+      const legs = [
+        { t0: 0.00, hit: 0.26, r: RB,        out: 0.62, back: 0.44 },
+        { t0: 0.40, hit: 0.62, r: RB * 0.56, out: 0.42, back: 0.30 },
+        { t0: 0.72, hit: 0.88, r: RB * 0.31, out: 0.26, back: 0.20 },
+      ];
+      let taken = 0;
+      for (const L of legs){
+        if (t < L.t0) continue;
+        const span = L.hit - L.t0;
+        const a = clamp01((t - L.t0) / span);
+        const u = clamp01((t - L.hit) / 0.10);          // the merge itself
+        taken += (L.r / RB) ** 3 * u;
+
+        // the first leg falls in from far away; the others are thrown out and
+        // come back, so their distance is an arc rather than a ramp
+        const d = L.t0 === 0
+          ? mix(D0, R0 + L.r * 0.8, easeIn(a))
+          : R0 + L.r * 0.7 + L.out * Math.sin(Math.PI * a) * 1.6;
+
+        if (u < 1){
+          s.blobs.push({
+            p: at(d - u * L.r),
+            r: L.r * Math.cbrt(1 - u),
+            // detached while it flies, eager only at the moment of contact
+            k: a < 0.86 ? 0.025 : 0.08 + 0.70 * Math.exp(-Math.max(0, t - L.hit) * 16),
+          });
+        }
+      }
+      const settle = Math.max(0, t - 0.26);
+      s.hostR = grow(Math.min(taken, 1)) * (1 + 0.05 * Math.sin(settle * 22) * Math.exp(-settle * 3.4));
+      s.ripple = 0.045 * Math.exp(-settle * 3.0);
+      s.ripplePhase = settle * 1.5;
+      return s;
+    },
+  },
+
+  {
+    key: 'snap',
+    name: 'Stretch and snap',
+    tag: 'E · merge, then part',
+    desc: 'The one that does both. They fuse thickly, the merged body keeps '
+        + 'the momentum and draws back out into a string, and the string necks '
+        + 'until it gives. What comes off is smaller than what went in.',
+    stage(t){
+      const s = blank();
+      s.tint = 1;
+      const hit = 0.24, fused = 0.44, pinch = 0.74;
+
+      if (t < fused){
+        // in it comes, and the fusing is thick and unhurried
+        const a = easeInOut(clamp01(t / hit));
+        const u = clamp01((t - hit) / (fused - hit));
+        s.hostR = grow(u);
+        s.prolate = 0.16 * u;
+        s.blobs.push({
+          p: at(mix(D0, R0 + RB * 0.52, a) - u * RB * 0.95),
+          r: RB * Math.cbrt(1 - u * 0.99),
+          k: t < hit ? 0.04 : 0.16 + 0.58 * Math.exp(-(t - hit) * 8.0),
+        });
+      } else if (t < pinch){
+        /* Having swallowed it, the body keeps the momentum and pulls back out
+           the way the blob came in. A head runs out ahead and a string is
+           left behind it, thinning at the waist because that is where a
+           stretched thread always gives. */
+        const st = clamp01((t - fused) / (pinch - fused));
+        s.hostR = grow(1) * (1 - 0.045 * Math.sin(Math.PI * st));
+        /* Barely any stretch on the body itself. Every unit the host reaches
+           is a unit the string does not get to span, and the string is the
+           only part of this anyone is going to look at. */
+        s.prolate = 0.14 * Math.sin(Math.PI * st * 0.80);
+
+        const head = mix(R0 * 0.95, R0 + 0.95, easeInOut(st));
+        const headR = mix(0.195, 0.122, st);
+        s.blobs.push({ p: at(head), r: headR, k: 0.11 });
+
+        /* The thread runs from inside the body to just short of the head, and
+           its waist closes on a curve that reaches zero exactly at the pinch.
+           Nothing declares the break: the waist runs out and there is simply
+           no longer anything joining the two. */
+        const waist = 0.062 * Math.pow(1 - st, 1.7);
+        s.thread = thread(R0 * 0.82, head - headR * 0.45,
+                          mix(0.15, 0.075, st), waist, headR * 0.72, 0.035);
+      } else {
+        // it has given: one body, one droplet, and nothing in between
+        const g = clamp01((t - pinch) / (1 - pinch));
+        s.hostR = grow(1) * (1 + 0.055 * Math.sin(g * 21) * Math.exp(-g * 4.5));
+        s.prolate = 0.16 * Math.exp(-g * 5.0);
+        s.blobs.push({ p: at(R0 + 0.97 + g * 0.15), r: 0.122, k: 0.02 });
+      }
+      return s;
+    },
+  },
+
+  {
+    key: 'engulf',
+    name: 'Engulf',
+    tag: 'F · into a pool',
+    desc: 'The blob is not absorbed so much as swallowed. It presses a crater '
+        + 'in, sinks below the surface, and the surface closes over the top of '
+        + 'it and rings outward from where it went down.',
+    stage(t){
+      const s = blank();
+      const hit = 0.30;
+      const a = easeIn(clamp01(t / hit));
+      const sink = clamp01((t - hit) / 0.34);
+      const after = Math.max(0, t - hit);
+
+      s.hostR = grow(sink) * (1 + 0.03 * Math.sin(after * 19) * Math.exp(-after * 3.2));
+      s.ripple = 0.06 * Math.exp(-after * 2.6) * (t > hit ? 1 : 0);
+      s.ripplePhase = after * 1.8;
+
+      // it keeps going once it is inside, which is what sells the depth
+      const d = mix(D0, -R0 * 0.30, Math.max(a, hit > 0 ? sink * 0.62 + a * 0.38 : a));
+      s.blobs.push({
+        p: at(d),
+        r: RB * Math.cbrt(1 - sink * 0.96),
+        k: t < hit ? 0.05 : 0.34,
+      });
+
+      // the dent it presses in on the way down, which fills back in behind it
+      const cr = Math.sin(Math.PI * clamp01((t - hit + 0.05) / 0.34)) * 0.52;
+      if (cr > 0.001) s.crater = { p: at(R0 + 0.26), r: cr };
+
+      // the rebound jet, and the bead it throws off the top of itself
+      const j = clamp01((t - 0.56) / 0.30);
+      if (j > 0 && j < 1){
+        s.blobs.push({
+          p: at(mix(R0 * 0.7, R0 + 0.34, Math.sin(Math.PI * j))),
+          r: 0.115 * (1 - Math.abs(j * 2 - 1) * 0.55),
+          k: 0.26,
+        });
+      }
+      return s;
+    },
+  },
+  {
+    key: 'exchange',
+    name: 'Exchange',
+    tag: 'G · one in, one out',
+    desc: 'Conservation made visible: taking one in sends the old one back out '
+        + 'to the ring it came from. On the site the returning droplet would be '
+        + 'wearing the material being replaced.',
+    stage(t){
+      const s = blank();
+      const touch = 0.30;             // the surfaces meet
+      const eaten = 0.54;             // it is all the way in
+      const pinch = 0.80;             // the replacement lets go
+      const CONTACT = R0 + RB;        // centre distance at first touch
+
+      /* The wave lives outside the branches so it cannot step at a boundary,
+         and it rises from nothing: x·e^(1-x) is zero at contact, peaks a
+         moment later and decays for the rest of the cycle. */
+      const rx = Math.max(0, t - touch) * 6.5;
+      s.ripple = 0.042 * rx * Math.exp(1 - rx);
+      s.ripplePhase = Math.max(0, t - touch) * 2.0;
+
+      if (t < eaten){
+        /* Two curves that both have zero velocity where they meet, so contact
+           has no step in it: the blob glides to a stop exactly as the surfaces
+           touch, and only then begins to sink. */
+        let dist, u;
+        if (t < touch){
+          dist = mix(D0, CONTACT, smoother(t / touch));
+          u = 0;
+        } else {
+          const q = clamp01((t - touch) / (eaten - touch));
+          dist = mix(CONTACT, R0 * 0.20, easeInOut(q));
+          u = easeInOut(q);
+        }
+        // exactly zero at u = 1, so there is nothing left to vanish
+        const orbR = RB * Math.cbrt(Math.max(0, 1 - u));
+        s.hostR = grow(u);
+
+        /* And the neck follows the gap between the surfaces rather than the
+           clock. Two drops begin to bridge while there is still air between
+           them, and how much they bridge depends on how little is left.
+           Written this way the blend radius cannot jump, because the gap
+           cannot jump: the swell starts far out and arrives at full strength
+           on the same frame the surfaces do. */
+        const gap = Math.max(0, dist - (s.hostR + orbR));
+        const near = 1 - clamp01(gap / 0.62);
+        // and the blend settles onto the value the next stage opens with, so
+        // the handover between the two is not a handover at all
+        s.blobs.push({ p: at(dist), r: orbR, k: mix(0.02 + 0.70 * near * near, 0.40, u * u) });
+
+      } else if (t < pinch){
+        const st = clamp01((t - eaten) / (pinch - eaten));
+        s.hostR = grow(1) * (1 - 0.05 * Math.sin(Math.PI * st));
+        // small, so the body does not travel out faster than the thing it is
+        // supposed to be pushing out of itself
+        s.prolate = 0.10 * Math.sin(Math.PI * st * 0.85);
+
+        /* The replacement grows out of the body rather than appearing on it.
+           At st = 0 it has no radius and sits below the surface, so the first
+           frame here is identical to the last frame before it. */
+        /* The head starts where the blob finished, at the same place and the
+           same nothing of a radius, so this stage opens on the exact frame the
+           last one closed on. */
+        const head = mix(R0 * 0.20, R0 + 0.92, easeInOut(st));
+        const hr = RB * 0.86 * easeOut(clamp01(st * 1.35));
+        s.blobs.push({ p: at(head), r: hr, k: 0.10 + 0.30 * (1 - st) });
+
+        /* The neck swells and then gives, rather than being there from the
+           first frame: zero at both ends of the stage, thickest early. */
+        const env = Math.sin(Math.PI * Math.pow(st, 0.75));
+        s.thread = thread(R0 * 0.80, head - hr * 0.5,
+                          0.075 * env, 0.062 * env * (1 - 0.35 * st),
+                          Math.max(0.012, hr * 0.6), 0.035);
+
+      } else {
+        const g = clamp01((t - pinch) / (1 - pinch));
+        s.hostR = grow(1) * (1 + 0.04 * Math.sin(g * 18) * Math.exp(-g * 5.0));
+        // 0.145 is where the stretch had got to at the pinch, not a new number
+        s.prolate = 0.045 * Math.exp(-g * 5.0);
+        s.blobs.push({
+          p: at(mix(R0 + 0.92, D0, easeOut(g))),
+          r: RB * 0.86,
+          k: Math.max(0.02, 0.10 * Math.exp(-g * 8.0)),
+        });
+      }
+      return s;
+    },
+  },
+
+];
+
+/* ── gl ──────────────────────────────────────────────────────────────── */
+
+const cv = document.getElementById('gl');
+const gl = cv.getContext('webgl2', { antialias: false, alpha: false, powerPreference: 'high-performance' });
+if (!gl){ document.getElementById('err').style.display = 'grid'; throw new Error('no webgl2'); }
+
+/* A shader that fails to compile used to throw into the void: the module
+   aborted before it exported anything, the page stayed black, and the reason
+   was only in a stack trace nobody was reading. Put it on the page and on
+   window, so both a person and a harness can see what went wrong. */
+function fail(msg){
+  const e = document.getElementById('err');
+  e.style.display = 'grid';
+  e.textContent = msg;
+  window.__labError = msg;
+  throw new Error(msg);
+}
+
+function compile(type, src){
+  const sh = gl.createShader(type);
+  gl.shaderSource(sh, src); gl.compileShader(sh);
+  if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) fail(gl.getShaderInfoLog(sh));
+  return sh;
+}
+const prog = gl.createProgram();
+gl.attachShader(prog, compile(gl.VERTEX_SHADER, VERT));
+gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, FRAG));
+gl.linkProgram(prog);
+if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) fail(gl.getProgramInfoLog(prog));
+gl.useProgram(prog);
+gl.bindVertexArray(gl.createVertexArray());
+
+const U = {};
+for (const n of ['uTile','uHostR','uProlate','uAxis','uBlobPos','uBlobR','uBlobK',
+                 'uBlobCount','uRipple','uRipplePhase','uCraterPos','uCraterR','uTint',
+                 'uT0','uT1','uT2','uTR','uThreadK']){
+  U[n] = gl.getUniformLocation(prog, n.startsWith('uBlob') && n !== 'uBlobCount' ? n + '[0]' : n);
+}
+gl.uniform3f(U.uAxis, AXIS[0], AXIS[1], AXIS[2]);
+
+/* ── layout ──────────────────────────────────────────────────────────── */
+
+let focus = -1;                        // -1 is the grid
+const els = VARIANTS.map((v, i) => {
+  const d = document.createElement('div');
+  d.className = 'tile';
+  d.innerHTML = `<div class="tag">${v.tag}</div><div class="name">${v.name}</div>`
+              + `<div class="desc">${v.desc}</div><div class="bar"><i></i></div>`;
+  d.onclick = () => setFocus(focus === i ? -1 : i);
+  document.body.appendChild(d);
+  return d;
+});
+const bars = els.map((e) => e.querySelector('.bar i'));
+
+/* Three ways to look at the same six.
+
+   grid    all six running live, side by side, in step
+   focus   one of them large
+   strip   a contact sheet: every variant a row, every row five moments
+
+   The strip is the one that actually settles an argument. Watching six loops
+   at once, the eye keeps missing the instant that matters; laid out as stills
+   at the same five times, the differences between them stop being a feeling. */
+const STRIP_T = [0.16, 0.34, 0.50, 0.66, 0.88];
+let strip = false;
+
+function setFocus(i){
+  focus = i;
+  strip = false;
+  syncTiles();
+}
+function setStrip(v){
+  strip = v;
+  syncTiles();
+}
+/* Strip and focus together is the useful third thing: one variant, laid out
+   across the whole cycle at whatever moments you care about. It is how you
+   settle a question about a single behaviour rather than between seven. */
+function soloStrip(i, times){
+  if (times && times.length){ STRIP_T.length = 0; STRIP_T.push(...times); }
+  focus = i; strip = true;
+  syncTiles();
+}
+function syncTiles(){
+  els.forEach((e, n) => {
+    e.classList.toggle('focus', n === focus);
+    e.classList.toggle('row', strip);
+    e.style.display = (focus < 0 || n === focus) ? 'block' : 'none';
+  });
+  layout();
+}
+
+let rects = [];
+function layout(){
+  const dpr = Math.min(devicePixelRatio || 1, 2);
+  const W = innerWidth, H = innerHeight - 40;
+  cv.width = Math.round(innerWidth * dpr); cv.height = Math.round(innerHeight * dpr);
+  cv.style.width = innerWidth + 'px'; cv.style.height = innerHeight + 'px';
+
+  rects = [];
+  if (strip && focus >= 0){
+    const lab = 132;
+    rects[focus] = { x: lab, y: 0, w: W - lab, h: H, label: lab };
+    Object.assign(els[focus].style, { left: '0px', top: '0px', width: W + 'px', height: H + 'px' });
+  } else if (strip){
+    const lab = 132, rh = H / VARIANTS.length;
+    VARIANTS.forEach((_, i) => {
+      rects[i] = { x: lab, y: i * rh, w: W - lab, h: rh, label: lab };
+      Object.assign(els[i].style, { left: '0px', top: (i * rh) + 'px', width: W + 'px', height: rh + 'px' });
+    });
+  } else if (focus >= 0){
+    const r = { x: 0, y: 0, w: W, h: H };
+    rects[focus] = r;
+    Object.assign(els[focus].style, { left: r.x + 'px', top: r.y + 'px', width: r.w + 'px', height: r.h + 'px' });
+  } else {
+    const cols = W < 760 ? 1 : W < 1180 ? 2 : 3;
+    const rows = Math.ceil(VARIANTS.length / cols);
+    const ch = H / rows;
+    VARIANTS.forEach((_, i) => {
+      // a short last row spreads to fill, rather than leaving a hole in the grid
+      const row = Math.floor(i / cols);
+      const inRow = Math.min(cols, VARIANTS.length - row * cols);
+      const cw = W / inRow;
+      const r = { x: (i - row * cols) * cw, y: row * ch, w: cw, h: ch };
+      rects[i] = r;
+      Object.assign(els[i].style, { left: r.x + 'px', top: r.y + 'px', width: r.w + 'px', height: r.h + 'px' });
+    });
+  }
+  window.__dpr = dpr;
+}
+addEventListener('resize', layout);
+setFocus(-1);
+
+/* ── loop ────────────────────────────────────────────────────────────── */
+
+const LOOP = 4.2;                       // seconds per cycle, plus a hold
+const HOLD = 0.9;
+let clock = 0, speed = 1, paused = false, last = performance.now();
+
+addEventListener('keydown', (e) => {
+  const k = e.key.toLowerCase();
+  if (k >= '1' && k <= String(VARIANTS.length)) setFocus(+k - 1);
+  else if (k === '0' || k === 'escape'){ strip = false; setFocus(-1); }
+  else if (k === 'f'){ strip = !strip; syncTiles(); }
+  else if (k === 'r') clock = 0;
+  else if (k === ' '){ paused = !paused; e.preventDefault(); }
+  else if (k === 's') speed = speed === 1 ? 0.28 : 1;
+  else if (k === ',') { paused = true; clock = Math.max(0, clock - 0.04); }
+  else if (k === '.') { paused = true; clock += 0.04; }
+});
+
+const P = new Float32Array(15), Rr = new Float32Array(5), Kk = new Float32Array(5);
+
+function draw(now){
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  if (!paused) clock += dt * speed;
+  const cyc = (clock % (LOOP + HOLD)) / LOOP;
+  const t = clamp01(cyc);
+
+  gl.disable(gl.SCISSOR_TEST);
+  gl.clearColor(0.027, 0.035, 0.039, 1); gl.clear(gl.COLOR_BUFFER_BIT);
+  gl.enable(gl.SCISSOR_TEST);
+
+  const dpr = window.__dpr;
+  // one entry per thing to draw: a live tile, or one still in a strip row
+  const cells = [];
+  VARIANTS.forEach((v, i) => {
+    const r = rects[i]; if (!r) return;
+    if (strip){
+      const cw = r.w / STRIP_T.length;
+      STRIP_T.forEach((tt, j) => cells.push({ v, i, t: tt, x: r.x + j * cw, y: r.y, w: cw, h: r.h }));
+    } else {
+      cells.push({ v, i, t, x: r.x, y: r.y, w: r.w, h: r.h });
+    }
+  });
+
+  cells.forEach(({ v, i, t: ct, x: rx, y: ry, w: rw, h: rh }) => {
+    const x = Math.round(rx * dpr), w = Math.round(rw * dpr), h = Math.round(rh * dpr);
+    const y = Math.round(cv.height - (ry + rh) * dpr);
+    gl.viewport(x, y, w, h); gl.scissor(x, y, w, h);
+
+    const s = v.stage(ct);
+    P.fill(0); Rr.fill(0); Kk.fill(0);
+    const n = Math.min(5, s.blobs.length);
+    for (let b = 0; b < n; b++){
+      P[b * 3] = s.blobs[b].p[0]; P[b * 3 + 1] = s.blobs[b].p[1]; P[b * 3 + 2] = s.blobs[b].p[2];
+      Rr[b] = Math.max(0, s.blobs[b].r); Kk[b] = s.blobs[b].k;
+    }
+    gl.uniform4f(U.uTile, x, y, w, h);
+    gl.uniform1f(U.uHostR, s.hostR);
+    gl.uniform1f(U.uProlate, s.prolate);
+    gl.uniform3fv(U.uBlobPos, P);
+    gl.uniform1fv(U.uBlobR, Rr);
+    gl.uniform1fv(U.uBlobK, Kk);
+    gl.uniform1i(U.uBlobCount, n);
+    gl.uniform1f(U.uRipple, s.ripple);
+    gl.uniform1f(U.uRipplePhase, s.ripplePhase);
+    gl.uniform3f(U.uCraterPos, ...(s.crater ? s.crater.p : [0, 0, 0]));
+    gl.uniform1f(U.uCraterR, s.crater ? s.crater.r : 0);
+    const th = s.thread;
+    gl.uniform3f(U.uT0, ...(th ? th.a : [0, 0, 0]));
+    gl.uniform3f(U.uT1, ...(th ? th.b : [0, 0, 0]));
+    gl.uniform3f(U.uT2, ...(th ? th.c : [0, 0, 0]));
+    gl.uniform3f(U.uTR, ...(th ? th.r : [0, 0, 0]));
+    gl.uniform1f(U.uThreadK, th ? th.k : 0.03);
+    gl.uniform1f(U.uTint, s.tint);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+    bars[i].style.width = (strip ? 100 : t * 100) + '%';
+  });
+
+  requestAnimationFrame(draw);
+}
+requestAnimationFrame(draw);
+window.__lab = {
+  VARIANTS, setFocus, setStrip, soloStrip,
+  get clock(){ return clock; }, set clock(v){ clock = v; },
+  set paused(v){ paused = v; },
+};
+</script>

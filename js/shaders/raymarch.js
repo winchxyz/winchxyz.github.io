@@ -109,7 +109,17 @@ const float STEP_K   = 0.62;   // < 1 because the morph, the gyroid and the
 float mapS(vec3 p){
   float d = sculpture(p / uScale, uTime, uShape, uDetail) * uScale;
 
-  // the orb mid-absorb, fused rather than merely overlapping
+  /* Whatever is mid-exchange, fused rather than merely overlapping. One slot
+     serves both directions, because the arriving orb is gone before the
+     departing one starts out.
+
+     The neck is this smooth minimum and nothing else. A capsule primitive
+     drawn between the two would give a finer thread, and it cost 1.4 s of
+     shader compile to find that out: mapS is inlined into the march, the
+     normal, the shadow and the occlusion, so five lines here are twenty
+     everywhere. The break falls out of k instead. Once the blend radius is
+     smaller than the gap, smin stops bridging and there are simply two
+     bodies, which is what a pinch is. */
   if (uFlyR > 0.001){
     d = smin(d, length(p - uFlyPos) - uFlyR, uFlyK);
   }
@@ -588,7 +598,7 @@ vec3 refractChannel(vec3 p, vec3 n, vec3 rd, float ior){
    refraction instead of an interior march per wavelength. They are 40 pixels
    across. Everything that got cut would be invisible at that size and each
    one of them would have cost as much as the sculpture itself. */
-vec3 shadeOrb(vec3 q, vec3 p, vec3 n, vec3 rd, Mat m){
+vec3 shadeOrb(vec3 q, vec3 p, vec3 n, vec3 rd, Mat m, float gain){
   Surf s = describe(q, p, n, m);
   vec3 v = -rd;
   float NoV = clamp(dot(n, v), 1e-4, 1.0);
@@ -597,7 +607,7 @@ vec3 shadeOrb(vec3 q, vec3 p, vec3 n, vec3 rd, Mat m){
     vec3 dir = refract(rd, n, 1.0 / m.ior);
     vec3 back = backdropFor(p + dir * 0.55, dir, 0.05) * exp(-m.absorb * 0.9);
     float F = F_Schlick(0.04, 1.0, NoV);
-    return mix(back, envColor(reflect(rd, n), m.rough, uRimBoost), clamp(F * 3.1, 0.06, 1.0)) * 1.55;
+    return mix(back, envColor(reflect(rd, n), m.rough, uRimBoost), clamp(F * 3.1, 0.06, 1.0)) * gain;
   }
 
   vec3 f0 = mix(vec3(0.04), s.albedo, s.metal);
@@ -610,14 +620,21 @@ vec3 shadeOrb(vec3 q, vec3 p, vec3 n, vec3 rd, Mat m){
   vec3 oCol[3]; oCol[0] = C_KEY; oCol[1] = C_FILL; oCol[2] = C_RIM * (1.0 + uRimBoost);
   for (int i = 0; i < 3; i++) col += brdfDirect(n, v, oDir[i], oCol[i], s, f0, diffCol, T, B);
 
-  /* Lit a stop and a half brighter than the sculpture. A mirror in a dark
-     room is a dark ball: correct, and useless as a swatch. These are
-     previews, and a preview has to be legible before it is accurate. */
-  const float ORB_GAIN = 1.55;
+  /* Out on the ring an orb is lit a stop and a half brighter than the
+     sculpture, because a mirror in a dark room is a dark ball: correct, and
+     useless as a swatch. A preview has to be legible before it is accurate.
+
+     The gain is handed in rather than fixed, and it falls to one as an orb
+     nears the sculpture. Both handovers depend on that. An arriving orb stops
+     being drawn and becomes part of the field at the moment of contact, and a
+     departing one appears out of the field at the pinch; if the two were lit
+     differently, the same ball would change brightness on the frame it
+     changed owner. Tie the gain to how far out it is and the seam closes
+     itself, for both directions, with no extra uniform. */
   vec2 ab = envBRDFApprox(NoV, s.rough);
-  col += envColor(reflect(rd, n), s.rough, uRimBoost) * (f0 * ab.x + ab.y) * ORB_GAIN;
-  col += diffCol * envColor(n, 0.92, uRimBoost) * 0.60 * ORB_GAIN;
-  col *= ORB_GAIN;
+  col += envColor(reflect(rd, n), s.rough, uRimBoost) * (f0 * ab.x + ab.y) * gain;
+  col += diffCol * envColor(n, 0.92, uRimBoost) * 0.60 * gain;
+  col *= gain;
   col += s.emis;
   return col;
 }
@@ -722,7 +739,9 @@ void main(){
       int k = h.id - 10;
       vec3 c = uOrbPos[k];
       vec3 n = normalize(p - c);
-      col = shadeOrb((p - c) / max(uOrbR[k], 1e-3), p, n, rd, matAt(k));
+      // 1.55 out on the ring, 1.0 once it is close enough to be merging
+      float og = mix(1.0, 1.55, smoothstep(1.25, 1.95, length(c)));
+      col = shadeOrb((p - c) / max(uOrbR[k], 1e-3), p, n, rd, matAt(k), og);
     } else {
       vec3 n = nrmS(p, max(0.0009, 0.0012 * h.t));
       Surf s = describe(p / uScale, p, n, matCurrent());

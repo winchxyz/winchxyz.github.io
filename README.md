@@ -1,8 +1,8 @@
 # winch · portfolio
 
 A portfolio site that renders itself on the GPU. One WebGL2 context, a few
-thousand lines of hand-written GLSL, and no dependencies at all. No engine, no libraries,
-no asset files, no build step required to run it.
+thousand lines of hand-written GLSL, and no dependencies at all. No engine, no
+libraries, no asset files, no build step required to run it.
 
 **[Open it →](https://winchxyz.github.io/)** · [@winchxyz](https://x.com/winchxyz) · [tryloupe.app](https://tryloupe.app)
 
@@ -40,18 +40,19 @@ Chrome, Edge, Firefox or Safari 15+.
 Everything moving is one `<canvas>`, drawn in nineteen passes per frame.
 
 **A signed distance field, sphere-traced.** The sculpture has no geometry. It
-is four mathematical forms (a noise-displaced sphere, a gyroid lattice,
-a rounded box frame and a twisted torus) cross-faded as you scroll, and every
+is four mathematical forms (a noise-displaced sphere, a gyroid lattice, a
+rounded box frame and a twisted torus) cross-faded as you scroll, and every
 pixel of it walks the field until it hits the surface. It writes its own
 `gl_FragDepth`, which is how the particle cloud can be occluded by a shape
 that does not exist as triangles.
 
 **Six materials, no textures.** The page opens on the cast crystal, and the
-materials section is the one place the page demonstrates rather than asserts. GGX with height-correlated Smith visibility,
-anisotropic GGX with a tangent frame built from a procedural direction field
-(a distance field has no UVs), thin-film interference for the anodised
-titanium, three-ray dispersion for the two glasses, and multi-scatter energy
-compensation so the rough metals are not quietly too dark. The environment is an analytic function of the view
+materials section is the one place the page demonstrates rather than asserts.
+GGX with height-correlated Smith visibility, anisotropic GGX with a tangent
+frame built from a procedural direction field (a distance field has no UVs),
+thin-film interference for the anodised titanium, three-ray dispersion for the
+two glasses, and multi-scatter energy compensation so the rough metals are not
+quietly too dark. The environment is an analytic function of the view
 direction: a studio written down rather than photographed. There is no HDRI
 and no BRDF lookup table.
 
@@ -65,8 +66,8 @@ state texture.
 
 **The post chain.** Temporal anti-aliasing with YCoCg neighbourhood clipping,
 the Call of Duty bloom mip ladder with a Karis average on the first
-downsample, an anamorphic streak, ACES, and a dither at exactly one 8-bit
-step so the dark gradients do not band.
+downsample, an anamorphic streak, ACES, and a dither at exactly one 8-bit step
+so the dark gradients do not band.
 
 ---
 
@@ -74,7 +75,7 @@ step so the dark gradients do not band.
 
 | | |
 |---|---|
-| **click an orb** | absorb that material |
+| **click an orb** | trade it for the one on the sculpture |
 | **1** – **6** | the same, from the keyboard |
 | **drag** | orbit the sculpture |
 | **P** | photo mode, UI hidden, higher render scale |
@@ -116,8 +117,8 @@ tools/
 
 ## Verifying it without a GPU
 
-The shaders are assembled from string chunks, so the compiler that would
-catch a mistake lives on a graphics card. Two tools stand in for one:
+The shaders are assembled from string chunks, so the compiler that would catch
+a mistake lives on a graphics card. Two tools stand in for one:
 
 ```bash
 npm run lint      # every program: undefined functions, chunk order, uniforms
@@ -128,13 +129,13 @@ npm run verify    # compile all 10 programs for real, in headless Chrome
 forward declarations, so getting the chunk order wrong is a compile error you
 only see on a machine with a working driver. It also cross-checks every
 uniform the renderer sets against every uniform the shaders declare, in both
-directions, because setting a uniform that does not exist is a silent no-op
-by design.
+directions, because setting a uniform that does not exist is a silent no-op by
+design.
 
 `gputest.mjs` drives headless Chrome over the DevTools protocol using nothing
-but the Node standard library, forces the SwiftShader software rasteriser,
-and compiles and links all ten programs through the real ANGLE
-translator. It can also load the site and screenshot it:
+but the Node standard library, forces the SwiftShader software rasteriser, and
+compiles and links all ten programs through the real ANGLE translator. It can
+also load the site and screenshot it:
 
 ```bash
 SITE='http://localhost:8141' SECTION='#work' node tools/gputest.mjs shot out.png
@@ -180,12 +181,12 @@ panel that is always on is a developer tool wearing a portfolio's clothes.
 
 ## What is not here
 
-There was a physics section: a Verlet cloth you could grab and throw, colliding
-against the same distance field. It was removed, and so was a section of live
-render statistics. Both were interesting and neither was about winch. A
-portfolio that spends two of its seven sections talking about the portfolio has
-lost the plot. Five sections now: who, what he builds, how it is built, the
-work, and how to reach him.
+There was a physics section: a Verlet cloth you could grab and throw,
+colliding against the same distance field. It was removed, and so was a
+section of live render statistics. Both were interesting and neither was about
+winch. A portfolio that spends two of its seven sections talking about the
+portfolio has lost the plot. Five sections now: who, what he builds, how it is
+built, the work, and how to reach him.
 
 The cloth is in the history if it is ever wanted back. It cost three shader
 programs, two float ping-pongs and nine draw calls a frame.
@@ -202,15 +203,21 @@ of that file and the page never touches the network at all.
 
 ### The material palette
 
-The materials section used to be a list of names beside a swatch. It is a
-ring of six orbs around the sculpture now, each one wearing its own
-material, and clicking one sends it inward to be absorbed.
+The materials section used to be a list of names beside a swatch. It is a ring
+of orbs around the sculpture now, each one wearing its own material, and
+clicking one starts an exchange: it comes in, and the material the sculpture
+was wearing leaves for the slot the arriving one vacated.
+
+That adds up because a slot is empty exactly while its material is on the
+sculpture. One orb leaves the ring, one returns, the count never changes, and
+the gap in the ring is always the thing you are currently looking at.
 
 Three things make it cheap enough to be worth doing:
 
 **The orbs are intersected, not marched.** They are spheres, so a ray meets
-one by solving a quadratic. Six of those, once per pixel, instead of six
-more distance-field evaluations at every one of a hundred-odd march steps.
+one by solving a quadratic. A handful of those, once per pixel, instead of a
+handful more distance-field evaluations at every one of a hundred-odd march
+steps.
 
 **Their positions come from the CPU**, as a uniform array, rather than being
 recomputed in the shader. The click test and the pixels then cannot disagree
@@ -227,18 +234,38 @@ dark room is a dark ball, which is correct and useless as a swatch.
 The flight is the one moment an orb stops being a sphere. From the instant it
 leaves the ring it is folded into the sculpture's own field through a
 polynomial smooth minimum, so the two surfaces grow a neck toward each other
-and close it, the way two drops of mercury do. The blend radius opens as the
-gap shrinks, which is what makes the sculpture appear to reach for the orb
-rather than merely swallow it where it arrives. The marcher's bounding sphere
-has to grow with the orb as well, or the fused shape gets clipped along the
-old bound.
+and close it, the way two drops of mercury do.
 
-The landing hides a hard edit. Material properties cannot be meaningfully
-interpolated. Halfway between chrome and glass is not a material, so the
-switch is instantaneous, timed to the moment the two surfaces touch rather
-than to the end of the flight, and covered by a ring wave that crosses the
-surface with an emissive burst behind it. The eye follows the ripple; the
-change happens beneath it.
+The blend radius is the whole trick, and it is also the whole bug. The first
+version of this stepped it from 0.03 to 0.56 on the frame of impact: the
+orb was a separate body, and then, one frame later, it had a wide neck. That
+reads as a collision, not a coalescence. It now follows a curve with no corner
+anywhere in it, and the approach decelerates to a stop as the surfaces meet
+rather than cutting from one curve to another mid-flight, so no frame of the
+arrival contains a step.
+
+Two materials, without a second material in the shader. The arriving orb keeps
+being drawn as an orb, in its own material, riding one and a half per cent
+proud of the blob it hands over to; the neck reaching for it belongs to the
+sculpture and wears the old material. So the ball is the material coming and
+the neck is the material going, and it costs nothing, because the sculpture
+adopts the new material on the same frame the drawn orb disappears into it.
+Nothing changes colour; something changes owner.
+
+The departure is the same trick run backwards, and its break is found rather
+than scheduled. A smooth minimum bridges a gap only while its blend radius is
+wider than the gap. Push a head out of the body and let the blend fall away
+faster than the gap opens, and the frame where the inequality flips is the
+frame the thread gives. Testing for that is three terms of arithmetic and it
+lands on the break at any scale; the hand-picked constant it replaced only
+managed it at one.
+
+What survives from the old version is the hard edit underneath. Material
+properties cannot be meaningfully interpolated. Halfway between chrome and
+glass is not a material, so the sculpture's own switch is instantaneous, timed
+to the moment the two surfaces touch, and covered by a ring wave with an
+emissive burst behind it. The eye follows the ripple; the change happens
+beneath it.
 
 ### Everyone starts at the lowest tier
 
@@ -274,10 +301,10 @@ other. The harness loads it over http and sweeps every section:
 GPU=1 VIEW=390x844 MOBILE=1 PROBE='(async()=>JSON.stringify(await import("/tools/audit.js").then(m=>m.sweep())))()' node tools/gputest.mjs shot out.png
 ```
 
-It found a stats grid overflowing its cells by up to 50px at 1366. A
-figure like `1,572,864` set at 42px is about 200px wide and the cell's content
-box was 144px. No screenshot had shown it, because the digits simply ran under
-the neighbouring cell and looked plausible.
+It found a stats grid overflowing its cells by up to 50px at 1366. A figure
+like `1,572,864` set at 42px is about 200px wide and the cell's content box
+was 144px. No screenshot had shown it, because the digits simply ran under the
+neighbouring cell and looked plausible.
 
 One thing it has to get right to be useful: overlap is measured per **line
 box**, not per element. `getBoundingClientRect()` on an inline span that wraps
@@ -288,6 +315,47 @@ reports every wrapped inline as fully overlapping its siblings.
 
 Currently clean at 2560×1440, 1920×1080, 1366×768, 768×1024, 390×844 and
 360×740.
+
+### The harness was timing its own leftovers
+
+`chrome.kill()` reaches the process Node spawned and nothing else. Chrome's
+renderer, GPU and utility processes are its children, and they survive a
+signal sent to the parent. Nothing in the harness noticed, because every run
+still produced a plausible number.
+
+Five consecutive measurements of the same unchanged shader:
+
+| run | compile |
+|---|---|
+| 1 | 5.8 s |
+| 2 | 15.1 s |
+| 3 | 16.2 s |
+| 4 | 16.3 s |
+| 5 | 18.2 s |
+
+The shader had not changed between the first measurement and the last. The
+machine had. A monotonic climb across repeated runs of identical work is never
+the work getting slower.
+
+The harness was leaving its browser behind. `chrome.kill()` signals the
+process Node spawned, and the launcher it spawns exits almost immediately
+after handing off, so the renderer and GPU processes are reparented and
+outlive both it and any `taskkill /T` aimed at its pid. Matching instead on
+the throwaway profile directory, which every process in that browser carries
+on its command line, kills this run and provably nothing else. It now leaves
+zero processes behind, measured over three consecutive runs, and the same five
+timings read 9.0 s cold, then 5.8, 5.8, 5.9 and 5.8.
+
+One caveat worth recording, because the alternative is a tidier story than the
+evidence supports: the clean-up fix and a blanket kill of every Chrome on the
+machine happened in the same step, so the stable numbers cannot be attributed
+to the fix alone. What is established is that the harness used to leave its
+browser running and now does not, and that a measurement which quietly
+degrades across runs is worth catching either way.
+
+This is the same failure as `msAvg < 11.5` above. A measurement that always
+returns something plausible is worse than one that throws, because nothing
+ever prompts you to check it.
 
 ### Composition is specified on the screen, not in the world
 
@@ -309,8 +377,8 @@ camPos = pivot + dir·d + right·(−ndcX · d · aspect · tan(fov/2))
 
 The horizontal position is a fraction of the **content column** rather than of
 the viewport, so the sculpture tracks the type instead of the window. Portrait
-gets its own composition, top centre using the full width, because on a
-phone there is no empty column to the right to put anything in.
+gets its own composition, top centre using the full width, because on a phone
+there is no empty column to the right to put anything in.
 
 ### Why the distance field reads its noise from a texture
 
@@ -334,9 +402,9 @@ Bisecting it by stubbing one function at a time (`tools/bisect.html`):
 | stub `noised()` | 15.3 s |
 | stub `sculpture()` | **5.2 s** |
 
-So it was never the arithmetic. It was inlining. Reading the noise from a
-64³ texture instead, where hardware trilinear filtering *is* the
-interpolation, took the program to **4.7 s**. Linking through
+So it was never the arithmetic. It was inlining. Reading the noise from a 64³
+texture instead, where hardware trilinear filtering *is* the interpolation,
+took the program to **4.7 s**. Linking through
 `KHR_parallel_shader_compile` and collecting the result from a
 `requestAnimationFrame` loop took the freeze to zero: the driver compiles on
 its own threads while the boot bar keeps moving.
@@ -357,18 +425,17 @@ compiler decides to paste it.
 > knowledge and make best graphics and best design. Surprise me with graphics,
 > materials, physics, textures and everything."*
 
-Everything after that was refinement in the same session, with
-[Claude Code](https://claude.com/claude-code).
+Everything after that was refinement in the same session, with [Claude
+Code](https://claude.com/claude-code).
 
 ---
 
 ### Notes on the interaction
 
 Text selection is disabled across the page. A drag here means orbit the
-sculpture, and a drag that also paints a selection across
-the headline reads as a bug. The cost is that nothing can be copied, shell
-commands included; `user-select:text` has to be put back on anything that
-should be exempt.
+sculpture, and a drag that also paints a selection across the headline reads
+as a bug. The cost is that nothing can be copied, shell commands included;
+`user-select:text` has to be put back on anything that should be exempt.
 
 ---
 
