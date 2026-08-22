@@ -265,12 +265,38 @@ frame the thread gives. Testing for that is three terms of arithmetic and it
 lands on the break at any scale; the hand-picked constant it replaced only
 managed it at one.
 
-What survives from the old version is the hard edit underneath. Material
-properties cannot be meaningfully interpolated. Halfway between chrome and
-glass is not a material, so the sculpture's own switch is instantaneous, timed
-to the moment the two surfaces touch, and covered by a ring wave with an
-emissive burst behind it. The eye follows the ripple; the change happens
-beneath it.
+The hard edit underneath is still hard, and it is still true that material
+properties cannot be meaningfully interpolated: halfway between chrome and
+glass is not a material. What changed is where the edit gets made. It used to
+be made in time, on a single frame, under a flash. It is made in space now.
+
+For as long as an exchange lasts the body is two materials at once, divided by
+a region that contracts onto the drop carrying the old one away. At contact
+that region covers the whole body, so nothing appears to happen; as it shrinks
+the new material floods in from where its own drop landed; the last of the old
+material is the drop that leaves. Taking one in is visibly what puts the other
+out, rather than a caption claiming it did.
+
+It cost 78 ms of shader compile, and that is the interesting part. `describe()`
+already branched on a material id handed in at draw time rather than a constant
+the compiler could fold away, so every material's code was in the program
+either way. Asking the question per point instead of per frame compiles to
+almost the same thing: the shader had been able to paint one surface in two
+materials since the day it was written, and nobody had ever asked it to.
+
+Two things had to be exempted, and both were bugs standing ready. The arriving
+drop keeps its own material while it sinks through a body that is still the old
+one, or it gets repainted on the way in and the new material appears from
+nowhere. And the dielectric branch had to stop reading `uTrans`, `uIor`,
+`uDispersion` and `uAbsorb` from the uniforms: those are the same numbers as
+the point's own material whenever the body is one material, and emphatically
+not when it is two. Reading `uTrans` there would have run the glass path over
+the half that is no longer glass.
+
+The emissive burst that used to cover the switch is a third of what it was. It
+existed to hide an instant edit, there is no longer an instant edit to hide,
+and a flash bright enough to cover the change was covering the only thing
+worth watching.
 
 ### Everyone starts at the lowest tier
 

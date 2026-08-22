@@ -2255,6 +2255,18 @@ uniform float uFlyR;          // 0 when nothing is being absorbed
 uniform float uFlyK;          // blend radius of the smooth union
 uniform float uBound;         // scene bounding radius, grown to cover the flight
 
+/* An exchange leaves the body made of two things at once. uSwapR is the
+   radius of the region still wearing the material on its way out, centred on
+   uSwapC, and it contracts onto the drop that carries that material away, so
+   the body finishes becoming the new thing exactly as the old thing leaves.
+   uNewBlob is the one part that is exempt: the arriving drop, which is its own
+   material from the moment it touches and must not be repainted while it
+   sinks through a body that still is not. */
+uniform int   uMatOld;
+uniform vec3  uSwapC;
+uniform float uSwapR;         // 0 when the body is all one material
+uniform vec4  uNewBlob;       // xyz centre, w radius; w <= 0 when unused
+
 /* Every one of these is a LOOP BOUND, and every one of them is a uniform
    rather than a constant on purpose.
 
@@ -2486,6 +2498,13 @@ Mat matAt(int i){
   return m;
 }
 
+/* Which material owns a point.
+
+   This costs nothing, which is the whole reason it is possible. describe()
+   already branches on m.id, and m.id already comes from a uniform rather than
+   a constant the compiler could fold away, so every material's code is
+   present in the shader either way. Asking the question per point instead of
+   per frame compiles to the same thing. */
 Mat matCurrent(){
   Mat m;
   m.id = uMatId;
@@ -2493,6 +2512,15 @@ Mat matCurrent(){
   m.film  = uFilm;  m.trans = uTrans; m.emis  = uEmissive;
   m.disp  = uDispersion; m.absorb = uAbsorb;
   return m;
+}
+
+Mat matAtPoint(vec3 p){
+  if (uSwapR > 0.0
+      && length(p - uSwapC) < uSwapR
+      && !(uNewBlob.w > 0.0 && length(p - uNewBlob.xyz) < uNewBlob.w)){
+    return matAt(uMatOld);
+  }
+  return matCurrent();
 }
 
 // A tangent field on a surface with no UVs. Latitude lines around the local
@@ -2751,7 +2779,7 @@ vec3 backdropFor(vec3 ro, vec3 rd, float rough){
   return fh ? fc : envColor(rd, rough, uRimBoost);
 }
 
-vec3 refractChannel(vec3 p, vec3 n, vec3 rd, float ior){
+vec3 refractChannel(vec3 p, vec3 n, vec3 rd, float ior, vec3 absorbC){
   vec3 dir = refract(rd, n, 1.0 / ior);
   if (dot(dir, dir) < 1e-6) return envColor(reflect(rd, n), 0.02, uRimBoost);
 
@@ -2766,7 +2794,10 @@ vec3 refractChannel(vec3 p, vec3 n, vec3 rd, float ior){
   // Beer-Lambert. The obsidian absorbs hard so thickness reads as darkness;
   // the crystal barely absorbs at all, so thickness reads as depth.
   float pathLen = distance(p, p2);
-  vec3 absorb = exp(-uAbsorb * pathLen * 1.1);
+  // the point's own absorption, not the uniform: during an exchange the glass
+  // half and the not-glass half are on screen at once, and only one of them
+  // is the material the uniform is describing
+  vec3 absorb = exp(-absorbC * pathLen * 1.1);
 
   return backdropFor(p2, normalize(out2), 0.03) * absorb;
 }
@@ -2923,10 +2954,15 @@ void main(){
       col = shadeOrb((p - c) / max(uOrbR[k], 1e-3), p, n, rd, matAt(k), og);
     } else {
       vec3 n = nrmS(p, max(0.0009, 0.0012 * h.t));
-      Surf s = describe(p / uScale, p, n, matCurrent());
+      Mat m = matAtPoint(p);
+      Surf s = describe(p / uScale, p, n, m);
       float ao = calcAO(p, n);
 
-      if (uTrans > 0.5){
+      /* From the struct, not from the uniforms. They are the same numbers
+         whenever the body is one material, and they are emphatically not
+         when it is two: reading uTrans here would have run the glass path
+         over the clay half. */
+      if (m.trans > 0.5){
         // dielectric: Fresnel splits the ray between a mirror and a prism
         float NoV = clamp(dot(n, -rd), 1e-4, 1.0);
         float F = F_Schlick(0.04, 1.0, NoV);
@@ -2935,11 +2971,11 @@ void main(){
         // one interior march per channel; this is where dispersion comes
         // from, and doing it with a single shared path is exactly the
         // shortcut that makes most real-time glass look like plastic
-        float d = uDispersion;
+        float d = m.disp;
         vec3 tr = vec3(
-          refractChannel(p, n, rd, uIor - d).r,
-          refractChannel(p, n, rd, uIor    ).g,
-          refractChannel(p, n, rd, uIor + d).b);
+          refractChannel(p, n, rd, m.ior - d, m.absorb).r,
+          refractChannel(p, n, rd, m.ior    , m.absorb).g,
+          refractChannel(p, n, rd, m.ior + d, m.absorb).b);
 
         col = mix(tr, refl, clamp(F * 3.1, 0.05, 1.0)) * ao;
         col += s.emis;
@@ -4298,6 +4334,8 @@ class Renderer {
         uOrbPos: this.orbPosBuf, uOrbR: this.orbRadBuf, uOrbCount: oc,
         uPulse: p.pulse, uPulseDir: p.pulseDir, uFlash: p.flash,
         uFlyPos: p.flyPos, uFlyR: p.flyR, uFlyK: p.flyK, uBound: p.bound,
+        uMatOld: p.matOld, uSwapC: p.swapC, uSwapR: p.swapR,
+        uNewBlob: p.newBlob,
         uRes: [this.iw, this.ih],
         uTime: this.simTime, uFrame: this.frame,
         uInvViewProj: this.invViewProjJ, uViewProj: this.viewProjJ,
@@ -4810,6 +4848,10 @@ const P_TOUCH = 0.32;     // surfaces meet; the material switches here
 const P_EATEN = 0.52;     // the arriving orb is all the way in
 const P_PUSH  = 0.56;     // the replacement starts out
 const P_PINCH = 0.86;     // the neck gives; it is an orb again
+/* And the body finishes changing a little before that, so the last of the old
+   material is the drop about to leave rather than a cap still stuck to the
+   body when the thread gives. */
+const P_DRAIN = 0.80;
 
 const c01 = (t) => (t < 0 ? 0 : t > 1 ? 1 : t);
 // zero velocity AND zero acceleration at both ends
@@ -4909,6 +4951,8 @@ class Director {
       show: 0, spin: 0, hover: -1,
       fly: 0, flyId: -1, pending: -1, outMat: -1, switched: false, parted: false,
       partAt: 0, partD: 0, partR: 0,
+      swapC: [0, 0, 0], swapR: 0, newBlob: [0, 0, 0, 0],
+      outDir: [0, 1, 0], outD: 0, outRad: 0,
       flyPos: [0, 0, 0], flyR: 0, flyK: 0.3, bound: R_BOUND,
       pulse: 0, pulseDir: [0, 1, 0], flash: 0,
       pos: MATERIALS.map(() => [0, 0, 0]),
@@ -4986,7 +5030,12 @@ class Director {
       if (!o.switched && o.fly >= P_TOUCH) {
         o.switched = true;
         this.materialIndex = o.pending;
-        o.pulse = 1; o.flash = 1;
+        /* A third of what this used to be. The burst was there to cover an
+           instant edit, and there is no longer an instant edit to cover: the
+           change takes half a second and is the thing worth watching, so a
+           flash bright enough to hide it is now working against the shot. It
+           stays as an impact accent, nothing more. */
+        o.pulse = 1; o.flash = 0.35;
         this.burst = 0.7;
       }
       if (o.fly >= 1) {
@@ -5068,6 +5117,7 @@ class Director {
 
       } else if (k === o.outMat) {
         r = 0;
+        o.outDir[0] = ux; o.outDir[1] = uy; o.outDir[2] = uz;
         if (f >= P_PUSH) {
           const s2 = c01((f - P_PUSH) / (P_PINCH - P_PUSH));
           /* It starts just under the surface rather than at the middle. Time
@@ -5092,8 +5142,11 @@ class Director {
           if (!o.parted && kOut < dOut - rOut - sculptR) {
             o.parted = true;
             o.partAt = f; o.partD = dOut; o.partR = rOut;
-            o.flash = Math.max(o.flash, 0.5);
+            o.flash = Math.max(o.flash, 0.28);
           }
+
+          o.outDir[0] = ux; o.outDir[1] = uy; o.outDir[2] = uz;
+          o.outD = dOut; o.outRad = rOut;
 
           if (!o.parted) {
             o.flyPos[0] = ux * dOut; o.flyPos[1] = uy * dOut; o.flyPos[2] = uz * dOut;
@@ -5125,6 +5178,41 @@ class Director {
 
       o.pos[k][0] = px; o.pos[k][1] = py; o.pos[k][2] = pz;
       o.rad[k] = r;
+    }
+
+    /* ── the change itself ──────────────────────────────────────────────
+       The body is two materials at once for as long as this lasts. The old
+       one occupies a region that contracts onto the drop carrying it away, so
+       the new material floods in from where its own drop landed and the last
+       of the old is what leaves: taking one in is what puts the other out,
+       and you can watch it happen rather than being told it did.
+
+       This replaces a switch that fired on one frame at contact, which
+       changed the whole body long before anything departed and so connected
+       nothing to nothing. */
+    if (flying && o.switched && !o.parted) {
+      const fr = easeIO(c01((f - P_TOUCH) / (P_DRAIN - P_TOUCH)));
+      const d = o.outRad > 0 ? o.outD : sculptR;
+      const u = o.outDir;
+      o.swapC[0] = u[0] * d; o.swapC[1] = u[1] * d; o.swapC[2] = u[2] * d;
+      // wide enough at the start to cover every point of the body, or the far
+      // side of it changes on the frame of the switch and the drain has
+      // already lost the argument
+      const cover = R_BOUND * this.current.scale + sculptR + 0.06;
+      o.swapR = lerp(cover, Math.max(o.outRad, 0.02) * 1.06, fr);
+    } else {
+      o.swapR = 0;
+    }
+
+    /* The arriving drop is exempt. It is its own material from the moment it
+       touches, and it spends the next third of a second sinking through a body
+       that is still the old one; without this it would be repainted on the way
+       in and the material would appear to arrive from nowhere. */
+    if (flying && o.switched && f < P_EATEN && o.flyR > 0) {
+      o.newBlob[0] = o.flyPos[0]; o.newBlob[1] = o.flyPos[1];
+      o.newBlob[2] = o.flyPos[2]; o.newBlob[3] = o.flyR * 1.2;
+    } else {
+      o.newBlob[3] = 0;
     }
 
     // the marcher's bounding sphere has to reach whatever has left the body
@@ -5347,6 +5435,11 @@ class Director {
     o.flyR = this.orbs.flyR;
     o.flyK = this.orbs.flyK;
     o.bound = this.orbs.bound;
+    // the two-material split, for as long as the body is two materials
+    o.swapC = this.orbs.swapC;
+    o.swapR = this.orbs.swapR;
+    o.newBlob = this.orbs.newBlob;
+    o.matOld = Math.max(0, this.orbs.outMat);
     o.pulse = this.orbs.pulse;
     o.pulseDir = this.orbs.pulseDir;
     o.flash = this.orbs.flash;

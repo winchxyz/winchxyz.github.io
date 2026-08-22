@@ -76,6 +76,18 @@ uniform float uFlyR;          // 0 when nothing is being absorbed
 uniform float uFlyK;          // blend radius of the smooth union
 uniform float uBound;         // scene bounding radius, grown to cover the flight
 
+/* An exchange leaves the body made of two things at once. uSwapR is the
+   radius of the region still wearing the material on its way out, centred on
+   uSwapC, and it contracts onto the drop that carries that material away, so
+   the body finishes becoming the new thing exactly as the old thing leaves.
+   uNewBlob is the one part that is exempt: the arriving drop, which is its own
+   material from the moment it touches and must not be repainted while it
+   sinks through a body that still is not. */
+uniform int   uMatOld;
+uniform vec3  uSwapC;
+uniform float uSwapR;         // 0 when the body is all one material
+uniform vec4  uNewBlob;       // xyz centre, w radius; w <= 0 when unused
+
 /* Every one of these is a LOOP BOUND, and every one of them is a uniform
    rather than a constant on purpose.
 
@@ -307,6 +319,13 @@ Mat matAt(int i){
   return m;
 }
 
+/* Which material owns a point.
+
+   This costs nothing, which is the whole reason it is possible. describe()
+   already branches on m.id, and m.id already comes from a uniform rather than
+   a constant the compiler could fold away, so every material's code is
+   present in the shader either way. Asking the question per point instead of
+   per frame compiles to the same thing. */
 Mat matCurrent(){
   Mat m;
   m.id = uMatId;
@@ -314,6 +333,15 @@ Mat matCurrent(){
   m.film  = uFilm;  m.trans = uTrans; m.emis  = uEmissive;
   m.disp  = uDispersion; m.absorb = uAbsorb;
   return m;
+}
+
+Mat matAtPoint(vec3 p){
+  if (uSwapR > 0.0
+      && length(p - uSwapC) < uSwapR
+      && !(uNewBlob.w > 0.0 && length(p - uNewBlob.xyz) < uNewBlob.w)){
+    return matAt(uMatOld);
+  }
+  return matCurrent();
 }
 
 // A tangent field on a surface with no UVs. Latitude lines around the local
@@ -572,7 +600,7 @@ vec3 backdropFor(vec3 ro, vec3 rd, float rough){
   return fh ? fc : envColor(rd, rough, uRimBoost);
 }
 
-vec3 refractChannel(vec3 p, vec3 n, vec3 rd, float ior){
+vec3 refractChannel(vec3 p, vec3 n, vec3 rd, float ior, vec3 absorbC){
   vec3 dir = refract(rd, n, 1.0 / ior);
   if (dot(dir, dir) < 1e-6) return envColor(reflect(rd, n), 0.02, uRimBoost);
 
@@ -587,7 +615,10 @@ vec3 refractChannel(vec3 p, vec3 n, vec3 rd, float ior){
   // Beer-Lambert. The obsidian absorbs hard so thickness reads as darkness;
   // the crystal barely absorbs at all, so thickness reads as depth.
   float pathLen = distance(p, p2);
-  vec3 absorb = exp(-uAbsorb * pathLen * 1.1);
+  // the point's own absorption, not the uniform: during an exchange the glass
+  // half and the not-glass half are on screen at once, and only one of them
+  // is the material the uniform is describing
+  vec3 absorb = exp(-absorbC * pathLen * 1.1);
 
   return backdropFor(p2, normalize(out2), 0.03) * absorb;
 }
@@ -744,10 +775,15 @@ void main(){
       col = shadeOrb((p - c) / max(uOrbR[k], 1e-3), p, n, rd, matAt(k), og);
     } else {
       vec3 n = nrmS(p, max(0.0009, 0.0012 * h.t));
-      Surf s = describe(p / uScale, p, n, matCurrent());
+      Mat m = matAtPoint(p);
+      Surf s = describe(p / uScale, p, n, m);
       float ao = calcAO(p, n);
 
-      if (uTrans > 0.5){
+      /* From the struct, not from the uniforms. They are the same numbers
+         whenever the body is one material, and they are emphatically not
+         when it is two: reading uTrans here would have run the glass path
+         over the clay half. */
+      if (m.trans > 0.5){
         // dielectric: Fresnel splits the ray between a mirror and a prism
         float NoV = clamp(dot(n, -rd), 1e-4, 1.0);
         float F = F_Schlick(0.04, 1.0, NoV);
@@ -756,11 +792,11 @@ void main(){
         // one interior march per channel; this is where dispersion comes
         // from, and doing it with a single shared path is exactly the
         // shortcut that makes most real-time glass look like plastic
-        float d = uDispersion;
+        float d = m.disp;
         vec3 tr = vec3(
-          refractChannel(p, n, rd, uIor - d).r,
-          refractChannel(p, n, rd, uIor    ).g,
-          refractChannel(p, n, rd, uIor + d).b);
+          refractChannel(p, n, rd, m.ior - d, m.absorb).r,
+          refractChannel(p, n, rd, m.ior    , m.absorb).g,
+          refractChannel(p, n, rd, m.ior + d, m.absorb).b);
 
         col = mix(tr, refl, clamp(F * 3.1, 0.05, 1.0)) * ao;
         col += s.emis;

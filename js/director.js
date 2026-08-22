@@ -70,6 +70,10 @@ const P_TOUCH = 0.32;     // surfaces meet; the material switches here
 const P_EATEN = 0.52;     // the arriving orb is all the way in
 const P_PUSH  = 0.56;     // the replacement starts out
 const P_PINCH = 0.86;     // the neck gives; it is an orb again
+/* And the body finishes changing a little before that, so the last of the old
+   material is the drop about to leave rather than a cap still stuck to the
+   body when the thread gives. */
+const P_DRAIN = 0.80;
 
 const c01 = (t) => (t < 0 ? 0 : t > 1 ? 1 : t);
 // zero velocity AND zero acceleration at both ends
@@ -169,6 +173,8 @@ export class Director {
       show: 0, spin: 0, hover: -1,
       fly: 0, flyId: -1, pending: -1, outMat: -1, switched: false, parted: false,
       partAt: 0, partD: 0, partR: 0,
+      swapC: [0, 0, 0], swapR: 0, newBlob: [0, 0, 0, 0],
+      outDir: [0, 1, 0], outD: 0, outRad: 0,
       flyPos: [0, 0, 0], flyR: 0, flyK: 0.3, bound: R_BOUND,
       pulse: 0, pulseDir: [0, 1, 0], flash: 0,
       pos: MATERIALS.map(() => [0, 0, 0]),
@@ -246,7 +252,12 @@ export class Director {
       if (!o.switched && o.fly >= P_TOUCH) {
         o.switched = true;
         this.materialIndex = o.pending;
-        o.pulse = 1; o.flash = 1;
+        /* A third of what this used to be. The burst was there to cover an
+           instant edit, and there is no longer an instant edit to cover: the
+           change takes half a second and is the thing worth watching, so a
+           flash bright enough to hide it is now working against the shot. It
+           stays as an impact accent, nothing more. */
+        o.pulse = 1; o.flash = 0.35;
         this.burst = 0.7;
       }
       if (o.fly >= 1) {
@@ -328,6 +339,7 @@ export class Director {
 
       } else if (k === o.outMat) {
         r = 0;
+        o.outDir[0] = ux; o.outDir[1] = uy; o.outDir[2] = uz;
         if (f >= P_PUSH) {
           const s2 = c01((f - P_PUSH) / (P_PINCH - P_PUSH));
           /* It starts just under the surface rather than at the middle. Time
@@ -352,8 +364,11 @@ export class Director {
           if (!o.parted && kOut < dOut - rOut - sculptR) {
             o.parted = true;
             o.partAt = f; o.partD = dOut; o.partR = rOut;
-            o.flash = Math.max(o.flash, 0.5);
+            o.flash = Math.max(o.flash, 0.28);
           }
+
+          o.outDir[0] = ux; o.outDir[1] = uy; o.outDir[2] = uz;
+          o.outD = dOut; o.outRad = rOut;
 
           if (!o.parted) {
             o.flyPos[0] = ux * dOut; o.flyPos[1] = uy * dOut; o.flyPos[2] = uz * dOut;
@@ -385,6 +400,41 @@ export class Director {
 
       o.pos[k][0] = px; o.pos[k][1] = py; o.pos[k][2] = pz;
       o.rad[k] = r;
+    }
+
+    /* ── the change itself ──────────────────────────────────────────────
+       The body is two materials at once for as long as this lasts. The old
+       one occupies a region that contracts onto the drop carrying it away, so
+       the new material floods in from where its own drop landed and the last
+       of the old is what leaves: taking one in is what puts the other out,
+       and you can watch it happen rather than being told it did.
+
+       This replaces a switch that fired on one frame at contact, which
+       changed the whole body long before anything departed and so connected
+       nothing to nothing. */
+    if (flying && o.switched && !o.parted) {
+      const fr = easeIO(c01((f - P_TOUCH) / (P_DRAIN - P_TOUCH)));
+      const d = o.outRad > 0 ? o.outD : sculptR;
+      const u = o.outDir;
+      o.swapC[0] = u[0] * d; o.swapC[1] = u[1] * d; o.swapC[2] = u[2] * d;
+      // wide enough at the start to cover every point of the body, or the far
+      // side of it changes on the frame of the switch and the drain has
+      // already lost the argument
+      const cover = R_BOUND * this.current.scale + sculptR + 0.06;
+      o.swapR = lerp(cover, Math.max(o.outRad, 0.02) * 1.06, fr);
+    } else {
+      o.swapR = 0;
+    }
+
+    /* The arriving drop is exempt. It is its own material from the moment it
+       touches, and it spends the next third of a second sinking through a body
+       that is still the old one; without this it would be repainted on the way
+       in and the material would appear to arrive from nowhere. */
+    if (flying && o.switched && f < P_EATEN && o.flyR > 0) {
+      o.newBlob[0] = o.flyPos[0]; o.newBlob[1] = o.flyPos[1];
+      o.newBlob[2] = o.flyPos[2]; o.newBlob[3] = o.flyR * 1.2;
+    } else {
+      o.newBlob[3] = 0;
     }
 
     // the marcher's bounding sphere has to reach whatever has left the body
@@ -607,6 +657,11 @@ export class Director {
     o.flyR = this.orbs.flyR;
     o.flyK = this.orbs.flyK;
     o.bound = this.orbs.bound;
+    // the two-material split, for as long as the body is two materials
+    o.swapC = this.orbs.swapC;
+    o.swapR = this.orbs.swapR;
+    o.newBlob = this.orbs.newBlob;
+    o.matOld = Math.max(0, this.orbs.outMat);
     o.pulse = this.orbs.pulse;
     o.pulseDir = this.orbs.pulseDir;
     o.flash = this.orbs.flash;
