@@ -83,7 +83,8 @@ uniform float uBound;         // scene bounding radius, grown to cover the fligh
    uNewBlob is the one part that is exempt: the arriving drop, which is its own
    material from the moment it touches and must not be repainted while it
    sinks through a body that still is not. */
-uniform int   uMatOld;
+uniform int   uMatOld;         // the one on its way out
+uniform int   uMatNew;         // the one that arrived, or is arriving
 uniform vec3  uSwapC;
 uniform float uSwapR;         // 0 when the body is all one material
 uniform vec4  uNewBlob;       // xyz centre, w radius; w <= 0 when unused
@@ -336,11 +337,17 @@ Mat matCurrent(){
 }
 
 Mat matAtPoint(vec3 p){
-  if (uSwapR > 0.0
-      && length(p - uSwapC) < uSwapR
-      && !(uNewBlob.w > 0.0 && length(p - uNewBlob.xyz) < uNewBlob.w)){
-    return matAt(uMatOld);
-  }
+  /* The arriving drop is its own material from the first frame it is in the
+     field, which is well before the body has agreed to become it. This used
+     to be written as an exemption from the drain, so it only applied once the
+     body had switched; for the whole approach before that the drop was inside
+     a body still wearing the old material and got painted with it. The ball
+     visibly turned into the thing it was arriving to replace. */
+  if (uNewBlob.w > 0.0 && length(p - uNewBlob.xyz) < uNewBlob.w) return matAt(uMatNew);
+
+  // and what has not yet been reached by the change is still the old one
+  if (uSwapR > 0.0 && length(p - uSwapC) < uSwapR) return matAt(uMatOld);
+
   return matCurrent();
 }
 

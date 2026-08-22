@@ -2306,7 +2306,8 @@ uniform float uBound;         // scene bounding radius, grown to cover the fligh
    uNewBlob is the one part that is exempt: the arriving drop, which is its own
    material from the moment it touches and must not be repainted while it
    sinks through a body that still is not. */
-uniform int   uMatOld;
+uniform int   uMatOld;         // the one on its way out
+uniform int   uMatNew;         // the one that arrived, or is arriving
 uniform vec3  uSwapC;
 uniform float uSwapR;         // 0 when the body is all one material
 uniform vec4  uNewBlob;       // xyz centre, w radius; w <= 0 when unused
@@ -2559,11 +2560,17 @@ Mat matCurrent(){
 }
 
 Mat matAtPoint(vec3 p){
-  if (uSwapR > 0.0
-      && length(p - uSwapC) < uSwapR
-      && !(uNewBlob.w > 0.0 && length(p - uNewBlob.xyz) < uNewBlob.w)){
-    return matAt(uMatOld);
-  }
+  /* The arriving drop is its own material from the first frame it is in the
+     field, which is well before the body has agreed to become it. This used
+     to be written as an exemption from the drain, so it only applied once the
+     body had switched; for the whole approach before that the drop was inside
+     a body still wearing the old material and got painted with it. The ball
+     visibly turned into the thing it was arriving to replace. */
+  if (uNewBlob.w > 0.0 && length(p - uNewBlob.xyz) < uNewBlob.w) return matAt(uMatNew);
+
+  // and what has not yet been reached by the change is still the old one
+  if (uSwapR > 0.0 && length(p - uSwapC) < uSwapR) return matAt(uMatOld);
+
   return matCurrent();
 }
 
@@ -4378,7 +4385,7 @@ class Renderer {
         uOrbPos: this.orbPosBuf, uOrbR: this.orbRadBuf, uOrbCount: oc,
         uPulse: p.pulse, uPulseDir: p.pulseDir, uFlash: p.flash,
         uFlyPos: p.flyPos, uFlyR: p.flyR, uFlyK: p.flyK, uBound: p.bound,
-        uMatOld: p.matOld, uSwapC: p.swapC, uSwapR: p.swapR,
+        uMatOld: p.matOld, uMatNew: p.matNew, uSwapC: p.swapC, uSwapR: p.swapR,
         uNewBlob: p.newBlob,
         uRes: [this.iw, this.ih],
         uTime: this.simTime, uFrame: this.frame,
@@ -5248,11 +5255,11 @@ class Director {
       o.swapR = 0;
     }
 
-    /* The arriving drop is exempt. It is its own material from the moment it
-       touches, and it spends the next third of a second sinking through a body
-       that is still the old one; without this it would be repainted on the way
-       in and the material would appear to arrive from nowhere. */
-    if (flying && o.switched && f < P_EATEN && o.flyR > 0) {
+    /* The arriving drop carries its own material the whole way in, from the
+       frame it enters the field rather than from the frame the body switches.
+       Those are two thirds of a second apart, and for all of it the drop was
+       being painted with the material of the body it was flying towards. */
+    if (flying && f < P_EATEN && o.flyR > 0) {
       o.newBlob[0] = o.flyPos[0]; o.newBlob[1] = o.flyPos[1];
       o.newBlob[2] = o.flyPos[2]; o.newBlob[3] = o.flyR * 1.2;
     } else {
@@ -5490,6 +5497,7 @@ class Director {
     o.swapR = this.orbs.swapR;
     o.newBlob = this.orbs.newBlob;
     o.matOld = Math.max(0, this.orbs.outMat);
+    o.matNew = Math.max(0, this.orbs.pending);
     o.pulse = this.orbs.pulse;
     o.pulseDir = this.orbs.pulseDir;
     o.flash = this.orbs.flash;

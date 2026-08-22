@@ -316,9 +316,23 @@ almost the same thing: the shader had been able to paint one surface in two
 materials since the day it was written, and nobody had ever asked it to.
 
 Two things had to be exempted, and both were bugs standing ready. The arriving
-drop keeps its own material while it sinks through a body that is still the old
-one, or it gets repainted on the way in and the new material appears from
-nowhere. And the dielectric branch had to stop reading `uTrans`, `uIor`,
+drop keeps its own material for as long as it is in the field, or it gets
+repainted with the material of the body it is flying towards.
+
+That one shipped broken, and it is worth saying why, because the mistake is
+easy to make twice. The exemption was written as an exemption from the drain,
+so it only applied once the drain existed, which is once the body has switched.
+The drop enters the field two thirds of a second before that. For all of that
+time it was inside a body still wearing the old material, matched the general
+case, and came out the old colour: the ball visibly turned into the thing it
+had been clicked to replace, and only then did something else leave. The
+correct statement is not "exempt from the drain" but "the arriving drop is its
+own material", and those coincide everywhere except the stretch that mattered.
+
+A CPU replay of the shader's own decision reported the drop as belonging to
+`matCurrent()` and I read that as correct, because during the approach
+`matCurrent()` is the OLD material and the label in my own dump said "new".
+The screenshot said otherwise within a second of looking at it. And the dielectric branch had to stop reading `uTrans`, `uIor`,
 `uDispersion` and `uAbsorb` from the uniforms: those are the same numbers as
 the point's own material whenever the body is one material, and emphatically
 not when it is two. Reading `uTrans` there would have run the glass path over

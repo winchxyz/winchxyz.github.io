@@ -524,7 +524,7 @@ export class Renderer {
         uOrbPos: this.orbPosBuf, uOrbR: this.orbRadBuf, uOrbCount: oc,
         uPulse: p.pulse, uPulseDir: p.pulseDir, uFlash: p.flash,
         uFlyPos: p.flyPos, uFlyR: p.flyR, uFlyK: p.flyK, uBound: p.bound,
-        uMatOld: p.matOld, uSwapC: p.swapC, uSwapR: p.swapR,
+        uMatOld: p.matOld, uMatNew: p.matNew, uSwapC: p.swapC, uSwapR: p.swapR,
         uNewBlob: p.newBlob,
         uRes: [this.iw, this.ih],
         uTime: this.simTime, uFrame: this.frame,

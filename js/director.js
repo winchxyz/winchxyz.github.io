@@ -426,11 +426,11 @@ export class Director {
       o.swapR = 0;
     }
 
-    /* The arriving drop is exempt. It is its own material from the moment it
-       touches, and it spends the next third of a second sinking through a body
-       that is still the old one; without this it would be repainted on the way
-       in and the material would appear to arrive from nowhere. */
-    if (flying && o.switched && f < P_EATEN && o.flyR > 0) {
+    /* The arriving drop carries its own material the whole way in, from the
+       frame it enters the field rather than from the frame the body switches.
+       Those are two thirds of a second apart, and for all of it the drop was
+       being painted with the material of the body it was flying towards. */
+    if (flying && f < P_EATEN && o.flyR > 0) {
       o.newBlob[0] = o.flyPos[0]; o.newBlob[1] = o.flyPos[1];
       o.newBlob[2] = o.flyPos[2]; o.newBlob[3] = o.flyR * 1.2;
     } else {
@@ -668,6 +668,7 @@ export class Director {
     o.swapR = this.orbs.swapR;
     o.newBlob = this.orbs.newBlob;
     o.matOld = Math.max(0, this.orbs.outMat);
+    o.matNew = Math.max(0, this.orbs.pending);
     o.pulse = this.orbs.pulse;
     o.pulseDir = this.orbs.pulseDir;
     o.flash = this.orbs.flash;
