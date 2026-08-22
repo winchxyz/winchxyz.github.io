@@ -97,8 +97,13 @@ const K = [
     pGain: 1.00, pCurl: 1.15, pAttract: 0.85, pTangent: 0.85, pSpin: 0.30, pSize: 1.6, pDamp: 0.55, pLife: 0.13,
     bloom: 0.85, streak: 0.30, ca: 0.55, vignette: 0.72, grain: 0.030,
   },
-  { /* 01 whoami */
-    yaw: -0.60, pitch: 0.17, fov: 39, fill: 0.66, fillW: 0.38, fx: 0.80, fy: 0.52,
+  { /* 01 whoami: measured against the yaml card rather than eyeballed. The
+       card sits at y 0.15 to 0.45 of the viewport and the sculpture was
+       centred at 0.52 with a radius of 0.33, which put its entire upper left
+       quadrant behind glass. Dropped below the card and shrunk enough to
+       still clear the bottom edge: 0.74 + 0.26 lands exactly on the clamp the
+       solver would apply anyway. */
+    yaw: -0.60, pitch: 0.17, fov: 39, fill: 0.52, fillW: 0.34, fx: 0.84, fy: 0.74,
     orbShow: 0, pivot: [0, 0, 0], radius: R_BOUND,
     shape: 0.85, detail: 0.75, scale: 0.98, rimBoost: 0.25, sceneExposure: 0.98,
     pGain: 0.62, pCurl: 0.85, pAttract: 1.15, pTangent: 0.95, pSpin: 0.20, pSize: 1.3, pDamp: 0.70, pLife: 0.11,

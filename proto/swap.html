@@ -1,0 +1,521 @@
+<meta charset="utf-8">
+<title>Swap lab</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root{
+    --ink:#07090a; --line:#1e2422; --line-2:#161b19;
+    --bone:#f2f6ec; --chalk:#dfe6d8; --ash:#9aa694; --muted:#7c8878; --dim:#5a6356;
+    --lime:#c6f24e;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--ink); color:var(--chalk); font-family:var(--mono);
+    overflow:hidden; user-select:none; -webkit-user-select:none;
+  }
+  #gl{position:fixed; inset:0; width:100%; height:100%; display:block}
+
+  .tile{
+    position:fixed; pointer-events:auto; cursor:pointer;
+    border:1px solid var(--line-2); transition:border-color .18s ease;
+  }
+  .tile:hover{ border-color:var(--lime) }
+  .tile.focus{ cursor:default }
+  .tag{
+    position:absolute; left:14px; top:12px; pointer-events:none;
+    font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--dim);
+  }
+  .name{
+    position:absolute; left:14px; top:30px; pointer-events:none;
+    font-size:15px; letter-spacing:-.01em; color:var(--bone);
+  }
+  .desc{
+    position:absolute; left:14px; bottom:26px; right:14px; pointer-events:none;
+    font-size:11.5px; line-height:1.55; color:var(--muted); max-width:46ch;
+    opacity:0; transition:opacity .2s ease;
+  }
+  .tile:hover .desc, .tile.focus .desc{ opacity:1 }
+  .bar{
+    position:absolute; left:14px; right:14px; bottom:14px; height:1px;
+    background:var(--line-2); pointer-events:none;
+  }
+  .bar i{ position:absolute; inset:0 auto 0 0; background:var(--lime); width:0 }
+
+  .tile.row .tag{ top:14px }
+  .tile.row .name{ top:32px; font-size:14px; max-width:118px; line-height:1.25 }
+  .tile.row .desc, .tile.row .bar{ display:none }
+  .tile.row{ border-left:none; border-right:none }
+
+  #hud{
+    position:fixed; left:0; right:0; bottom:0; padding:10px 16px;
+    display:flex; gap:18px; align-items:center; flex-wrap:wrap;
+    background:linear-gradient(0deg,rgba(7,9,10,.94),rgba(7,9,10,0));
+    font-size:11.5px; color:var(--dim); letter-spacing:.06em; pointer-events:none;
+  }
+  kbd{ font:inherit; border:1px solid var(--line); border-radius:4px; padding:1px 5px; color:var(--ash); }
+  #err{ position:fixed; inset:0; display:none; place-items:center; padding:40px; color:var(--ash); }
+</style>
+
+<canvas id="gl"></canvas>
+<div id="hud">
+  <span>glass body · clay arrives · glass leaves</span>
+  <span><kbd>1</kbd>–<kbd>6</kbd> focus · <kbd>0</kbd> grid · <kbd>F</kbd> filmstrip</span>
+  <span><kbd>R</kbd> replay · <kbd>space</kbd> pause · <kbd>S</kbd> slow · <kbd>,</kbd> <kbd>.</kbd> step</span>
+</div>
+<div id="err">This prototype needs WebGL2.</div>
+
+<script type="module">
+/* ───────────────────────────────────────────────────────────────────────────
+   swap lab
+
+   Six ways for a body to change what it is made of, given that something
+   arrives carrying the new material and something leaves carrying the old.
+
+   The motion underneath is identical in all six and is the one already on the
+   site: a drop comes in and fuses, the body pushes a drop of its own out the
+   far side, the neck gives. What differs is only the rule that decides, for a
+   point on that surface, which of the two materials owns it.
+
+   That rule can be spatial, which is the whole point. The site's material
+   branch already switches on a value handed in at draw time rather than one
+   the compiler can fold away, so asking the same question per point instead
+   of per frame costs nothing: the shader was always ready to paint one
+   surface in two materials, nobody had ever asked it to.
+   ─────────────────────────────────────────────────────────────────────── */
+
+const VERT = `#version 300 es
+void main(){
+  vec2 p = vec2((gl_VertexID << 1) & 2, gl_VertexID & 2);
+  gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0);
+}`;
+
+const FRAG = `#version 300 es
+precision highp float;
+out vec4 fragColor;
+
+uniform vec4  uTile;
+uniform float uHostR;
+uniform vec3  uAxis;          // the line the drops travel on
+uniform vec3  uInPos;         // the arriving drop
+uniform float uInR;
+uniform float uInK;
+uniform vec3  uOutPos;        // the departing one
+uniform float uOutR;
+uniform float uOutK;
+uniform int   uMode;          // which rule owns a point
+uniform float uFront;         // how far the change has got, 0 to 1
+uniform float uSeam;          // emissive weight at the interface
+
+float smin(float a, float b, float k){
+  float h = clamp(0.5 + 0.5 * (b - a) / k, 0.0, 1.0);
+  return mix(b, a, h) - k * h * (1.0 - h);
+}
+
+float hash(vec3 p){
+  p = fract(p * 0.3183099 + vec3(0.71, 0.113, 0.419));
+  p *= 17.0;
+  return fract(p.x * p.y * p.z * (p.x + p.y + p.z));
+}
+float vnoise(vec3 x){
+  vec3 i = floor(x), f = fract(x);
+  f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(mix(hash(i + vec3(0,0,0)), hash(i + vec3(1,0,0)), f.x),
+                 mix(hash(i + vec3(0,1,0)), hash(i + vec3(1,1,0)), f.x), f.y),
+             mix(mix(hash(i + vec3(0,0,1)), hash(i + vec3(1,0,1)), f.x),
+                 mix(hash(i + vec3(0,1,1)), hash(i + vec3(1,1,1)), f.x), f.y), f.z);
+}
+
+float map(vec3 p){
+  float d = length(p) - uHostR;
+  if (uInR  > 0.001) d = smin(d, length(p - uInPos)  - uInR,  uInK);
+  if (uOutR > 0.001) d = smin(d, length(p - uOutPos) - uOutR, uOutK);
+  return d;
+}
+
+vec3 normalAt(vec3 p){
+  const vec2 e = vec2(1.0, -1.0) * 0.0015;
+  return normalize(e.xyy * map(p + e.xyy) + e.yyx * map(p + e.yyx) +
+                   e.yxy * map(p + e.yxy) + e.xxx * map(p + e.xxx));
+}
+
+/* ── who owns this point ───────────────────────────────────────────────
+   Positive is the arriving material, negative is the one on its way out.
+   Every rule is written so that it reaches "all new" exactly when uFront
+   reaches one, which is the frame the departing drop lets go. */
+float ownership(vec3 p){
+  vec3 entry = uAxis * uHostR;          // where the new one landed
+  vec3 exit  = -uAxis * uHostR;         // where the old one leaves
+  float R = uHostR * 2.15;
+
+  /* Whatever the rule says elsewhere, the drop on its way out is made of what
+     it is taking with it. Without this the sweep converted it on the last
+     frame and the whole point of the exchange went with it: the thing that
+     leaves has to be the old material, or nothing has been conserved. */
+  if (uOutR > 0.001 && length(p - uOutPos) < uOutR * 1.02) return -1.0;
+
+  if (uMode == 0) return uFront > 0.999 ? 1.0 : -1.0;             // instant
+  if (uMode == 1) return uFront * R - length(p - entry);          // flood
+
+  // sign this way round, or the far pole is the first thing to convert
+  // instead of the last
+  if (uMode == 2) return uHostR * (2.0 * uFront - 1.0) - dot(p, -uAxis);
+
+  if (uMode == 3){
+    /* The old material contracts onto the drop that will carry it away, so
+       what leaves is visibly the same stuff that was in the body rather than
+       a drop that merely happens to be the old colour. */
+    vec3 c = uOutR > 0.001 ? uOutPos : exit;
+    float rr = mix(uHostR * 2.25, max(uOutR, 0.02) * 1.05, uFront);
+    return length(p - c) - rr;
+  }
+
+  if (uMode == 4){                                                 // marbled
+    float n = (vnoise(p * 3.4 + uAxis * 2.0) - 0.5) * 0.85 * uHostR;
+    return uFront * R * 1.15 - length(p - entry) + n * (1.0 - abs(uFront * 2.0 - 1.0));
+  }
+  return uFront * R - length(p - entry);                           // seam, same front
+}
+
+/* ── the two materials ─────────────────────────────────────────────────
+   Deliberately far apart: one is cold, hard and specular, the other warm,
+   soft and matte. A transition you cannot read on these two is not worth
+   putting on the real ones. */
+vec3 env(vec3 d){
+  vec3 c = mix(vec3(0.010, 0.013, 0.013), vec3(0.032, 0.038, 0.033),
+               smoothstep(-0.6, 0.9, d.y));
+  float key = pow(max(dot(d, normalize(vec3(-0.42, 0.70, 0.45))), 0.0), 90.0);
+  float fil = pow(max(dot(d, normalize(vec3( 0.82, 0.12, 0.30))), 0.0), 34.0);
+  float rim = pow(max(dot(d, normalize(vec3( 0.30, 0.10,-0.92))), 0.0), 55.0);
+  c += vec3(1.00, 0.98, 0.93) * key * 11.0;
+  c += vec3(0.38, 0.52, 0.70) * fil * 1.60;
+  c += vec3(0.78, 0.95, 0.31) * rim * 7.0;
+  return c;
+}
+vec3 backdrop(vec3 rd){
+  float v = smoothstep(0.75, -0.55, rd.y);
+  return mix(vec3(0.020, 0.024, 0.025), vec3(0.030, 0.035, 0.032), v) * 0.55;
+}
+
+vec3 shadeGlass(vec3 p, vec3 n, vec3 rd){
+  float NoV = max(dot(n, -rd), 0.0);
+  float F = 0.04 + 0.96 * pow(1.0 - NoV, 5.0);
+  vec3 refr = refract(rd, n, 1.0 / 1.52);
+  // dark through the middle and bright at the edge, which is what makes it
+  // read as glass rather than as a pale ball
+  // mostly the backdrop, barely any of the light rig: feeding a sphere's worth
+  // of refracted directions into three coloured lobes turns glass into jade
+  vec3 back = backdrop(refr) * 1.9 + env(refr) * 0.22;
+  return mix(back * 0.8, env(reflect(rd, n)), clamp(F * 2.4, 0.03, 1.0)) * 1.15;
+}
+vec3 shadeClay(vec3 p, vec3 n, vec3 rd){
+  vec3 alb = vec3(0.44, 0.26, 0.17);
+  float lam = max(dot(n, normalize(vec3(-0.42, 0.68, 0.55))), 0.0);
+  vec3 col = alb * (0.10 + 0.72 * lam);
+  col += env(reflect(rd, n)) * 0.045;                    // very little
+  col += vec3(0.78, 0.95, 0.31) * pow(1.0 - max(dot(n, -rd), 0.0), 3.0) * 0.16;
+  return col;
+}
+
+void main(){
+  vec2 frag = gl_FragCoord.xy - uTile.xy;
+  vec2 uv = (frag - 0.5 * uTile.zw) / uTile.w;
+
+  vec3 ro = vec3(0.0, 0.42, 4.85);
+  vec3 fw = normalize(vec3(0.0, 0.02, 0.0) - ro);
+  vec3 rt = normalize(cross(fw, vec3(0.0, 1.0, 0.0)));
+  vec3 up = cross(rt, fw);
+  vec3 rd = normalize(uv.x * rt + uv.y * up + 1.55 * fw);
+
+  vec3 col = backdrop(rd);
+
+  float t = 0.0, hit = 0.0;
+  {
+    float b = dot(ro, rd), c = dot(ro, ro) - 9.0;
+    float h = b * b - c;
+    t = h > 0.0 ? max(0.0, -b - sqrt(h)) : 1e9;
+  }
+  for (int i = 0; i < 110; i++){
+    if (t > 9.0) break;
+    vec3 p = ro + rd * t;
+    float d = map(p);
+    if (d < 0.0009 * t){ hit = 1.0; break; }
+    t += d * 0.80;
+  }
+
+  if (hit > 0.5){
+    vec3 p = ro + rd * t;
+    vec3 n = normalAt(p);
+    float own = ownership(p);
+    col = own > 0.0 ? shadeClay(p, n, rd) : shadeGlass(p, n, rd);
+
+    // a hot line where the two meet, for the variant that wants one
+    if (uSeam > 0.0){
+      float w = uHostR * 0.075;
+      col += vec3(1.00, 0.86, 0.42) * exp(-abs(own / w)) * uSeam * 1.5;
+    }
+  }
+
+  col = col / (col + 0.86);
+  col = pow(max(col, 0.0), vec3(1.0 / 2.2));
+  col += (fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453) - 0.5) / 255.0;
+  fragColor = vec4(col, 1.0);
+}`;
+
+/* ── the six ─────────────────────────────────────────────────────────── */
+
+const R0 = 0.88, RB = 0.32, D0 = 2.05;
+/* Nearly across the view rather than into it. The first axis had most of its
+   length in z, so the drop that leaves went straight away from the camera and
+   the departure, the entire point of the thing being compared, happened behind
+   the ball. */
+const AXIS = (() => { const v = [0.90, 0.27, 0.34]; const l = Math.hypot(...v); return v.map((x) => x / l); })();
+const at = (d) => AXIS.map((x) => x * d);
+const c01 = (x) => (x < 0 ? 0 : x > 1 ? 1 : x);
+const mix = (a, b, t) => a + (b - a) * t;
+const easeIO = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+const easeOut = (t) => 1 - Math.pow(1 - t, 3);
+const smoother = (t) => t * t * t * (t * (t * 6 - 15) + 10);
+
+/* Motion, shared by every variant, so the only thing being compared is the
+   rule that paints it. Contact, then a settle, then the push, then the break. */
+const T_TOUCH = 0.26, T_EATEN = 0.44, T_PUSH = 0.56, T_PART = 0.85;
+
+function motion(t){
+  const contact = R0 + RB * 0.92;
+  const apart = R0 + RB + 0.04;
+  const m = { inPos: [0, 0, 0], inR: 0, inK: 0.02, outPos: [0, 0, 0], outR: 0, outK: 0.02 };
+
+  if (t < T_EATEN){
+    let d, r;
+    if (t < T_TOUCH){ d = mix(D0, contact, smoother(t / T_TOUCH)); r = RB; }
+    else {
+      const q = c01((t - T_TOUCH) / (T_EATEN - T_TOUCH));
+      d = mix(contact, R0 * 0.2, easeIO(q));
+      r = RB * Math.cbrt(Math.max(0, 1 - q));
+    }
+    m.inPos = at(d); m.inR = r;
+    m.inK = 0.02 + 0.38 * Math.pow(smoother(c01(t / T_TOUCH)), 1.6);
+  }
+  if (t >= T_PUSH){
+    const s = c01((t - T_PUSH) / (T_PART - T_PUSH));
+    const d = mix(R0 * 0.55, apart, easeIO(s));
+    const r = RB * easeIO(Math.min(1, s * 1.3));
+    // out the far side, which is where the old material has been driven
+    m.outPos = at(-(t > T_PART ? mix(apart, D0, easeOut(c01((t - T_PART) / (1 - T_PART)))) : d));
+    m.outR = r;
+    m.outK = t > T_PART ? 0.02 : 0.02 + 0.42 * Math.pow(1 - s, 1.35);
+  }
+  return m;
+}
+
+/* front(t) is how far the change has got, and every rule is written so that
+   one means done. All six reach one at the break, which is the point: the
+   body finishes becoming the new thing at the moment the old thing leaves. */
+const front = (t) => c01((t - T_TOUCH) / (T_PART - T_TOUCH));
+
+const VARIANTS = [
+  { key: 'instant', name: 'Instant', tag: 'A · current',
+    mode: 0, seam: 0,
+    front: (t) => (t >= T_TOUCH ? 1 : 0),
+    desc: 'What the site does now. The whole body changes on one frame, at '
+        + 'contact, long before anything leaves. Nothing connects the change '
+        + 'to the thing that supposedly caused it.' },
+
+  { key: 'flood', name: 'Flood', tag: 'B · from the contact',
+    mode: 1, seam: 0, front,
+    desc: 'The new material spreads from the point the drop landed and pushes '
+        + 'the old one ahead of it, reaching the far side exactly as the old '
+        + 'one is squeezed out. Cause, then effect, in that order.' },
+
+  { key: 'sweep', name: 'Sweep', tag: 'C · a moving plane',
+    mode: 2, seam: 0, front,
+    desc: 'The same idea with a flat interface instead of a round one. Reads '
+        + 'more graphic and less liquid: a line crossing the form rather than '
+        + 'something spreading through it.' },
+
+  { key: 'drain', name: 'Drain', tag: 'D · the old one gathers',
+    mode: 3, seam: 0, front,
+    desc: 'Told the other way round. The old material contracts toward the far '
+        + 'side, gathering into the very drop that then leaves, so what departs '
+        + 'is visibly the same stuff that was in the body.' },
+
+  { key: 'marble', name: 'Marble', tag: 'E · mixed at the edge',
+    mode: 4, seam: 0, front,
+    desc: 'A flood whose interface is broken up by noise, so the two interleave '
+        + 'in fingers before resolving. Liquid, but busier, and the noise is '
+        + 'strongest in the middle where the change is least settled.' },
+
+  { key: 'seam', name: 'Hot seam', tag: 'F · a reaction line',
+    mode: 5, seam: 1, front,
+    desc: 'A flood with light at the boundary. The interface stops being a '
+        + 'place where two colours meet and starts being where something is '
+        + 'happening.' },
+];
+
+/* ── gl ──────────────────────────────────────────────────────────────── */
+
+const cv = document.getElementById('gl');
+const gl = cv.getContext('webgl2', { antialias: false, alpha: false, powerPreference: 'high-performance' });
+if (!gl){ document.getElementById('err').style.display = 'grid'; throw new Error('no webgl2'); }
+
+function fail(msg){
+  const e = document.getElementById('err');
+  e.style.display = 'grid'; e.textContent = msg; window.__labError = msg;
+  throw new Error(msg);
+}
+function compile(type, src){
+  const sh = gl.createShader(type);
+  gl.shaderSource(sh, src); gl.compileShader(sh);
+  if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) fail(gl.getShaderInfoLog(sh));
+  return sh;
+}
+const prog = gl.createProgram();
+gl.attachShader(prog, compile(gl.VERTEX_SHADER, VERT));
+gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, FRAG));
+gl.linkProgram(prog);
+if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) fail(gl.getProgramInfoLog(prog));
+gl.useProgram(prog);
+gl.bindVertexArray(gl.createVertexArray());
+
+const U = {};
+for (const n of ['uTile','uHostR','uAxis','uInPos','uInR','uInK','uOutPos','uOutR','uOutK','uMode','uFront','uSeam']){
+  U[n] = gl.getUniformLocation(prog, n);
+}
+gl.uniform3f(U.uAxis, AXIS[0], AXIS[1], AXIS[2]);
+
+/* ── layout ──────────────────────────────────────────────────────────── */
+
+const STRIP_T = [0.18, 0.34, 0.52, 0.70, 0.86];
+let focus = -1, strip = false;
+
+const els = VARIANTS.map((v, i) => {
+  const d = document.createElement('div');
+  d.className = 'tile';
+  d.innerHTML = `<div class="tag">${v.tag}</div><div class="name">${v.name}</div>`
+              + `<div class="desc">${v.desc}</div><div class="bar"><i></i></div>`;
+  d.onclick = () => setFocus(focus === i ? -1 : i);
+  document.body.appendChild(d);
+  return d;
+});
+const bars = els.map((e) => e.querySelector('.bar i'));
+
+function setFocus(i){ focus = i; strip = false; sync(); }
+function soloStrip(i, times){
+  if (times && times.length){ STRIP_T.length = 0; STRIP_T.push(...times); }
+  focus = i; strip = true; sync();
+}
+function sync(){
+  els.forEach((e, n) => {
+    e.classList.toggle('focus', n === focus);
+    e.classList.toggle('row', strip);
+    e.style.display = (focus < 0 || n === focus) ? 'block' : 'none';
+  });
+  layout();
+}
+
+let rects = [];
+function layout(){
+  const dpr = Math.min(devicePixelRatio || 1, 2);
+  const W = innerWidth, H = innerHeight - 40;
+  cv.width = Math.round(innerWidth * dpr); cv.height = Math.round(innerHeight * dpr);
+  cv.style.width = innerWidth + 'px'; cv.style.height = innerHeight + 'px';
+
+  rects = [];
+  if (strip && focus >= 0){
+    rects[focus] = { x: 132, y: 0, w: W - 132, h: H };
+    Object.assign(els[focus].style, { left: '0px', top: '0px', width: W + 'px', height: H + 'px' });
+  } else if (strip){
+    const rh = H / VARIANTS.length;
+    VARIANTS.forEach((_, i) => {
+      rects[i] = { x: 132, y: i * rh, w: W - 132, h: rh };
+      Object.assign(els[i].style, { left: '0px', top: (i * rh) + 'px', width: W + 'px', height: rh + 'px' });
+    });
+  } else if (focus >= 0){
+    rects[focus] = { x: 0, y: 0, w: W, h: H };
+    Object.assign(els[focus].style, { left: '0px', top: '0px', width: W + 'px', height: H + 'px' });
+  } else {
+    const cols = W < 760 ? 1 : W < 1180 ? 2 : 3;
+    const rows = Math.ceil(VARIANTS.length / cols);
+    const ch = H / rows;
+    VARIANTS.forEach((_, i) => {
+      const row = Math.floor(i / cols);
+      const inRow = Math.min(cols, VARIANTS.length - row * cols);
+      const cw = W / inRow;
+      rects[i] = { x: (i - row * cols) * cw, y: row * ch, w: cw, h: ch };
+      Object.assign(els[i].style, { left: rects[i].x + 'px', top: rects[i].y + 'px', width: cw + 'px', height: ch + 'px' });
+    });
+  }
+  window.__dpr = dpr;
+}
+addEventListener('resize', layout);
+sync();
+
+/* ── loop ────────────────────────────────────────────────────────────── */
+
+const LOOP = 4.6, HOLD = 1.0;
+let clock = 0, speed = 1, paused = false, last = performance.now();
+
+addEventListener('keydown', (e) => {
+  const k = e.key.toLowerCase();
+  if (k >= '1' && k <= String(VARIANTS.length)) setFocus(+k - 1);
+  else if (k === '0' || k === 'escape'){ strip = false; setFocus(-1); }
+  else if (k === 'f'){ strip = !strip; sync(); }
+  else if (k === 'r') clock = 0;
+  else if (k === ' '){ paused = !paused; e.preventDefault(); }
+  else if (k === 's') speed = speed === 1 ? 0.3 : 1;
+  else if (k === ','){ paused = true; clock = Math.max(0, clock - 0.05); }
+  else if (k === '.'){ paused = true; clock += 0.05; }
+});
+
+function draw(now){
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  if (!paused) clock += dt * speed;
+  const t = c01((clock % (LOOP + HOLD)) / LOOP);
+
+  gl.disable(gl.SCISSOR_TEST);
+  gl.clearColor(0.027, 0.035, 0.039, 1); gl.clear(gl.COLOR_BUFFER_BIT);
+  gl.enable(gl.SCISSOR_TEST);
+
+  const dpr = window.__dpr;
+  const cells = [];
+  VARIANTS.forEach((v, i) => {
+    const r = rects[i]; if (!r) return;
+    if (strip){
+      const cw = r.w / STRIP_T.length;
+      STRIP_T.forEach((tt, j) => cells.push({ v, i, t: tt, x: r.x + j * cw, y: r.y, w: cw, h: r.h }));
+    } else cells.push({ v, i, t, x: r.x, y: r.y, w: r.w, h: r.h });
+  });
+
+  cells.forEach(({ v, i, t: ct, x: rx, y: ry, w: rw, h: rh }) => {
+    const x = Math.round(rx * dpr), w = Math.round(rw * dpr), h = Math.round(rh * dpr);
+    const y = Math.round(cv.height - (ry + rh) * dpr);
+    gl.viewport(x, y, w, h); gl.scissor(x, y, w, h);
+
+    const m = motion(ct);
+    gl.uniform4f(U.uTile, x, y, w, h);
+    gl.uniform1f(U.uHostR, R0);
+    gl.uniform3f(U.uInPos, ...m.inPos);
+    gl.uniform1f(U.uInR, m.inR);
+    gl.uniform1f(U.uInK, m.inK);
+    gl.uniform3f(U.uOutPos, ...m.outPos);
+    gl.uniform1f(U.uOutR, m.outR);
+    gl.uniform1f(U.uOutK, m.outK);
+    gl.uniform1i(U.uMode, v.mode);
+    gl.uniform1f(U.uFront, v.front(ct));
+    gl.uniform1f(U.uSeam, v.seam * (1 - Math.abs(v.front(ct) * 2 - 1)));
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+    bars[i].style.width = (strip ? 100 : t * 100) + '%';
+  });
+
+  requestAnimationFrame(draw);
+}
+requestAnimationFrame(draw);
+window.__lab = {
+  VARIANTS, setFocus, soloStrip,
+  set strip(v){ strip = v; sync(); },
+  get clock(){ return clock; }, set clock(v){ clock = v; },
+  set paused(v){ paused = v; },
+};
+</script>

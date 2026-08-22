@@ -200,10 +200,19 @@ export class UI {
   scrollTo(sel) {
     const n = sel && document.querySelector(sel);
     if (!n) return;
-    // offsetTop puts the section's top edge at the viewport's top edge, which
-    // is underneath the fixed navigation. Back off by its height.
     const nav = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--nav-h')) || 68;
-    scrollTo({ top: Math.max(0, n.offsetTop - nav), behavior: this.reduced ? 'auto' : 'smooth' });
+
+    /* offsetTop is the top of the section's box, and that box opens with up to
+       208px of padding whose entire job is to give the section air while you
+       scroll past it. Landing there put all of that air on screen and the
+       heading somewhere below it: a jump that appears to arrive at nothing.
+
+       Land on the content instead, keeping a little of the air rather than
+       none, so it still reads as the top of a section and not as a crop. */
+    const pad = parseFloat(getComputedStyle(n).paddingTop) || 0;
+    const air = Math.min(pad, 56);
+    const top = Math.max(0, n.offsetTop + pad - air - nav);
+    scrollTo({ top, behavior: this.reduced ? 'auto' : 'smooth' });
   }
 
   /* ── cursor ────────────────────────────────────────────────────────── */
