@@ -150,7 +150,12 @@ GPU=1 PAGE=bisect.html node tools/gputest.mjs   # which part of one costs what
 ```
 
 Every image in this README is a real GPU capture taken through that harness,
-at 1920×1080 and at 390×844, on an RTX 4070 at 60 fps.
+at 1920×1080 and at 390×844, on an RTX 4070 at 60 fps. They are taken with
+`?tier=ultra` in the URL, and that is not vanity: headless Chrome never gives
+the quality controller the clean frame timings it wants, so it sits at the
+opening tier forever and every capture came back dim, undersampled and full of
+particle noise that is not in the real thing. An hour went into chasing a
+rendering bug that turned out to be the harness photographing the fallback.
 
 | | |
 |---|---|
