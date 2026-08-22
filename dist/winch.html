@@ -159,6 +159,14 @@ code{ font-family:var(--mono); font-size:.92em; color:var(--lime-lt); }
 }
 html.gl-up #gl{ opacity:1; }
 
+/* Without a context there is nothing for these two to be about. The chip
+   opens a readout with no numbers in it, and a line that begins "everything
+   you see moving" is not true of a page where nothing is moving. Both are
+   decoration on top of a renderer that did not start. */
+html:not(.gl-up) #hud-toggle,
+html:not(.gl-up) .hero-footnote,
+html:not(.gl-up) .scroll-cue{ display:none; }
+
 /* Film grain + scanline. Pure CSS so it costs the GPU pass nothing. */
 #grain{
   position:fixed; inset:-50%; z-index:2; pointer-events:none;

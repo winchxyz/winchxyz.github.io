@@ -43,6 +43,10 @@ const chrome = spawn(CHROME, [
     ? ['--ignore-gpu-blocklist', '--enable-gpu-rasterization']
     : ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader']),
   `--window-size=${process.env.WIN || '1280,800'}`,
+  /* FLAGS lets a run ask for a browser the site has never seen: no WebGL, no
+     GPU at all, whatever. The fallback path is a claim the page makes about
+     itself, and a claim nobody can reproduce is not a tested one. */
+  ...(process.env.FLAGS ? process.env.FLAGS.split(',').map((f) => f.trim()).filter(Boolean) : []),
   'about:blank',
 ], { stdio: ['ignore', 'pipe', 'pipe'], detached: process.platform !== 'win32' });
 
@@ -243,6 +247,15 @@ try {
     deviceScaleFactor: Number(process.env.DPR || 1),
     mobile: process.env.MOBILE === '1',
   });
+  /* INJECT runs before any of the page's own script does, which is the only
+     moment at which some things can be tested. The no-WebGL path is one: by
+     the time PRE could run, the context has been created and the decision has
+     been made. Chrome's own flags for this were no help, either ignored or in
+     conflict with the ones this harness already passes. */
+  if (process.env.INJECT) {
+    await cdp.send('Page.addScriptToEvaluateOnNewDocument', { source: process.env.INJECT });
+  }
+
   await cdp.send('Page.navigate', { url: SITE });
 
   /* READY overrides what counts as loaded, so this harness can screenshot a

@@ -141,6 +141,22 @@ also load the site and screenshot it:
 SITE='http://localhost:8141' SECTION='#work' node tools/gputest.mjs shot out.png
 ```
 
+`INJECT` runs a script before any of the page's own, which is the only moment
+some things can be tested at all. The no-WebGL path is one: by the time
+anything else could intervene the context exists and the decision is made.
+Chrome's own flags for this were no help, either ignored or in conflict with
+the ones the harness already passes, so the test stubs the context instead:
+
+```bash
+INJECT='HTMLCanvasElement.prototype.getContext = () => null' node tools/gputest.mjs shot out.png
+```
+
+That path is now checked rather than asserted. The notice appears with the
+real reason, every reveal fires so the writing is readable, and the two pieces
+of chrome that only make sense with a renderer behind them (the readout chip,
+and a line beginning "everything you see moving") take themselves off the
+page. `FLAGS` passes extra flags to Chrome for the cases where that is enough.
+
 `GPU=1` runs the same harness on the real adapter instead, which is how the
 sixty-eight-second shader compile described below was found:
 
