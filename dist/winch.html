@@ -201,11 +201,14 @@ html.booted #boot{ opacity:0; visibility:hidden; pointer-events:none; }
 
 .boot-inner{ display:grid; gap:22px; justify-items:center; width:min(320px,72vw); }
 .boot-mark{ color:var(--lime); }
-.boot-stroke{
-  stroke-dasharray:1; stroke-dashoffset:1;
-  animation:draw 1.5s var(--ease-io) infinite alternate;
+/* The letter is cut once and stays cut. What moves is how much of the block
+   exists, which is exactly how much of the load is done: the previous version
+   animated the cut instead, so for half of every cycle the mark was a lime
+   rectangle with no letter in it. */
+#boot-fill{
+  clip-path:inset(0 96% 0 0);
+  transition:clip-path .45s var(--ease);
 }
-@keyframes draw{ from{stroke-dashoffset:1} to{stroke-dashoffset:0} }
 
 .boot-bar{
   width:100%; height:2px; background:var(--line-2); overflow:hidden; border-radius:2px;
@@ -1013,12 +1016,16 @@ body.cur-drag .c-lbl{ opacity:1; }
         <mask id="boot-cut">
           <rect width="96" height="44" fill="#fff"/>
           <path d="M14 12l12 22 12-22 12 22 12-22" fill="none" stroke="#000" stroke-width="7"
-                stroke-linecap="round" stroke-linejoin="round" pathLength="1" class="boot-stroke"/>
+                stroke-linecap="round" stroke-linejoin="round"/>
         </mask>
-        <rect x="2" y="2" width="92" height="40" rx="9" fill="currentColor" mask="url(#boot-cut)"/>
+        <!-- what it will be when it is done, so the gauge has a scale -->
+        <rect x="2" y="2" width="92" height="40" rx="9" fill="none"
+              stroke="currentColor" stroke-width="1.5" opacity=".2"/>
+        <rect id="boot-fill" x="2" y="2" width="92" height="40" rx="9"
+              fill="currentColor" mask="url(#boot-cut)"/>
       </svg>
     </div>
-    <div class="boot-bar"><i></i></div>
+
     <div class="boot-log" id="boot-log">initialising</div>
   </div>
 </div>
@@ -1962,9 +1969,19 @@ float formRing(vec3 p, float t){
 
 float sculpture(vec3 p, float t, float shape, float detail){
   p /= 1.0;
+  /* The pair is chosen by the floor of s and weighted by what is left over,
+     which works for every value except the top of the range, and the top of
+     the range is where the last section sits.
+
+     At s = 3 exactly, floor gives 3, no pair is named for it so the selector
+     falls through to the frame, and fract gives 0 so the frame is what gets
+     returned at full weight. Scrolling to the contact section therefore
+     crossfaded almost all the way to the ring and then snapped back to a cube
+     on the final value. Hold the index one below the top and let the leftover
+     reach one instead. */
   float s = clamp(shape, 0.0, 3.0);
-  int i = int(floor(s));
-  float f = smoothstep(0.0, 1.0, fract(s));
+  int i = int(min(floor(s), 2.0));
+  float f = smoothstep(0.0, 1.0, s - float(i));
 
   /* Select, then blend, rather than a branch per pair.
 
@@ -6006,10 +6023,17 @@ class UI {
     this._flash = setTimeout(() => f.classList.remove('on'), ms);
   }
 
+  /* The mark is the progress bar. It used to be a line underneath one, and
+     the mark above it spent the wait animating something unrelated to the
+     wait; now the thing being watched is the thing being waited for. */
   boot(msg, pct) {
-    const l = $('#boot-log'), b = $('.boot-bar i');
+    const l = $('#boot-log'), f = $('#boot-fill');
     if (l && msg) l.textContent = msg;
-    if (b && pct != null) b.style.width = clamp(pct, 0, 1) * 100 + '%';
+    if (f && pct != null) {
+      const p = clamp(pct, 0, 1);
+      // a sliver always showing, or nothing on screen says loading has begun
+      f.style.clipPath = `inset(0 ${(1 - Math.max(p, 0.04)) * 100}% 0 0)`;
+    }
   }
 
   /* ── live stats ────────────────────────────────────────────────────────

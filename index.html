@@ -45,12 +45,16 @@
         <mask id="boot-cut">
           <rect width="96" height="44" fill="#fff"/>
           <path d="M14 12l12 22 12-22 12 22 12-22" fill="none" stroke="#000" stroke-width="7"
-                stroke-linecap="round" stroke-linejoin="round" pathLength="1" class="boot-stroke"/>
+                stroke-linecap="round" stroke-linejoin="round"/>
         </mask>
-        <rect x="2" y="2" width="92" height="40" rx="9" fill="currentColor" mask="url(#boot-cut)"/>
+        <!-- what it will be when it is done, so the gauge has a scale -->
+        <rect x="2" y="2" width="92" height="40" rx="9" fill="none"
+              stroke="currentColor" stroke-width="1.5" opacity=".2"/>
+        <rect id="boot-fill" x="2" y="2" width="92" height="40" rx="9"
+              fill="currentColor" mask="url(#boot-cut)"/>
       </svg>
     </div>
-    <div class="boot-bar"><i></i></div>
+
     <div class="boot-log" id="boot-log">initialising</div>
   </div>
 </div>

@@ -432,10 +432,17 @@ export class UI {
     this._flash = setTimeout(() => f.classList.remove('on'), ms);
   }
 
+  /* The mark is the progress bar. It used to be a line underneath one, and
+     the mark above it spent the wait animating something unrelated to the
+     wait; now the thing being watched is the thing being waited for. */
   boot(msg, pct) {
-    const l = $('#boot-log'), b = $('.boot-bar i');
+    const l = $('#boot-log'), f = $('#boot-fill');
     if (l && msg) l.textContent = msg;
-    if (b && pct != null) b.style.width = clamp(pct, 0, 1) * 100 + '%';
+    if (f && pct != null) {
+      const p = clamp(pct, 0, 1);
+      // a sliver always showing, or nothing on screen says loading has begun
+      f.style.clipPath = `inset(0 ${(1 - Math.max(p, 0.04)) * 100}% 0 0)`;
+    }
   }
 
   /* ── live stats ────────────────────────────────────────────────────────

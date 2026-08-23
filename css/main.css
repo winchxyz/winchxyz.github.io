@@ -176,11 +176,14 @@ html.booted #boot{ opacity:0; visibility:hidden; pointer-events:none; }
 
 .boot-inner{ display:grid; gap:22px; justify-items:center; width:min(320px,72vw); }
 .boot-mark{ color:var(--lime); }
-.boot-stroke{
-  stroke-dasharray:1; stroke-dashoffset:1;
-  animation:draw 1.5s var(--ease-io) infinite alternate;
+/* The letter is cut once and stays cut. What moves is how much of the block
+   exists, which is exactly how much of the load is done: the previous version
+   animated the cut instead, so for half of every cycle the mark was a lime
+   rectangle with no letter in it. */
+#boot-fill{
+  clip-path:inset(0 96% 0 0);
+  transition:clip-path .45s var(--ease);
 }
-@keyframes draw{ from{stroke-dashoffset:1} to{stroke-dashoffset:0} }
 
 .boot-bar{
   width:100%; height:2px; background:var(--line-2); overflow:hidden; border-radius:2px;

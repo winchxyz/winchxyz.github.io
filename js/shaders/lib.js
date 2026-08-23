@@ -294,9 +294,19 @@ float formRing(vec3 p, float t){
 
 float sculpture(vec3 p, float t, float shape, float detail){
   p /= 1.0;
+  /* The pair is chosen by the floor of s and weighted by what is left over,
+     which works for every value except the top of the range, and the top of
+     the range is where the last section sits.
+
+     At s = 3 exactly, floor gives 3, no pair is named for it so the selector
+     falls through to the frame, and fract gives 0 so the frame is what gets
+     returned at full weight. Scrolling to the contact section therefore
+     crossfaded almost all the way to the ring and then snapped back to a cube
+     on the final value. Hold the index one below the top and let the leftover
+     reach one instead. */
   float s = clamp(shape, 0.0, 3.0);
-  int i = int(floor(s));
-  float f = smoothstep(0.0, 1.0, fract(s));
+  int i = int(min(floor(s), 2.0));
+  float f = smoothstep(0.0, 1.0, s - float(i));
 
   /* Select, then blend, rather than a branch per pair.
 

@@ -364,6 +364,23 @@ existed to hide an instant edit, there is no longer an instant edit to hide,
 and a flash bright enough to cover the change was covering the only thing
 worth watching.
 
+### The value at the top of a range is the one nobody tests
+
+The sculpture is four forms crossfaded by a single number. The pair to blend
+is chosen by the floor of that number and weighted by what is left over, which
+is correct for every value it can take except the last one.
+
+At 3 exactly, floor gives 3, no pair is named for 3 so the selector falls
+through to the frame, and the leftover is 0 so the frame is returned at full
+weight. The contact section's keyframe is 3. So scrolling to it crossfaded
+almost all the way to the ring and then snapped back to a cube on the final
+value, and stayed there, because that is where the scroll stops.
+
+Holding the index one below the top and letting the leftover reach 1 instead
+costs one `min` and fixes it. Worth remembering that the bug lived at exactly
+the value the last section sits on, which is the one place a crossfade is
+guaranteed to come to rest.
+
 ### Everyone starts at the lowest tier
 
 Detection gives a *ceiling*, not a starting point. Guessing a quality tier
