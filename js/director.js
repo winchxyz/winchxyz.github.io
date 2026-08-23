@@ -173,7 +173,7 @@ export class Director {
       show: 0, spin: 0, hover: -1,
       fly: 0, flyId: -1, pending: -1, outMat: -1, switched: false, parted: false,
       partAt: 0, partD: 0, partR: 0,
-      swapC: [0, 0, 0], swapR: 0, newBlob: [0, 0, 0, 0],
+      swapC: [0, 0, 0], swapR: 0, newBlob: [0, 0, 0, 0], swapDir: [0, 1, 0],
       outDir: [0, 1, 0], outD: 0, outRad: 0,
       flyPos: [0, 0, 0], flyR: 0, flyK: 0.3, bound: R_BOUND,
       pulse: 0, pulseDir: [0, 1, 0], flash: 0,
@@ -195,6 +195,18 @@ export class Director {
     if (i === this.materialIndex) return;
     this.materialIndex = clamp(i, 0, MATERIALS.length - 1);
     this.burst = 0.65;
+  }
+
+  /* The direction of a ring slot, and it takes a fractional index as readily
+     as a whole one, because the front has to sit between two of them. The
+     vector is already unit: cos(a)^2 + sin(a)^2(sin^2 t + cos^2 t) is one. */
+  slotDir(k, out) {
+    const a = this.orbs.spin + (Math.PI * 2 * k) / MATERIALS.length;
+    const s = Math.sin(a);
+    out[0] = Math.cos(a);
+    out[1] = -s * Math.sin(ORB_TILT);
+    out[2] = s * Math.cos(ORB_TILT);
+    return out;
   }
 
   /* Start an exchange. The material does not change now; it changes when the
@@ -277,7 +289,7 @@ export class Director {
        is a stretch of detached ball still wearing the body's material. */
     const apart = sculptR + ORB_R + 0.035;
 
-    o.flyR = 0;
+    o.flyR = 0; o.outRad = 0; o.outD = 0;
 
     const n = o.pos.length;
     const ct = Math.cos(ORB_TILT), st = Math.sin(ORB_TILT);
@@ -414,8 +426,24 @@ export class Director {
        nothing to nothing. */
     if (flying && o.switched && !o.parted) {
       const fr = easeIO(c01((f - P_TOUCH) / (P_DRAIN - P_TOUCH)));
-      const d = o.outRad > 0 ? o.outD : sculptR;
-      const u = o.outDir;
+
+      /* The front travels the ring between the two slots involved, and it
+         reads both of them live, this frame, rather than sampling a direction
+         once at the click.
+
+         It used to contract onto the departing slot alone, and the numbers
+         said what that looked like: over one exchange the anchor moved six
+         degrees while the change itself crossed a hundred and ten, so nothing
+         about where the change went had anything to do with where the orbs
+         were. Interpolating the slot index rather than the vector matters
+         here: two slots can be exactly opposite, and a spherical interpolation
+         between opposite directions has no defined path, while a ring has an
+         obvious one. */
+      const N = MATERIALS.length;
+      let dk = ((o.outMat - o.flyId) % N + N) % N;
+      if (dk > N / 2) dk -= N;                     // the short way round
+      const u = this.slotDir(o.flyId + dk * fr, o.swapDir);
+      const d = lerp(sculptR, o.outRad > 0 ? o.outD : sculptR, fr);
       o.swapC[0] = u[0] * d; o.swapC[1] = u[1] * d; o.swapC[2] = u[2] * d;
       // wide enough at the start to cover every point of the body, or the far
       // side of it changes on the frame of the switch and the drain has
