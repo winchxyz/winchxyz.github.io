@@ -302,11 +302,32 @@ glass is not a material. What changed is where the edit gets made. It used to
 be made in time, on a single frame, under a flash. It is made in space now.
 
 For as long as an exchange lasts the body is two materials at once, divided by
-a region that contracts onto the drop carrying the old one away. At contact
-that region covers the whole body, so nothing appears to happen; as it shrinks
-the new material floods in from where its own drop landed; the last of the old
-material is the drop that leaves. Taking one in is visibly what puts the other
-out, rather than a caption claiming it did.
+a front that travels the ring between the two slots involved while shrinking
+onto the drop carrying the old material away. At contact it covers the whole
+body, so nothing appears to happen; as it moves and shrinks the new material
+fills in behind it; the last of the old is the drop that leaves. Taking one in
+is visibly what puts the other out, rather than a caption claiming it did.
+
+The front reads both slots live, every frame, and that is the second version of
+it. The first contracted onto the departing slot alone, sampled where it
+happened to be, and it looked like an animation playing on a static ball while
+the orbs went past unrelated to it. The measurement agreed: over one exchange
+the ring turns 11 degrees, that anchor moved 6, and the change itself crossed
+110. It travels the real arc now, 56 degrees between adjacent slots and 186
+between opposite ones, and the couple of degrees by which the distance covered
+exceeds the straight line between its endpoints is the ring's own rotation,
+picked up because the endpoints are read live rather than sampled at the click.
+
+The interpolation is over the slot index rather than the direction vector,
+which matters more than it sounds: two slots can be exactly opposite, and a
+spherical interpolation between opposite directions has no defined path, while
+a ring has an obvious one.
+
+One thing this does not fix. The pair of slots is whichever the visitor
+clicked, so when the material being replaced sits on the far side of the ring
+the end of the change happens behind the body and out of sight. The front at
+least travels there visibly now instead of waiting there, but the geometry is
+the geometry.
 
 It cost 78 ms of shader compile, and that is the interesting part. `describe()`
 already branched on a material id handed in at draw time rather than a constant
