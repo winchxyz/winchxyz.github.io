@@ -63,6 +63,34 @@ export class UI {
       list.appendChild(li);
     });
     this.selectMaterial(DEFAULT_MATERIAL, true);
+    this.reserveMaterialPanel();
+    addEventListener('resize', () => this.reserveMaterialPanel());
+  }
+
+  /* Hold the panel still while the material changes.
+
+     The six descriptions run to four, five and six lines, so switching moved
+     everything under them: the chips jumped 53px, which is to say the button
+     being clicked slid out from under the cursor as it was clicked. Reserve
+     the tallest of the six and nothing below it can move.
+
+     Measured rather than declared, because the count of lines is a function
+     of the column width and the copy, and both change. */
+  reserveMaterialPanel() {
+    const name = $('#mat-name'), desc = $('#mat-desc');
+    if (!name || !desc) return;
+    const was = { n: name.textContent, d: desc.textContent };
+    name.style.minHeight = desc.style.minHeight = '0px';
+
+    let nh = 0, dh = 0;
+    for (const m of MATERIALS) {
+      name.textContent = m.name; desc.textContent = m.desc;
+      nh = Math.max(nh, name.getBoundingClientRect().height);
+      dh = Math.max(dh, desc.getBoundingClientRect().height);
+    }
+    name.textContent = was.n; desc.textContent = was.d;
+    name.style.minHeight = Math.ceil(nh) + 'px';
+    desc.style.minHeight = Math.ceil(dh) + 'px';
   }
 
   selectMaterial(i, silent = false) {

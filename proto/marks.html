@@ -1,0 +1,197 @@
+<meta charset="utf-8">
+<title>Marks</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#07090a; --panel:#0d1011; --line:#1e2422; --line-2:#161b19;
+    --bone:#f2f6ec; --chalk:#dfe6d8; --ash:#9aa694; --muted:#7c8878; --dim:#5a6356;
+    --lime:#c6f24e;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    --display:"Archivo",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--ink); color:var(--chalk); font-family:var(--mono);
+    padding:clamp(24px,4vw,56px); line-height:1.6;
+  }
+  h1{
+    font-family:var(--display); font-weight:700; font-stretch:112%;
+    font-size:clamp(26px,3.4vw,42px); letter-spacing:-.02em; color:var(--bone);
+    margin-bottom:10px;
+  }
+  .lede{ color:var(--muted); max-width:72ch; font-size:13px; margin-bottom:6px; }
+  .lede b{ color:var(--ash); font-weight:400; }
+
+  .grid{
+    display:grid; gap:1px; margin-top:34px;
+    grid-template-columns:repeat(auto-fill,minmax(268px,1fr));
+    background:var(--line-2); border:1px solid var(--line-2);
+  }
+  .card{ background:var(--panel); padding:20px 20px 16px; display:flex; flex-direction:column; gap:14px; }
+  .card:hover{ background:#111514; }
+
+  .big{
+    display:grid; place-items:center; min-height:132px;
+    background:var(--ink); border:1px solid var(--line-2); border-radius:8px;
+  }
+  .big svg{ width:132px; height:auto; color:var(--bone); }
+
+  .row{ display:flex; align-items:center; gap:16px; min-width:0; }
+  /* the size it is actually used at, next to the type it sits beside */
+  .navbar{
+    flex:1 1 0; min-width:0; overflow:hidden;
+    display:flex; align-items:center; gap:12px;
+    background:var(--ink); border:1px solid var(--line-2); border-radius:8px;
+    padding:9px 12px;
+  }
+  .navbar svg{ width:56px; height:21px; color:var(--bone); flex:none; }
+  .navbar .nav-type{ font-size:10px; letter-spacing:.1em; color:var(--dim);
+    white-space:nowrap; overflow:hidden; text-overflow:clip; min-width:0; }
+  .navbar .cta{
+    margin-left:auto; font-size:9.5px; letter-spacing:.1em; text-transform:uppercase;
+    background:var(--lime); color:var(--ink); border-radius:20px; padding:4px 9px; font-weight:600;
+  }
+  .tiny{
+    display:grid; place-items:center; width:38px; height:38px; flex:none;
+    background:var(--ink); border:1px solid var(--line-2); border-radius:8px;
+  }
+  .tiny svg{ width:19px; height:auto; color:var(--lime); }
+
+  .meta{ display:flex; align-items:baseline; gap:9px; }
+  .key{ font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--dim); }
+  .nm{ font-size:14px; color:var(--bone); }
+  .note{ font-size:11.5px; color:var(--muted); text-wrap:pretty; }
+
+  footer{ margin-top:38px; font-size:11.5px; color:var(--dim); max-width:74ch; }
+  footer b{ color:var(--ash); font-weight:400; }
+</style>
+
+<h1>Eight marks</h1>
+<p class="lede">
+  Each one shown three ways, because a mark that only works in one of them is
+  not a mark: <b>large</b>, at the <b>21px</b> it actually occupies in the
+  navigation bar beside its neighbours, and at <b>19px in lime</b>, which is
+  the hardest case and the one a favicon has to survive.
+</p>
+<p class="lede">
+  A is what the site wears now. It is here to be compared against, not defended.
+</p>
+
+<div class="grid" id="grid"></div>
+
+<footer>
+  Drawn as paths in a 96&times;44 box, one colour, no gradients and no
+  effects, so any of them drops into the existing markup unchanged and
+  inherits <b>currentColor</b> the way the present one does. Nothing here needs
+  a font to be installed or a file to be fetched.
+</footer>
+
+<script type="module">
+/* Eight marks for a page whose entire argument is that it computes rather
+   than downloads. So: geometry, one stroke weight, no gradients, nothing that
+   needs a raster fallback. Every one is legible at 19 pixels, which is the
+   size that kills most logos and the only size some people will ever see. */
+
+const MARKS = [
+  {
+    key: 'A', name: 'Current',
+    note: 'The zigzag as it stands. Drawn light and wide, it sits in the left '
+        + 'half of its own box and thins out to almost nothing at small sizes.',
+    svg: `<path d="M8 10l14 26 14-26 14 26 14-26" fill="none" stroke="currentColor"
+           stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>`,
+    box: '0 0 120 44',
+  },
+  {
+    key: 'B', name: 'Tightened',
+    note: 'The same idea, drawn properly: narrower, heavier, filling its box. '
+        + 'The smallest possible change, and most of the gain.',
+    svg: `<path d="M6 7l15 30 15-30 15 30 15-30" fill="none" stroke="currentColor"
+           stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/>`,
+    box: '0 0 96 44',
+  },
+  {
+    key: 'C', name: 'Mitred',
+    note: 'Sharp joins instead of round ones. Reads as cut rather than drawn, '
+        + 'and holds its weight at small sizes better than any round cap does.',
+    svg: `<path d="M5 6l16 32 15-27 15 27 16-32" fill="none" stroke="currentColor"
+           stroke-width="8" stroke-linejoin="miter" stroke-miterlimit="6"/>`,
+    box: '0 0 96 44',
+  },
+  {
+    key: 'D', name: 'Split',
+    note: 'Two chevrons with air between them. Reads as W and as the pair of '
+        + 'slashes you would type, which suits a page written in code.',
+    svg: `<path d="M6 8l13 27 13-27" fill="none" stroke="currentColor" stroke-width="6.5"
+           stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M44 8l13 27 13-27" fill="none" stroke="currentColor" stroke-width="6.5"
+           stroke-linecap="round" stroke-linejoin="round"/>`,
+    box: '0 0 96 44',
+  },
+  {
+    key: 'E', name: 'Winch',
+    note: 'The thing the name means. A drum, and a cable coming off it into the '
+        + 'first stroke of the W. The only one that says anything beyond the letter.',
+    svg: `<circle cx="19" cy="19" r="11" fill="none" stroke="currentColor" stroke-width="5"/>
+          <path d="M30 19l10 19 13-27 13 27 13-27" fill="none" stroke="currentColor"
+           stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>`,
+    box: '0 0 96 44',
+  },
+  {
+    key: 'F', name: 'Signal',
+    note: 'A triangle wave with its peaks clipped flat, the way a readout '
+        + 'clips. Still a W, but it belongs to instruments rather than to '
+        + 'stationery.',
+    svg: `<path d="M4 10h8l11 26h5l11-26h8l11 26h5l11-26h8" fill="none" stroke="currentColor"
+           stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>`,
+    box: '0 0 96 44',
+  },
+  {
+    key: 'G', name: 'Solid',
+    note: 'Filled rather than stroked, with the inner valleys cut shallower '
+        + 'than the outer ones. The heaviest of the eight and the one that '
+        + 'survives being printed small.',
+    svg: `<path d="M2 6h15l9 21 9-21h12l9 21 9-21h15L64 38H51L44 21l-7 17H24z"
+           fill="currentColor"/>`,
+    box: '0 0 96 44',
+  },
+  {
+    key: 'H', name: 'Cut',
+    note: 'The mark is the hole. A filled block with the W taken out of it, so '
+        + 'at a distance it is a shape and up close it is a letter.',
+    svg: `<defs><mask id="cutmask">
+            <rect x="0" y="0" width="96" height="44" fill="#fff"/>
+            <path d="M14 12l12 22 12-22 12 22 12-22" fill="none" stroke="#000"
+             stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+          </mask></defs>
+          <rect x="2" y="2" width="92" height="40" rx="9" fill="currentColor" mask="url(#cutmask)"/>`,
+    box: '0 0 96 44',
+  },
+];
+
+/* Each mark gets its own id namespace, or the masks in one collide with the
+   masks in another the moment two of them are on the page together. */
+const svg = (m, cls, uid) => {
+  const body = m.svg.replace(/cutmask/g, 'cutmask' + uid);
+  return `<svg class="${cls}" viewBox="${m.box}" xmlns="http://www.w3.org/2000/svg"
+           aria-label="${m.name} mark" role="img">${body}</svg>`;
+};
+
+document.getElementById('grid').innerHTML = MARKS.map((m, i) => `
+  <div class="card">
+    <div class="meta"><span class="key">${m.key}</span><span class="nm">${m.name}</span></div>
+    <div class="big">${svg(m, '', i)}</div>
+    <div class="row">
+      <div class="navbar">
+        ${svg(m, '', i + 100)}
+        <span class="nav-type">whoami&nbsp;&nbsp;materials&nbsp;&nbsp;work</span>
+        <span class="cta">contact</span>
+      </div>
+      <div class="tiny">${svg(m, '', i + 200)}</div>
+    </div>
+    <p class="note">${m.note}</p>
+  </div>
+`).join('');
+</script>

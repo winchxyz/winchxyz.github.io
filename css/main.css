@@ -393,6 +393,13 @@ main{ position:relative; z-index:10; }
 .sec{
   position:relative;
   padding:clamp(112px,15vh,208px) 0;
+  /* Short sections used to let the next one's heading up over the fold. On a
+     1920 screen whoami is 717px of a 1080 viewport, so after a jump landed on
+     it you read four paragraphs and then found "$ materials" sitting at the
+     bottom of the same screen. Filling the viewport is not the same thing as
+     the full-height sections this page deliberately does not have: the tall
+     ones are unaffected, and nothing here snaps or pages. */
+  min-height:100svh;
 }
 .sec-hero{
   padding-top:0;
