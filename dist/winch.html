@@ -417,7 +417,10 @@ main{ position:relative; z-index:10; }
    tall as their content, with padding doing the separating. */
 .sec{
   position:relative;
-  padding:clamp(112px,15vh,208px) 0;
+  /* Named, because the section label is positioned against it and the two
+     drifting apart is what put the label under the navigation bar. */
+  --sec-pad:clamp(112px,15vh,208px);
+  padding:var(--sec-pad) 0;
   /* Short sections used to let the next one's heading up over the fold. On a
      1920 screen whoami is 717px of a 1080 viewport, so after a jump landed on
      it you read four paragraphs and then found "$ materials" sitting at the
@@ -442,9 +445,17 @@ main{ position:relative; z-index:10; }
   background:linear-gradient(180deg, transparent, rgba(7,9,10,.82) 14%, rgba(7,9,10,.88) 86%, transparent);
 }
 
+/* The label is anchored to the section, and a jump lands 56px into the
+   section's content, so a value picked independently of the padding rides up
+   under the navigation bar as the viewport grows: measured at 1920 it sat 20px
+   above the bar's lower edge, at 1440 seven, at 1280 exactly on it.
+
+   Deriving it from the same padding fixes it at every size at once. The label
+   ends up 32px below the bar after a jump, on every viewport, because both
+   numbers now come from one. */
 .sec::after{
   content:attr(data-label);
-  position:absolute; top:clamp(40px,8vh,90px); right:var(--gut);
+  position:absolute; top:calc(var(--sec-pad) - 24px); right:var(--gut);
   font-family:var(--mono); font-size:11px; letter-spacing:.18em; text-transform:uppercase;
   color:var(--dim); opacity:.65; pointer-events:none;
 }
