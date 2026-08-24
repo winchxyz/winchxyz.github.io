@@ -17,6 +17,15 @@ import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 
 const MODE = process.argv[2] === 'shot' ? 'shot' : 'compile';
+
+/* PNG is right for a screenshot you are going to read pixel values out of,
+   and wrong for one that has to travel: the hero at 1920 comes to a megabyte
+   and a half, which is a slow fetch for a link preview. JPEG at the canonical
+   card size is a tenth of that and nobody can tell at 1200 wide. */
+const SHOT_FMT = process.env.FORMAT === 'jpeg' ? 'jpeg' : 'png';
+const SHOT_OPTS = SHOT_FMT === 'jpeg'
+  ? { format: 'jpeg', quality: Number(process.env.QUALITY || 82) }
+  : { format: 'png' };
 const OUT = process.argv[3] || 'docs/headless.png';
 const PORT = 9333;
 const SITE = process.env.SITE || 'http://localhost:8141';
@@ -350,8 +359,10 @@ try {
       const id = sel.replace(/^#/, '');
       await evaluate(cdp, `(() => { const n = document.querySelector('${sel}'); if (n) scrollTo({top: n.offsetTop, behavior: 'auto'}); return !!n; })()`);
       await sleep(dwell);
-      const s2 = await cdp.send('Page.captureScreenshot', { format: 'png' });
-      const path = OUT.replace(/\.png$/, '') + '-' + id + '.png';
+      const s2 = await cdp.send('Page.captureScreenshot', SHOT_OPTS);
+      // the extension follows the format, or a jpeg lands in a file called png
+      const ext = SHOT_FMT === 'jpeg' ? '.jpg' : '.png';
+      const path = OUT.replace(/\.(png|jpe?g)$/i, '') + '-' + id + ext;
       writeFileSync(path, Buffer.from(s2.data, 'base64'));
       console.log('wrote ' + path);
     }
@@ -359,7 +370,7 @@ try {
     process.exit(0);
   }
 
-  const shot = await cdp.send('Page.captureScreenshot', { format: 'png' });
+  const shot = await cdp.send('Page.captureScreenshot', SHOT_OPTS);
   writeFileSync(OUT, Buffer.from(shot.data, 'base64'));
   console.log('wrote ' + OUT);
 
