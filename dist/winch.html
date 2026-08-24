@@ -554,6 +554,20 @@ html[data-nojs] [data-reveal]{ opacity:1; transform:none; }
 @keyframes cue{ 0%,100%{transform:translateY(0);opacity:.4} 50%{transform:translateY(5px);opacity:1} }
 html.scrolled .scroll-cue{ opacity:0; pointer-events:none; }
 
+/* The one line on the page that asks for something. It sits under the counts
+   rather than beside the tagline, because a hero that opens with an ask reads
+   as a pitch, and this page would rather demonstrate first and ask second. */
+.hero-offer{
+  margin-top:18px; font-size:12px; letter-spacing:.06em; color:var(--dim);
+  display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+}
+.hero-offer .sep{ color:var(--line); }
+.hero-offer a{
+  color:var(--lime); border-bottom:1px solid rgba(198,242,78,.35);
+  padding-bottom:1px; transition:border-color .25s var(--ease);
+}
+.hero-offer a:hover{ border-bottom-color:var(--lime); }
+
 .hero-footnote{
   position:absolute; left:var(--gut); bottom:26px;
   font-size:12px; color:var(--dim); letter-spacing:.05em; margin:0;
@@ -1093,14 +1107,14 @@ body.cur-drag .c-lbl{ opacity:1; }
 <section class="sec sec-hero" id="hero" data-scene="hero" data-label="00 / hero">
   <div class="wrap">
     <p class="eyebrow" data-reveal>
-      <span class="tick"></span>real-time graphics &amp; AI dev tools
+      <span class="tick"></span>AI dev tools &amp; real-time graphics
     </p>
 
     <h1 class="wordmark" data-reveal data-reveal-delay="1">
       <span class="letter">w</span><span class="letter">i</span><span class="letter">n</span><span class="letter">c</span><span class="letter">h</span>
     </h1>
 
-    <p class="tagline" data-reveal data-reveal-delay="2">vibecoding cool shit</p>
+    <p class="tagline" data-reveal data-reveal-delay="2">vibecoding tools, not demos</p>
 
     <p class="rotator mono" data-reveal data-reveal-delay="3">
       <span class="caret">&gt;</span> <span id="rotator-text"></span><span class="cursor" aria-hidden="true">▍</span>
@@ -1112,6 +1126,10 @@ body.cur-drag .c-lbl{ opacity:1; }
       <span><b id="stat-repos">14</b> repos</span>
       <span class="live" title="Refreshed from the GitHub API when it is reachable; otherwise these are the numbers baked in at build time."><i></i><span id="stat-src">snapshot</span></span>
     </div>
+    <p class="hero-offer mono" data-reveal data-reveal-delay="5">
+      open to collaboration <span class="sep">&middot;</span> a project or a job <span class="sep">&middot;</span>
+      <a href="#contact" data-scrollto="#contact">get in touch</a>
+    </p>
   </div>
 
   <a class="scroll-cue mono" href="#whoami" aria-label="Scroll to content">
@@ -1198,8 +1216,8 @@ body.cur-drag .c-lbl{ opacity:1; }
     <header class="sec-head">
       <h2 class="h-mono" data-reveal><span class="prompt">$</span> ls ~/projects</h2>
       <p class="sec-sub" data-reveal data-reveal-delay="1">
-        Everything generated at runtime. No asset files, no build step, nothing
-        downloaded. Star counts are live when GitHub answers, and the last verified
+        Every one of these runs on your machine and hides nothing about how it
+        works. Star counts are live when GitHub answers, and the last verified
         snapshot when it doesn't.
       </p>
     </header>
@@ -1256,7 +1274,7 @@ body.cur-drag .c-lbl{ opacity:1; }
     <footer class="foot mono">
       <span>© <span id="year">2026</span> winch</span>
       <span class="sep">·</span>
-      <span>no engine · no libraries · no asset files</span>
+      <span>built in the open</span>
       <span class="sep">·</span>
       <button type="button" class="linkish" data-action="shortcuts">keyboard shortcuts</button>
     </footer>
@@ -4657,10 +4675,15 @@ const DEFAULT_MATERIAL = 5;
 
 /* ── typing line under the wordmark ────────────────────────────────────── */
 
+/* The tagline says vibecoding, and three sections down the same page says it
+   is allergic to AI slop and to tools that hide what they did. Those only
+   contradict each other if vibecoding means shipping what you never read.
+   This is where that gets settled, in the first line, before the objection
+   has had time to form. */
 const ROTATOR = [
-  'Real-time graphics and AI dev tools',
-  'Shaders on one end, agents on the other',
+  'Vibecoded, then read line by line',
   'Local-first. Open source. Nothing hidden.',
+  'Shaders on one end, agents on the other',
   'Built because I wanted it to exist',
 ];
 

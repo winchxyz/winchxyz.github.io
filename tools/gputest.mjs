@@ -35,6 +35,20 @@ const chrome = spawn(CHROME, [
   `--remote-debugging-port=${PORT}`,
   `--user-data-dir=${profile}`,
   '--no-first-run', '--no-default-browser-check', '--disable-extensions',
+  /* Standard hygiene against Chrome throttling a window it thinks nobody is
+     watching. Worth having, and worth knowing that on its own it is not
+     enough: measured at one animation frame per second afterwards, with an
+     idle CPU and visibilityState still reporting "visible".
+
+     What actually keeps frames coming is scrolling. Every capture in this
+     project that came back settled used SHOTS, which scrolls before it
+     dwells; every one that came back dim, or at the opening tier, or with a
+     boot overlay caught mid-fade, had asked for a still without moving
+     first. Prefer SHOTS over a bare settle. */
+  '--disable-background-timer-throttling',
+  '--disable-renderer-backgrounding',
+  '--disable-backgrounding-occluded-windows',
+  '--disable-features=CalculateNativeWinOcclusion',
   '--disable-background-networking', '--disable-sync', '--mute-audio',
   // GPU=1 runs on the real adapter. The default forces the software GL
   // stack, because the point of this harness is to compile shaders on a

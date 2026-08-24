@@ -20,10 +20,15 @@ export const DEFAULT_MATERIAL = 5;
 
 /* ── typing line under the wordmark ────────────────────────────────────── */
 
+/* The tagline says vibecoding, and three sections down the same page says it
+   is allergic to AI slop and to tools that hide what they did. Those only
+   contradict each other if vibecoding means shipping what you never read.
+   This is where that gets settled, in the first line, before the objection
+   has had time to form. */
 export const ROTATOR = [
-  'Real-time graphics and AI dev tools',
-  'Shaders on one end, agents on the other',
+  'Vibecoded, then read line by line',
   'Local-first. Open source. Nothing hidden.',
+  'Shaders on one end, agents on the other',
   'Built because I wanted it to exist',
 ];
 
