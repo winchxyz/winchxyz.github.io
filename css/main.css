@@ -372,13 +372,21 @@ html.nav-hide #nav{ transform:translateY(-100%); }
   background:var(--dim); transition:all .3s var(--ease);
 }
 #rail li.is-on::before{ background:var(--lime); width:5px; height:5px; box-shadow:0 0 8px var(--lime); }
+/* The name stays for anything reading the page aloud and comes off the screen.
+
+   It sat 16px to the right of a dot that is already most of the way across the
+   gutter, so at 1366 the label ran from x66 into a content box starting at
+   x16, and the current section's name was printed permanently over the copy.
+   Widening the gutter would only move the problem to the next narrower screen.
+
+   Nothing is lost by taking it out: every section already prints its own name
+   in the top right corner, which is where the eye goes for it. What the rail
+   is for is where you are and how far along, and the dot and the fill say
+   both without a word. */
 #rail li span{
-  position:absolute; left:16px; white-space:nowrap;
-  font-family:var(--mono); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase;
-  color:var(--dim); opacity:0; transform:translateX(-4px);
-  transition:all .3s var(--ease); pointer-events:none;
+  position:absolute; width:1px; height:1px; margin:-1px; padding:0;
+  overflow:hidden; clip-path:inset(50%); white-space:nowrap; border:0;
 }
-#rail li:hover span, #rail li.is-on span{ opacity:1; transform:none; color:var(--ash); }
 
 @media (max-width:900px){ #rail{ display:none; } }
 
