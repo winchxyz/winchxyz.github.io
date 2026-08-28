@@ -14,16 +14,23 @@
      image behind it, so every share of a page whose whole argument is visual
      arrived as plain text. This one is a real GPU capture of the page. -->
 <!-- 1200x630 is the size every card reader crops to, and a JPEG at that size
-     is 184 kB against the 1.5 MB the full-resolution PNG came to. A preview
+     is 204 kB against the 1.5 MB the full-resolution PNG came to. A preview
      nobody waits for is a preview nobody sees. -->
-<meta property="og:image" content="https://winchxyz.github.io/docs/share.jpg" />
+<!-- ?v=2 is not decoration. The first capture was taken before the rail label
+     came off the screen, so the card was advertising a corner of the interface
+     the page no longer has, and every network that had already scraped this URL
+     was serving that. Changing the path is the only reliable way to make them
+     look again; the file behind it is a fresh capture on the real adapter at
+     ultra, with the section index, the GPU chip and the scroll cue taken out,
+     because those are controls and a still cannot be clicked. -->
+<meta property="og:image" content="https://winchxyz.github.io/docs/share.jpg?v=2" />
 <meta property="og:image:type" content="image/jpeg" />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
 <meta property="og:image:alt" content="The winch home page: the wordmark beside a cast-crystal sculpture rendered in real time on the GPU." />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:creator" content="@winchxyz" />
-<meta name="twitter:image" content="https://winchxyz.github.io/docs/share.jpg" />
+<meta name="twitter:image" content="https://winchxyz.github.io/docs/share.jpg?v=2" />
 <meta name="twitter:title" content="winch · AI dev tools &amp; real-time graphics" />
 <meta name="twitter:description" content="Vibecoding tools, not demos. Local-first AI dev tools and real-time graphics." />
 
