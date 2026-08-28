@@ -34,12 +34,12 @@ Or skip all of that:
 npm run build
 ```
 
-That flattens this page into `dist/winch.html`: one file, about 263 kB, double-click
-it and it runs. Nothing is fetched at runtime except the two Google Fonts, and
-it falls back to system fonts without them. The two pages in `notes/` are not
-in it and do not need to be; each one is already a single self-contained file,
-and the links to them are absolute so they still resolve out of the flattened
-copy.
+That flattens this page into `dist/winch.html`: one file, about 263 kB,
+double-click it and it runs. Nothing is fetched at runtime except the two
+Google Fonts, and it falls back to system fonts without them. The two pages in
+`notes/` are not in it and do not need to be; each one is already a single
+self-contained file, and the links to them are absolute so they still resolve
+out of the flattened copy.
 
 **Requirements:** a browser with WebGL2 and hardware acceleration. Recent
 Chrome, Edge, Firefox or Safari 15+.
@@ -575,7 +575,9 @@ compiler decides to paste it.
 
 ---
 
-## Built in one prompt
+## Where it started
+
+One prompt, and this was it:
 
 > *"Create me a high-quality portfolio website On GPU. A website for me
 > (x.com/winchxyz, github.com/winchxyz). I need it with 3D. Make it with
@@ -583,8 +585,16 @@ compiler decides to paste it.
 > knowledge and make best graphics and best design. Surprise me with graphics,
 > materials, physics, textures and everything."*
 
-Everything after that was refinement in the same session, with [Claude
-Code](https://claude.com/claude-code).
+That is where it started and not how it was built, and this section used to
+claim otherwise. What actually followed was close to forty commits across a
+week with [Claude Code](https://claude.com/claude-code). The material system,
+the orb exchange, the mobile pass, the layout auditor and the headless GPU
+harness were each their own piece of work, and several of them replaced an
+earlier version that measured worse than it looked. The section further up
+this file about a shader that got three times slower is one of those, and it
+is the kind of thing a single prompt does not produce and does not catch.
+
+"Built in one prompt" is a good story. It was not this one.
 
 ---
 
