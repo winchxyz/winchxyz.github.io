@@ -8,6 +8,14 @@ libraries, no asset files, no build step required to run it.
 
 ![The hero](docs/hero.png)
 
+Two longer pieces are published on the site itself.
+[A Studio, Written Down](https://winchxyz.github.io/notes/how-it-works/) is the
+reference, and most of this file is its source.
+[Not What It Looked Like](https://winchxyz.github.io/notes/not-what-it-looked-like/)
+is the other kind of document: twelve times while this page was being built the
+obvious reading was wrong and the measurement said something else, and five of
+the twelve are my own mistakes. They live in `notes/`.
+
 ---
 
 ## Running it
@@ -26,9 +34,12 @@ Or skip all of that:
 npm run build
 ```
 
-That flattens the whole site into `dist/winch.html`: one file, 249 kB,
-double-click it and it runs. Nothing is fetched at runtime except the two
-Google Fonts, and it falls back to system fonts without them.
+That flattens this page into `dist/winch.html`: one file, 269 kB, double-click
+it and it runs. Nothing is fetched at runtime except the two Google Fonts, and
+it falls back to system fonts without them. The two pages in `notes/` are not
+in it and do not need to be; each one is already a single self-contained file,
+and the links to them are absolute so they still resolve out of the flattened
+copy.
 
 **Requirements:** a browser with WebGL2 and hardware acceleration. Recent
 Chrome, Edge, Firefox or Safari 15+.

@@ -1,0 +1,700 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Not What It Looked Like &middot; winch</title>
+
+<meta name="description" content="Twelve times building winchxyz.github.io the obvious reading was wrong and the measurement said something else. Five of them were my own mistakes." />
+<meta name="author" content="winch" />
+<meta name="theme-color" content="#0f1216" />
+<link rel="canonical" href="https://winchxyz.github.io/notes/not-what-it-looked-like/" />
+
+<meta property="og:type" content="article" />
+<meta property="og:title" content="Not What It Looked Like" />
+<meta property="og:description" content="Twelve times building winchxyz.github.io the obvious reading was wrong and the measurement said something else. Five of them were my own mistakes." />
+<meta property="og:url" content="https://winchxyz.github.io/notes/not-what-it-looked-like/" />
+<meta property="og:image" content="https://winchxyz.github.io/docs/share.jpg" />
+<meta property="og:image:type" content="image/jpeg" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="The winch home page: the wordmark beside a cast-crystal sculpture rendered in real time on the GPU." />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:creator" content="@winchxyz" />
+<meta name="twitter:image" content="https://winchxyz.github.io/docs/share.jpg" />
+<meta name="twitter:title" content="Not What It Looked Like" />
+<meta name="twitter:description" content="Twelve times building winchxyz.github.io the obvious reading was wrong and the measurement said something else. Five of them were my own mistakes." />
+
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><mask id='c'><rect width='32' height='32' fill='%23fff'/><path d='M6.5 10.5l4.5 11 5-11 5 11 4.5-11' fill='none' stroke='%23000' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'/></mask><rect width='32' height='32' rx='7' fill='%23C6F24E' mask='url(%23c)'/></svg>" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;450;600&display=swap">
+
+<style>
+  h1,h2,h3,p,dl,dd,dt,figure,blockquote,pre{ margin:0; }
+</style>
+</head>
+
+<body>
+<style>
+  /* ── tokens: the complete light set lives here, unconditionally ───────── */
+  :root{
+    --paper:      #eef0f2;
+    --paper-2:    #e4e7eb;
+    --ink:        #14181d;
+    --ink-soft:   #3d4650;
+    --muted:      #5c6672;
+    --rule:       #c9cfd6;
+    --rule-soft:  #d8dde2;
+
+    /* the assumption, and the measurement that replaced it */
+    --before:     #8a94a0;
+    --after:      #1b57c4;
+    --after-wash: #dbe4f7;
+    --cost:       #b4451f;
+    --cost-wash:  #f4e2da;
+
+    --serif: "Instrument Serif", Georgia, "Times New Roman", serif;
+    --sans:  "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+    --mono:  "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+    --measure: 66ch;
+    --step:    clamp(18px, 2.2vw, 30px);
+  }
+  /* system dark, unless an explicit light choice overrides the OS */
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:     #0f1216;
+      --paper-2:   #171b21;
+      --ink:       #e9edf1;
+      --ink-soft:  #bcc5ce;
+      --muted:     #8b95a1;
+      --rule:      #2a3138;
+      --rule-soft: #21272d;
+      --before:    #6b7480;
+      --after:     #7aa5ff;
+      --after-wash:#182642;
+      --cost:      #e08558;
+      --cost-wash: #2e1d15;
+    }
+  }
+  /* and the toggle wins in the other direction too */
+  :root[data-theme="dark"]{
+    --paper:     #0f1216;
+    --paper-2:   #171b21;
+    --ink:       #e9edf1;
+    --ink-soft:  #bcc5ce;
+    --muted:     #8b95a1;
+    --rule:      #2a3138;
+    --rule-soft: #21272d;
+    --before:    #6b7480;
+    --after:     #7aa5ff;
+    --after-wash:#182642;
+    --cost:      #e08558;
+    --cost-wash: #2e1d15;
+  }
+
+  *{ box-sizing:border-box; }
+  html{ -webkit-text-size-adjust:100%; }
+  body{
+    margin:0;
+    background:var(--paper);           /* explicit: the host paints its own ground behind this */
+    color:var(--ink);
+    font-family:var(--sans);
+    font-size:16px;
+    line-height:1.62;
+    font-weight:400;
+  }
+
+  .sheet{
+    max-width:1040px;
+    margin:0 auto;
+    padding:clamp(28px,5vw,72px) clamp(20px,4vw,56px) 96px;
+    display:flex;
+    flex-direction:column;
+    gap:calc(var(--step) * 1.6);
+  }
+
+  /* ── masthead ─────────────────────────────────────────────────────────── */
+  .masthead{ display:flex; flex-direction:column; gap:14px; }
+  .slug{
+    font-family:var(--mono); font-size:11px; font-weight:500;
+    letter-spacing:.16em; text-transform:uppercase; color:var(--muted);
+    display:flex; flex-wrap:wrap; gap:8px 18px;
+  }
+  h1{
+    font-family:var(--serif); font-weight:400;
+    font-size:clamp(42px,7.4vw,86px); line-height:.98;
+    letter-spacing:-.015em; margin:0; text-wrap:balance;
+  }
+  h1 em{ font-style:italic; color:var(--after); }
+  .standfirst{
+    font-family:var(--serif); font-size:clamp(19px,2.3vw,26px);
+    line-height:1.42; color:var(--ink-soft); max-width:44ch; margin:0;
+    text-wrap:pretty;
+  }
+
+  /* ── the plot ─────────────────────────────────────────────────────────── */
+  figure{ margin:0; display:flex; flex-direction:column; gap:12px; }
+  .plot-frame{
+    background:var(--paper-2); border:1px solid var(--rule);
+    padding:clamp(14px,2vw,22px); overflow-x:auto;
+  }
+  canvas{ display:block; width:100%; height:auto; }
+  figcaption{
+    font-family:var(--mono); font-size:11.5px; line-height:1.6;
+    color:var(--muted); max-width:78ch;
+  }
+  .legend{ display:flex; flex-wrap:wrap; gap:6px 22px; margin-bottom:4px; }
+  .legend b{ font-weight:500; color:var(--ink-soft); }
+  .swatch{ display:inline-block; width:22px; height:2px; vertical-align:middle; margin-right:7px; }
+
+  /* ── running text ─────────────────────────────────────────────────────── */
+  .prose{ display:flex; flex-direction:column; gap:1.05em; max-width:var(--measure); }
+  .prose p{ margin:0; text-wrap:pretty; }
+  .prose strong{ font-weight:600; }
+  code{
+    font-family:var(--mono); font-size:.88em;
+    background:var(--paper-2); border:1px solid var(--rule-soft);
+    padding:.08em .34em;
+  }
+
+  h2{
+    font-family:var(--serif); font-weight:400;
+    font-size:clamp(27px,3.6vw,40px); line-height:1.1; letter-spacing:-.01em;
+    margin:0; text-wrap:balance;
+  }
+  .section-head{ display:flex; flex-direction:column; gap:10px; max-width:var(--measure); }
+  .kicker{
+    font-family:var(--mono); font-size:11px; font-weight:500;
+    letter-spacing:.16em; text-transform:uppercase; color:var(--after);
+  }
+  .kicker.is-cost{ color:var(--cost); }
+
+  /* ── the calibration rows ─────────────────────────────────────────────── */
+  .findings{ display:flex; flex-direction:column; border-top:1px solid var(--rule); }
+  .finding{
+    display:grid; gap:6px 28px; padding:22px 0;
+    border-bottom:1px solid var(--rule-soft);
+    grid-template-columns:1fr;
+  }
+  @media (min-width:800px){
+    .finding{ grid-template-columns:minmax(0,1fr) 232px; align-items:start; }
+  }
+  .finding h3{
+    font-family:var(--sans); font-weight:600; font-size:16.5px; line-height:1.4;
+    margin:0 0 4px; letter-spacing:-.005em;
+  }
+  .finding p{ margin:0; color:var(--ink-soft); font-size:15px; text-wrap:pretty; }
+  .finding p + p{ margin-top:.7em; }
+
+  .readout{
+    display:flex; flex-direction:column; gap:7px;
+    font-family:var(--mono); font-variant-numeric:tabular-nums;
+    font-size:12.5px; line-height:1.35;
+  }
+  @media (min-width:800px){ .readout{ padding-top:2px; } }
+  .reading{ display:flex; align-items:baseline; gap:9px; }
+  .reading .tag{
+    flex:none; width:56px; font-size:10px; letter-spacing:.11em;
+    text-transform:uppercase; color:var(--muted);
+  }
+  .reading .val{ font-weight:500; }
+  .val.before{ color:var(--before); text-decoration:line-through; text-decoration-thickness:1px; }
+  .val.after{ color:var(--after); }
+  .val.cost{ color:var(--cost); }
+  .note{
+    font-size:11px; color:var(--muted); border-left:2px solid var(--rule);
+    padding-left:9px; margin-top:1px;
+  }
+
+  /* the mistakes get a different ground, because they are a different claim */
+  .mine .finding{ background:var(--cost-wash); padding-left:16px; padding-right:16px; }
+  .mine .finding h3{ color:var(--cost); }
+
+  .verdict{
+    display:grid; gap:2px 26px; grid-template-columns:1fr;
+    border-top:2px solid var(--ink); padding-top:16px;
+    max-width:var(--measure);
+  }
+  .verdict dt{
+    font-family:var(--mono); font-size:10.5px; letter-spacing:.14em;
+    text-transform:uppercase; color:var(--muted); padding-top:9px;
+  }
+  .verdict dd{ margin:0; font-size:15px; color:var(--ink-soft); text-wrap:pretty; }
+  @media (min-width:700px){
+    .verdict{ grid-template-columns:150px minmax(0,1fr); }
+    .verdict dt{ padding-top:2px; }
+    .verdict dd{ padding-bottom:12px; }
+  }
+
+  footer{
+    border-top:1px solid var(--rule); padding-top:16px;
+    font-family:var(--mono); font-size:11.5px; color:var(--muted);
+    display:flex; flex-wrap:wrap; gap:6px 20px;
+  }
+  a{ color:var(--after); text-underline-offset:2px; }
+  a:focus-visible, button:focus-visible{ outline:2px solid var(--after); outline-offset:3px; }
+
+
+  /* a hosted page needs a way back; an artifact does not */
+  .home{ color:var(--muted); text-decoration:none; }
+  .home:hover{ color:var(--after); text-decoration:underline; }
+  .sibling{ color:var(--after); text-decoration:none; }
+  .sibling:hover{ text-decoration:underline; }
+
+  @media (prefers-reduced-motion:reduce){
+    *{ animation-duration:.001ms !important; transition-duration:.001ms !important; }
+  }
+</style>
+
+<div class="sheet">
+
+  <header class="masthead">
+    <div class="slug">
+      <a class="home" href="/">&larr; winchxyz.github.io</a>
+      <span>calibration sheet</span>
+      <span>august 2026</span>
+    </div>
+    <h1>Not what it <em>looked like</em></h1>
+    <p class="standfirst">
+      Twelve times in one session a thing looked like one thing and measured as
+      another. Five of them were mine.
+    </p>
+  </header>
+
+  <figure>
+    <div class="plot-frame">
+      <canvas id="plot" width="960" height="300" role="img"
+        aria-label="Shader compile time over five consecutive runs. Before the harness was fixed: 5.8, 15.1, 16.2, 16.3 and 18.2 seconds. After: 9.0 cold, then 5.8, 5.8, 5.9 and 5.8."></canvas>
+    </div>
+    <figcaption>
+      <div class="legend">
+        <span><i class="swatch" style="background:var(--before)"></i><b>before</b> &nbsp;five in a row, one unchanged shader</span>
+        <span><i class="swatch" style="background:var(--after)"></i><b>after</b> &nbsp;the same five</span>
+      </div>
+      A monotonic rise across five runs of identical work is never the work getting
+      slower. The shader did not change between the first reading and the last.
+      The machine did.
+    </figcaption>
+  </figure>
+
+  <div class="prose">
+    <p>
+      This sheet is not a list of what got built. It is a list of the times the
+      obvious reading was wrong, and what the measurement said instead. It
+      includes my own misses, because the version without them is advertising
+      rather than a record.
+    </p>
+    <p>
+      The order carries no meaning. These are independent findings, not a
+      sequence, and numbering them would be a claim about the contents that is
+      not true.
+    </p>
+  </div>
+
+  <section class="section-head">
+    <span class="kicker">Measurement against impression</span>
+    <h2>What looked like something it was not</h2>
+  </section>
+
+  <div class="findings">
+
+    <article class="finding">
+      <div>
+        <h3>The material change looked like a separate animation</h3>
+        <p>
+          The orbs turn, and the colour change read as something played on top of
+          a body standing still. The measurement explained the feeling: the anchor
+          of the transition moved 5.9&deg; while the change itself travelled
+          110&deg; across the body. The geometry of the change was barely coupled
+          to where the orbs were.
+        </p>
+        <p>
+          The ring cannot carry the front on its own. At 4.9&deg;/s it would need
+          twenty-two seconds to walk the arc, and an exchange lasts two, so both
+          ends have to be read live, every frame.
+        </p>
+      </div>
+      <div class="readout">
+        <div class="reading"><span class="tag">before</span><span class="val before">5.9&deg;</span></div>
+        <div class="reading"><span class="tag">after</span><span class="val after">56&deg; / 186&deg;</span></div>
+        <div class="note">adjacent slots / opposite ones</div>
+      </div>
+    </article>
+
+    <article class="finding">
+      <div>
+        <h3>Two materials on one surface looked expensive</h3>
+        <p>
+          Painting a single body in two materials looked like it would need a
+          second call to <code>describe()</code>, the most expensive function in
+          the program to compile. It turned out the material branch already ran on
+          a value passed in at draw time rather than on a constant. The code for
+          every material was in the program already.
+        </p>
+      </div>
+      <div class="readout">
+        <div class="reading"><span class="tag">before</span><span class="val before">5954 ms</span></div>
+        <div class="reading"><span class="tag">after</span><span class="val after">6032 ms</span></div>
+        <div class="note">+78 ms to ask per point instead of per frame</div>
+      </div>
+    </article>
+
+    <article class="finding">
+      <div>
+        <h3>Five lines of a primitive looked cheap</h3>
+        <p>
+          A capsule for a thinner thread is five lines in <code>mapS</code>. But
+          <code>mapS</code> is inlined into the march, the normal, the shadow and
+          the occlusion, so five lines there become twenty everywhere. Cut; the
+          pinch falls out of a single blend radius instead.
+        </p>
+      </div>
+      <div class="readout">
+        <div class="reading"><span class="tag">cost</span><span class="val cost">+1425 ms</span></div>
+        <div class="note">removed, compile back to 5954</div>
+      </div>
+    </article>
+
+    <article class="finding">
+      <div>
+        <h3>One value of the form looked like all the others</h3>
+        <p>
+          The pair of forms is chosen by the integer part and weighted by what is
+          left over. That works across the range except at the very top of it. At
+          <code>shape = 3.0</code> the selector falls through to the frame and the
+          weight is zero, so the frame comes back at full strength.
+        </p>
+        <p>
+          The one value the range could not express was the one the last section
+          sits on. Scrolling to contact wound almost all the way to the ring and
+          then snapped back to a cube.
+        </p>
+      </div>
+      <div class="readout">
+        <div class="reading"><span class="tag">before</span><span class="val before">cube</span></div>
+        <div class="reading"><span class="tag">after</span><span class="val after">ring</span></div>
+        <div class="note">index held one below the top</div>
+      </div>
+    </article>
+
+    <article class="finding">
+      <div>
+        <h3>Scrolling on a phone looked ordinary</h3>
+        <p>
+          The drag handler did not tell one gesture from another. A single vertical
+          swipe, which is to say ordinary page scrolling, drove the camera pitch
+          into its clamp, and a horizontal one spun the view 4.1 radians.
+        </p>
+      </div>
+      <div class="readout">
+        <div class="reading"><span class="tag">before</span><span class="val before">&minus;0.697</span></div>
+        <div class="reading"><span class="tag">limit</span><span class="val">&minus;0.700</span></div>
+        <div class="reading"><span class="tag">after</span><span class="val after">0.000</span></div>
+        <div class="note">the gesture axis is locked once and held</div>
+      </div>
+    </article>
+
+    <article class="finding">
+      <div>
+        <h3>The share card looked configured</h3>
+        <p>
+          The markup declared <code>summary_large_image</code> from the start, and
+          there was no image behind it. Every share of a site whose entire value is
+          visual arrived as plain text.
+        </p>
+      </div>
+      <div class="readout">
+        <div class="reading"><span class="tag">before</span><span class="val before">no image</span></div>
+        <div class="reading"><span class="tag">after</span><span class="val after">184 kB</span></div>
+        <div class="note">1200&times;630 JPEG in place of a 1505 kB PNG</div>
+      </div>
+    </article>
+
+    <article class="finding">
+      <div>
+        <h3>A short section looked finished</h3>
+        <p>
+          On a 1080 screen the whoami section is 717 pixels tall. After the
+          transition you would finish four paragraphs and find the heading of the
+          next section at the bottom of the same screen.
+        </p>
+      </div>
+      <div class="readout">
+        <div class="reading"><span class="tag">before</span><span class="val before">239 px</span></div>
+        <div class="reading"><span class="tag">after</span><span class="val after">0 px</span></div>
+        <div class="note">visible of the section below</div>
+      </div>
+    </article>
+
+  </div>
+
+  <section class="section-head">
+    <span class="kicker is-cost">The instrument lied</span>
+    <h2>Five times the mistake was mine</h2>
+  </section>
+
+  <div class="prose">
+    <p>
+      This is the useful half. A measurement that always returns a plausible
+      number is worse than one that throws, because nothing ever makes you go
+      back and check it.
+    </p>
+  </div>
+
+  <div class="findings mine">
+
+    <article class="finding">
+      <div>
+        <h3>A table confirmed the bug it was reporting</h3>
+        <p>
+          The arriving drop was painted in the material of the body. I ran the
+          selection from the shader on the CPU, got a column of values, and read it
+          as correct, because my own label said <code>new</code> while
+          <code>matCurrent()</code> during the approach is the old material.
+        </p>
+        <p>
+          The arithmetic was right and the label was wrong. A screenshot settled it
+          in a second.
+        </p>
+      </div>
+      <div class="readout">
+        <div class="note">look first, compute second</div>
+      </div>
+    </article>
+
+    <article class="finding">
+      <div>
+        <h3>An hour on a render bug that was not there</h3>
+        <p>
+          The crystal was breaking up in the captures. Headless Chrome never gives
+          the quality controller clean timings, so it sits on the starting tier
+          forever: the harness was photographing the fallback, not the page.
+        </p>
+      </div>
+      <div class="readout">
+        <div class="reading"><span class="tag">tier</span><span class="val before">low</span></div>
+        <div class="note">did not rise in 17 seconds of warm-up</div>
+        <div class="note">every README image was taken this way</div>
+      </div>
+    </article>
+
+    <article class="finding">
+      <div>
+        <h3>A claim I could not support</h3>
+        <p>
+          I wrote "forty-eight orphaned processes" into the README as the cause of
+          the rising compile times. Then I checked them by profile name: not one
+          belonged to the harness. It was the browser of the user.
+        </p>
+        <p>
+          Fixing the cleanup and killing every Chrome happened in one step, so the
+          stable numbers cannot be credited to the fix alone. I rewrote the passage
+          to state only what was established.
+        </p>
+      </div>
+      <div class="readout">
+        <div class="reading"><span class="tag">claimed</span><span class="val before">48 orphans</span></div>
+        <div class="reading"><span class="tag">found</span><span class="val after">0</span></div>
+        <div class="note">matched on the launch profile</div>
+      </div>
+    </article>
+
+    <article class="finding">
+      <div>
+        <h3>Flags I credited with work they did not do</h3>
+        <p>
+          I added flags against background throttling and wrote in the comment that
+          they fix it. Re-measured: one frame a second, with the CPU idle and
+          <code>visibilityState: visible</code>. Frames come from scrolling, not
+          from flags, and every capture that worked all session went through
+          <code>SHOTS</code>.
+        </p>
+      </div>
+      <div class="readout">
+        <div class="reading"><span class="tag">rAF</span><span class="val before">1 / s</span></div>
+        <div class="reading"><span class="tag">CPU</span><span class="val">1 %</span></div>
+        <div class="note">comment corrected to what is true</div>
+      </div>
+    </article>
+
+    <article class="finding">
+      <div>
+        <h3>A README edit missed its anchor and the commit went out anyway</h3>
+        <p>
+          The code for the new behaviour reached the server and the paragraph
+          describing it did not. For one revision the documentation described the
+          previous version. Fixed in the next commit.
+        </p>
+      </div>
+      <div class="readout">
+        <div class="note">check what the replacement did, not that it ran</div>
+      </div>
+    </article>
+
+  </div>
+
+  <section class="section-head">
+    <span class="kicker">Limits of the instrument</span>
+    <h2>What the audit could not see</h2>
+  </section>
+
+  <dl class="verdict">
+    <dt>Blind spot</dt>
+    <dd>
+      The layout audit compares text against text, line box by line box. The label
+      on the rail is a fixed overlay in a different layer, so its overlap with the
+      text never counted as an intersection. A screenshot from the user found it.
+      That is an honest limit of the tool rather than a failure of it.
+    </dd>
+
+    <dt>Capture</dt>
+    <dd>
+      Prefer <code>SHOTS</code> to plain waiting, because scrolling is what wakes
+      the compositor. And force the tier, or you are photographing the fallback.
+    </dd>
+
+    <dt>Accessibility</dt>
+    <dd>
+      Headless Chrome reports <code>prefers-reduced-motion: reduce</code> by
+      default, which means every capture in the history of this project was a
+      capture of the calm version of the page rather than the one a visitor sees.
+    </dd>
+
+    <dt>Rule</dt>
+    <dd>
+      A measurement that always returns a plausible number is more dangerous than
+      one that throws. A monotonic rise across repeats of the same work is always
+      the instrument, never the work.
+    </dd>
+  </dl>
+
+  <footer>
+    <span>winchxyz.github.io</span>
+    <span>WebGL2 &middot; hand-written GLSL &middot; no engine</span>
+    <span>every number measured on an RTX 4070</span>
+    <a class="sibling" href="/notes/how-it-works/">Read: A Studio, Written Down &rarr;</a>
+  </footer>
+
+</div>
+
+<script>
+  /* The plot is the page's thesis in one picture: the same unchanged shader,
+     five runs, before and after. Canvas rather than hand-authored path data,
+     drawn once, in CSS pixels with a device-pixel transform on top. */
+  (function () {
+    var c = document.getElementById('plot');
+    if (!c || !c.getContext) return;
+    var ctx = c.getContext('2d');
+
+    var BEFORE = [5.839, 15.066, 16.211, 16.287, 18.178];
+    var AFTER  = [9.039, 5.752, 5.752, 5.865, 5.827];
+    var MAXY = 20;
+    // the right pad has to clear the last run's label, not just the last point
+    var PAD = { l: 56, r: 52, t: 18, b: 36 };
+
+    var css = function (n) {
+      return getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+    };
+
+    function drawIn(W, H, progress) {
+      var w = W - PAD.l - PAD.r, h = H - PAD.t - PAD.b;
+      var x = function (i, n) { return PAD.l + (w * i) / (n - 1); };
+      var y = function (v) { return PAD.t + h - (h * v) / MAXY; };
+
+      ctx.clearRect(0, 0, W, H);
+      ctx.font = '11px "IBM Plex Mono", monospace';
+      ctx.textBaseline = 'middle';
+
+      for (var v = 0; v <= MAXY; v += 5) {
+        var gy = Math.round(y(v)) + 0.5;
+        ctx.strokeStyle = css('--rule');
+        ctx.lineWidth = 1;
+        ctx.globalAlpha = v === 0 ? 1 : 0.5;
+        ctx.beginPath(); ctx.moveTo(PAD.l, gy); ctx.lineTo(W - PAD.r, gy); ctx.stroke();
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = css('--muted');
+        ctx.textAlign = 'right';
+        ctx.fillText(v + ' s', PAD.l - 10, gy);
+      }
+
+      ctx.textAlign = 'center';
+      ctx.fillStyle = css('--muted');
+      for (var i = 0; i < 5; i++) {
+        ctx.fillText('run ' + (i + 1), x(i, 5), H - PAD.b / 2 + 3);
+      }
+
+      [[BEFORE, css('--before'), true], [AFTER, css('--after'), false]].forEach(function (s) {
+        var vals = s[0], colour = s[1], dashed = s[2];
+        var n = Math.max(1, Math.round(vals.length * progress));
+        ctx.strokeStyle = colour;
+        ctx.lineWidth = 2;
+        ctx.setLineDash(dashed ? [5, 4] : []);
+        ctx.beginPath();
+        for (var i = 0; i < n; i++) {
+          var px = x(i, vals.length), py = y(vals[i]);
+          if (i) ctx.lineTo(px, py); else ctx.moveTo(px, py);
+        }
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        for (var j = 0; j < n; j++) {
+          var ex = x(j, vals.length), ey = y(vals[j]);
+          var last = j === vals.length - 1 && n === vals.length;
+          ctx.fillStyle = colour;
+          ctx.beginPath(); ctx.arc(ex, ey, last ? 4 : 2.5, 0, Math.PI * 2); ctx.fill();
+          if (last) {
+            ctx.textAlign = 'right';
+            ctx.font = '500 12px "IBM Plex Mono", monospace';
+            ctx.fillText(vals[j].toFixed(1) + ' s', ex - 9, ey - 13);
+            ctx.font = '11px "IBM Plex Mono", monospace';
+          }
+        }
+      });
+    }
+
+    var cssW = 0, cssH = 0;
+
+    function layout(progress) {
+      /* Measure the canvas, not its parent: the frame's width includes its own
+         padding, so sizing from it made the canvas wider than the box holding
+         it and put a scrollbar under a figure that fits. */
+      c.style.width = '100%';
+      var box = c.getBoundingClientRect();
+      var dpr = Math.min(window.devicePixelRatio || 1, 2);
+      cssW = Math.max(300, Math.floor(box.width));
+      cssH = Math.round(Math.min(300, Math.max(200, cssW * 0.33)));
+      c.style.width = cssW + 'px';
+      c.style.height = cssH + 'px';
+      c.width = Math.round(cssW * dpr);
+      c.height = Math.round(cssH * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      drawIn(cssW, cssH, progress === undefined ? 1 : progress);
+    }
+
+    var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    layout(reduce ? 1 : 0);
+
+    if (!reduce) {
+      var start = null;
+      requestAnimationFrame(function frame(t) {
+        if (start === null) start = t;
+        var p = Math.min(1, (t - start) / 900);
+        drawIn(cssW, cssH, p);
+        if (p < 1) requestAnimationFrame(frame);
+      });
+    }
+
+    var timer;
+    addEventListener('resize', function () {
+      clearTimeout(timer);
+      timer = setTimeout(function () { layout(1); }, 120);
+    });
+    matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function () { layout(1); });
+  })();
+</script>
+
+</body>
+</html>

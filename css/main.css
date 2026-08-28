@@ -785,6 +785,97 @@ html.scrolled .scroll-cue{ opacity:0; pointer-events:none; }
 }
 .card:hover .card-bar{ transform:none; }
 
+/* The write-ups. Neither of them is a project, so neither is a card: they are
+   two documents about one of the repos above, and that repo is this page. Both
+   are served out of this repo under /notes/.
+
+   Ruled rows, not a bordered box. The grid is a box, and a second box built
+   out of the same 1px --line-2 set under it reads as more entries of the same
+   kind. This borrows the contact list's rule model instead: a hairline over
+   the set and one under each row, which also means a third row costs one
+   hairline rather than the doubled 2px seam two adjacent boxes would draw.
+   The hover is this section's own and not the contact list's, so the rows read
+   as belonging to the work section without pretending to be entries in it.
+
+   No heading and no title: a named block here would make the page's own
+   documentation a sixth thing the site is about, which is the section that got
+   cut. One line of prose names the subject instead, because a position ("the
+   first card") stops being true the moment a filter chip is on. */
+.wn-lede{
+  margin:18px 0 14px; padding:0 clamp(20px,2.2vw,30px);
+  color:var(--muted); font-size:13.5px; line-height:1.75;
+  max-width:74ch; text-wrap:pretty;
+}
+.wn-lede b{ color:var(--ash); font-weight:400; font-size:13px; }
+
+/* The rows carry --ink for the same reason .work-grid li does. This block sits
+   at the very bottom of the section, where the scene is already morphing
+   toward contact and is at its brightest, and transparent rows lose the
+   description into the glow while the cards above stay crisp. */
+.work-notes{ list-style:none; margin:0; padding:0; }
+.work-notes li{ background:var(--ink); border-bottom:1px solid var(--line-2); }
+.work-notes li:first-child{ border-top:1px solid var(--line-2); }
+
+/* Three tracks: label, text, arrow. minmax(92px,max-content) rather than a
+   fixed width or max-content alone, because every row is its own grid and
+   max-content would size "reference" and "notes" differently and start the two
+   titles at different x. A floor of 92px puts them on the same x and still
+   grows rather than wraps if a longer label is ever added. minmax(0,1fr) on
+   the middle track because a grid track's default minimum is min-content, and
+   one long unbreakable token would otherwise push the row wider than the page.
+   The inline padding is the card's, so the row text lands within a pixel of
+   the card text directly above it. */
+.work-note{
+  display:grid; align-items:start;
+  grid-template-columns:minmax(92px,max-content) minmax(0,1fr) max-content;
+  gap:clamp(14px,2vw,26px);
+  padding:clamp(16px,1.9vw,22px) clamp(20px,2.2vw,30px);
+  transition:background .4s var(--ease);
+}
+.work-note:hover{ background:rgba(28,36,24,.30); }
+.work-notes .wn-k{
+  font-size:11px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--dim); padding-top:5px; transition:color .3s;
+}
+.work-note:hover .wn-k{ color:var(--lime); }
+.work-notes .wn-t{ display:flex; flex-direction:column; gap:5px; min-width:0; }
+.work-notes .wn-t b{
+  font-family:var(--mono); font-size:16px; font-weight:500; color:var(--chalk);
+  letter-spacing:-.01em; transition:color .3s;
+  /* Selection is off across the page and anything exempt has to put it back.
+     A write-up title is a thing people copy in order to search for it. Inside
+     an <a> a click-drag still starts a link drag in Chrome, so what this buys
+     is double-click and keyboard selection. That is most of it. */
+  -webkit-user-select:text; -moz-user-select:text; user-select:text;
+}
+.work-note:hover .wn-t b{ color:var(--lime); }
+/* The cap goes on the sentence, not on the row: the middle track runs to about
+   930px at 1280 and a description set at over a hundred characters is wider
+   than anything else on this page. It sits on an element with no background of
+   its own, so a capped box can never expose the surface behind it. */
+.work-notes .wn-t em{
+  font-style:normal; color:var(--muted); font-size:14.5px; line-height:1.6;
+  max-width:68ch;
+}
+.work-notes .wn-a{
+  color:var(--dim); font-size:15px; padding-top:4px;
+  transition:transform .4s var(--ease-out), color .3s;
+}
+/* Straight right, not the diagonal lift the contact list uses: that one
+   follows its own arrow, and this arrow points along the page rather than off
+   it. */
+.work-note:hover .wn-a{ transform:translateX(4px); color:var(--lime); }
+
+/* Stacked, the label takes its own line and the arrow stays. The row this
+   replaced hid the arrow below 560px, which left a phone with no visible sign
+   that the title was a link at all. Done with grid-column rather than a flex
+   `order` swap, so the painted order never diverges from the DOM order. */
+@media (max-width:560px){
+  .work-note{ grid-template-columns:minmax(0,1fr) max-content; gap:9px clamp(14px,4vw,20px); }
+  .work-notes .wn-k{ grid-column:1 / -1; padding-top:0; }
+  .work-notes .wn-a{ padding-top:2px; }
+}
+
 /* ══ NUMBERS ═════════════════════════════════════════════════════════════ */
 
 /* 240px, not 190px. "1,572,864" set at 42px is about 200px wide and the cell

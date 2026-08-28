@@ -1,0 +1,654 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>A Studio, Written Down &middot; winch</title>
+
+<meta name="description" content="The technical reference for winchxyz.github.io: how to run it, what the GPU is actually drawing, and how to verify it without one." />
+<meta name="author" content="winch" />
+<meta name="theme-color" content="#14151c" />
+<link rel="canonical" href="https://winchxyz.github.io/notes/how-it-works/" />
+
+<meta property="og:type" content="article" />
+<meta property="og:title" content="A Studio, Written Down" />
+<meta property="og:description" content="The technical reference for winchxyz.github.io: how to run it, what the GPU is actually drawing, and how to verify it without one." />
+<meta property="og:url" content="https://winchxyz.github.io/notes/how-it-works/" />
+<meta property="og:image" content="https://winchxyz.github.io/docs/share.jpg" />
+<meta property="og:image:type" content="image/jpeg" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="The winch home page: the wordmark beside a cast-crystal sculpture rendered in real time on the GPU." />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:creator" content="@winchxyz" />
+<meta name="twitter:image" content="https://winchxyz.github.io/docs/share.jpg" />
+<meta name="twitter:title" content="A Studio, Written Down" />
+<meta name="twitter:description" content="The technical reference for winchxyz.github.io: how to run it, what the GPU is actually drawing, and how to verify it without one." />
+
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><mask id='c'><rect width='32' height='32' fill='%23fff'/><path d='M6.5 10.5l4.5 11 5-11 5 11 4.5-11' fill='none' stroke='%23000' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'/></mask><rect width='32' height='32' rx='7' fill='%23C6F24E' mask='url(%23c)'/></svg>" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..700&family=JetBrains+Mono:wght@400;500;700&family=Newsreader:ital,opsz,wght@0,6..72,300..600;1,6..72,300..600&display=swap">
+
+<style>
+  h1,h2,h3,p,dl,dd,dt,figure,blockquote,pre{ margin:0; }
+</style>
+</head>
+
+<body>
+<style>
+  /* ── tokens ────────────────────────────────────────────────────────────
+     Dark first, deliberately: the subject is a dark studio, and a dispersion
+     triad sings on a dark ground and goes muddy on a pale one. So the bare
+     :root carries the complete dark set and the light overrides mirror it. */
+  :root{
+    --ground:    #14151c;
+    --surface:   #1b1d26;
+    --surface-2: #21232e;
+    --ink:       #e7e6ec;
+    --ink-soft:  #b6b7c4;
+    --muted:     #838697;
+    --rule:      #2c2f3b;
+    --rule-soft: #23262f;
+
+    /* one ray, split. red long, blue short, in that order everywhere */
+    --ray-r: #ff7a5c;
+    --ray-g: #57d9a3;
+    --ray-b: #8098ff;
+    --accent: var(--ray-b);
+    --accent-wash: #1d2340;
+
+    --display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+    --body:    "Newsreader", Georgia, "Times New Roman", serif;
+    --mono:    "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+    --measure: 62ch;
+    --label-col: 148px;
+    --gap: clamp(30px, 4.4vw, 54px);
+  }
+  /* system light, unless an explicit dark choice overrides the OS */
+  @media (prefers-color-scheme: light){
+    :root:not([data-theme="dark"]){
+      --ground:    #f3f3f7;
+      --surface:   #ffffff;
+      --surface-2: #eaeaf1;
+      --ink:       #181923;
+      --ink-soft:  #414458;
+      --muted:     #63667a;
+      --rule:      #d2d3de;
+      --rule-soft: #e2e3ea;
+      --ray-r: #c2402a;
+      --ray-g: #0d7553;
+      --ray-b: #3b52c9;
+      --accent: var(--ray-b);
+      --accent-wash: #e3e7fb;
+    }
+  }
+  /* and the toggle wins in the other direction too */
+  :root[data-theme="light"]{
+    --ground:    #f3f3f7;
+    --surface:   #ffffff;
+    --surface-2: #eaeaf1;
+    --ink:       #181923;
+    --ink-soft:  #414458;
+    --muted:     #63667a;
+    --rule:      #d2d3de;
+    --rule-soft: #e2e3ea;
+    --ray-r: #c2402a;
+    --ray-g: #0d7553;
+    --ray-b: #3b52c9;
+    --accent: var(--ray-b);
+    --accent-wash: #e3e7fb;
+  }
+
+  *{ box-sizing:border-box; }
+  html{ -webkit-text-size-adjust:100%; }
+  body{
+    margin:0;
+    background:var(--ground);      /* explicit: the host paints its own ground */
+    color:var(--ink);
+    font-family:var(--body);
+    font-size:17px;
+    line-height:1.68;
+    font-weight:400;
+    font-optical-sizing:auto;
+  }
+
+  .doc{
+    max-width:1080px;
+    margin:0 auto;
+    padding:clamp(30px,5vw,76px) clamp(20px,4vw,54px) 110px;
+    display:flex; flex-direction:column;
+    gap:var(--gap);
+  }
+
+  /* ── masthead ─────────────────────────────────────────────────────────── */
+  .masthead{ display:flex; flex-direction:column; gap:20px; }
+  .eyebrow{
+    font-family:var(--mono); font-size:11.5px; font-weight:500;
+    letter-spacing:.15em; text-transform:uppercase; color:var(--muted);
+    display:flex; flex-wrap:wrap; gap:7px 18px;
+  }
+  h1{
+    font-family:var(--display); font-weight:700;
+    font-variation-settings:"wdth" 112;
+    font-size:clamp(38px,6.6vw,76px); line-height:1.02;
+    letter-spacing:-.028em; margin:0; text-wrap:balance;
+  }
+  .standfirst{
+    font-size:clamp(18px,2.1vw,22px); line-height:1.5;
+    color:var(--ink-soft); max-width:46ch; margin:0; text-wrap:pretty;
+  }
+  .standfirst em{ font-style:italic; color:var(--ink); }
+
+  /* One white beam entering, three wavelengths leaving. The page performs its
+     own subject once, on load, and then never again. */
+  .prism{ position:relative; height:15px; }
+  .prism i{
+    position:absolute; left:0; right:0; top:6px; height:2px; display:block;
+    background:var(--ink); opacity:.85;
+  }
+  .prism i:nth-child(1){ background:var(--ray-r); animation:split-r .95s cubic-bezier(.2,.8,.25,1) both; }
+  .prism i:nth-child(2){ background:var(--ray-g); animation:split-g .95s cubic-bezier(.2,.8,.25,1) both; }
+  .prism i:nth-child(3){ background:var(--ray-b); animation:split-b .95s cubic-bezier(.2,.8,.25,1) both; }
+  @keyframes split-r{ from{ transform:none; filter:saturate(0) brightness(1.7); } to{ transform:translateY(-5px); } }
+  @keyframes split-g{ from{ filter:saturate(0) brightness(1.7); } to{ filter:none; } }
+  @keyframes split-b{ from{ transform:none; filter:saturate(0) brightness(1.7); } to{ transform:translateY(5px); } }
+
+  .links{ display:flex; flex-wrap:wrap; gap:8px 22px; font-family:var(--mono); font-size:13px; }
+  a{ color:var(--accent); text-underline-offset:3px; text-decoration-thickness:1px; }
+  a:hover{ text-decoration-thickness:2px; }
+  a:focus-visible{ outline:2px solid var(--accent); outline-offset:3px; border-radius:2px; }
+
+  /* ── the datasheet header ──────────────────────────────────────────────
+     Two strips, not one seven-cell grid: three of these readings are the
+     thesis (nothing is stored) and four are scale, and a boxed grid of seven
+     leaves a ragged row at every width. Free-flowing readings under a rule
+     wrap without ever leaving a hole. */
+  .specs{ display:grid; gap:24px; grid-template-columns:1fr; }
+  @media (min-width:880px){ .specs{ grid-template-columns:3fr 4fr; gap:34px; } }
+  .spec-group{ display:flex; flex-direction:column; gap:11px; min-width:0; }
+  .spec-mark{
+    font-family:var(--mono); font-size:10.5px; font-weight:500;
+    letter-spacing:.15em; text-transform:uppercase; color:var(--muted);
+  }
+  .spec{
+    display:flex; flex-wrap:wrap; gap:16px 30px; margin:0;
+    border-top:1px solid var(--rule); padding-top:15px;
+  }
+  .spec div{ display:flex; flex-direction:column; gap:5px; }
+  .spec dt{
+    font-family:var(--mono); font-size:10.5px; font-weight:500;
+    letter-spacing:.11em; text-transform:uppercase; color:var(--muted);
+  }
+  .spec dd{
+    margin:0; font-family:var(--mono); font-size:clamp(20px,2.3vw,25px); font-weight:500;
+    font-variant-numeric:tabular-nums; letter-spacing:-.02em; color:var(--ink);
+    line-height:1.1;
+  }
+  /* the zeros are the thesis, so they are the only figures that get colour */
+  .spec dd.nil{ color:var(--accent); }
+  .spec dd small{ font-size:12px; font-weight:400; color:var(--muted); letter-spacing:0; }
+
+  /* ── the section grid: label column against a measured column ─────────── */
+  section{
+    display:grid; gap:14px 26px; grid-template-columns:1fr;
+    border-top:1px solid var(--rule); padding-top:16px;
+  }
+  @media (min-width:880px){
+    section{ grid-template-columns:var(--label-col) minmax(0,1fr); }
+    .mark{ padding-top:5px; }
+  }
+  .mark{
+    font-family:var(--mono); font-size:11px; font-weight:500;
+    letter-spacing:.15em; text-transform:uppercase; color:var(--muted);
+  }
+  .col{ display:flex; flex-direction:column; gap:1.05em; min-width:0; }
+
+  h2{
+    font-family:var(--display); font-weight:600;
+    font-variation-settings:"wdth" 104;
+    font-size:clamp(25px,3.1vw,34px); line-height:1.16; letter-spacing:-.02em;
+    margin:0 0 .1em; text-wrap:balance;
+  }
+  h3{
+    font-family:var(--display); font-weight:600;
+    font-variation-settings:"wdth" 100;
+    font-size:17px; line-height:1.4; letter-spacing:-.005em;
+    margin:0 0 .3em; color:var(--ink);
+  }
+  /* :not(.lede) so a paragraph that opts into another role keeps it. The same
+     collision cost this project a lede once already. */
+  .col p:not(.lede){ margin:0; max-width:var(--measure); text-wrap:pretty; color:var(--ink-soft); }
+  .col p strong{ color:var(--ink); font-weight:600; }
+  .lede{ margin:0; max-width:var(--measure); font-size:19px; color:var(--ink); text-wrap:pretty; }
+
+  code, pre, kbd, .eyebrow, .mark, .spec dt, .spec dd, .spec-mark, th, td.key, .links, .fig, footer{
+    font-variant-ligatures:none;
+  }
+  code{
+    font-family:var(--mono); font-size:.84em; color:var(--ink);
+    background:var(--surface-2); padding:.12em .26em; border-radius:2px;
+  }
+  pre{
+    margin:0; background:var(--surface); border:1px solid var(--rule);
+    padding:15px 17px; overflow-x:auto;
+    font-family:var(--mono); font-size:13px; line-height:1.65; color:var(--ink);
+  }
+  pre code{ background:none; border:0; padding:0; font-size:inherit; }
+  pre .c{ color:var(--muted); }
+
+  /* ── the block list under "what is on screen" ─────────────────────────── */
+  .blocks{ display:flex; flex-direction:column; gap:1px; background:var(--rule); border:1px solid var(--rule); }
+  .blocks article{ background:var(--ground); padding:18px 19px; display:flex; flex-direction:column; gap:.6em; }
+  .blocks p{ margin:0; color:var(--ink-soft); font-size:16px; max-width:60ch; text-wrap:pretty; }
+  .blocks .fig{
+    font-family:var(--mono); font-size:11px; letter-spacing:.1em;
+    text-transform:uppercase; color:var(--muted);
+  }
+  /* three dots, in wavelength order, only where three channels is the content */
+  /* bound to the word before it: on its own at the head of a line the mark
+     reads as a bullet rather than as three channels of that sentence */
+  .nb{ white-space:nowrap; }
+  .rays{ display:inline-flex; gap:4px; vertical-align:middle; margin-left:7px; }
+  .rays i{ width:6px; height:6px; border-radius:50%; display:block; }
+  .rays i:nth-child(1){ background:var(--ray-r); }
+  .rays i:nth-child(2){ background:var(--ray-g); }
+  .rays i:nth-child(3){ background:var(--ray-b); }
+
+  /* ── tables ───────────────────────────────────────────────────────────── */
+  .table-wrap{ overflow-x:auto; border:1px solid var(--rule); }
+  table{ border-collapse:collapse; width:100%; min-width:min(100%,440px); font-size:15px; }
+  td, th{
+    text-align:left; padding:11px 15px; line-height:1.55;
+    border-bottom:1px solid var(--rule-soft); vertical-align:top;
+  }
+  tr:last-child td{ border-bottom:0; }
+  th{
+    font-family:var(--mono); font-size:10.5px; font-weight:500; letter-spacing:.12em;
+    text-transform:uppercase; color:var(--muted); border-bottom:1px solid var(--rule);
+  }
+  td:first-child{ white-space:nowrap; width:1%; }
+  td.key{ font-family:var(--mono); font-size:13px; color:var(--ink); }
+  td.def{ color:var(--ink-soft); }
+  kbd{
+    font-family:var(--mono); font-size:12px; font-weight:500;
+    background:var(--surface-2); border:1px solid var(--rule);
+    border-bottom-width:2px; border-radius:3px; padding:2px 6px; color:var(--ink);
+  }
+
+  /* ── the prompt ───────────────────────────────────────────────────────── */
+  blockquote{
+    margin:0; padding:20px 0 20px 22px; max-width:var(--measure);
+    font-family:var(--body); font-style:italic; font-size:19px; line-height:1.55;
+    color:var(--ink); text-wrap:pretty;
+    /* three wavelengths on the left, converging into one input */
+    border-left:3px solid transparent;
+    border-image:linear-gradient(var(--ray-r) 33%, var(--ray-g) 33% 66%, var(--ray-b) 66%) 1;
+  }
+
+  footer{
+    border-top:1px solid var(--rule); padding-top:18px;
+    font-family:var(--mono); font-size:12px; color:var(--muted);
+    display:flex; flex-wrap:wrap; gap:7px 20px;
+  }
+
+
+  /* a hosted page needs a way back; an artifact does not */
+  .home{ color:var(--muted); text-decoration:none; }
+  .home:hover{ color:var(--accent); text-decoration:underline; }
+  .sibling{ color:var(--accent); text-decoration:none; }
+  .sibling:hover{ text-decoration:underline; }
+
+  @media (prefers-reduced-motion:reduce){
+    *{ animation-duration:.001ms !important; animation-iteration-count:1 !important;
+       transition-duration:.001ms !important; }
+    /* the split is information, not decoration, so it lands rather than plays */
+    .prism i:nth-child(1){ transform:translateY(-5px); }
+    .prism i:nth-child(3){ transform:translateY(5px); }
+  }
+</style>
+
+<div class="doc">
+
+  <header class="masthead">
+    <div class="eyebrow">
+      <a class="home" href="/">&larr; winchxyz.github.io</a>
+      <span>technical reference</span>
+      <span>MIT</span>
+    </div>
+    <h1>A studio, written down</h1>
+    <div class="prism" aria-hidden="true"><i></i><i></i><i></i></div>
+    <p class="standfirst">
+      A portfolio that renders itself on the GPU. One WebGL2 context, a few
+      thousand lines of hand-written GLSL, and <em>nothing else at all</em>. No
+      engine, no libraries, no asset files, no build step required to run it.
+    </p>
+    <div class="links">
+      <a href="https://winchxyz.github.io/" target="_blank" rel="noopener">Open it &rarr;</a>
+      <a href="https://github.com/winchxyz/winchxyz.github.io" target="_blank" rel="noopener">Source</a>
+      <a href="https://x.com/winchxyz" target="_blank" rel="noopener">@winchxyz</a>
+    </div>
+  </header>
+
+  <div class="specs">
+    <div class="spec-group">
+      <span class="spec-mark">Not there</span>
+      <dl class="spec">
+        <div><dt>Dependencies</dt><dd class="nil">0</dd></div>
+        <div><dt>Asset files</dt><dd class="nil">0</dd></div>
+        <div><dt>Build step to run</dt><dd class="nil">none</dd></div>
+      </dl>
+    </div>
+    <div class="spec-group">
+      <span class="spec-mark">Per frame, at ultra</span>
+      <dl class="spec">
+        <div><dt>Lines of GLSL</dt><dd>~1 500</dd></div>
+        <div><dt>Draw calls</dt><dd>19</dd></div>
+        <div><dt>Particles</dt><dd>262 144</dd></div>
+        <div><dt>Render targets</dt><dd>~113 <small>MB</small></dd></div>
+      </dl>
+    </div>
+  </div>
+
+  <section>
+    <div class="mark">Run</div>
+    <div class="col">
+      <h2>Running it</h2>
+      <pre><code>npm start</code></pre>
+      <p>
+        Then open <code>http://localhost:8141</code>. Any static server works;
+        <code>npm start</code> just runs the 40-line one in <code>server.js</code>,
+        which exists because ES modules need an http origin and
+        <code>file://</code> will not load them.
+      </p>
+      <p>Or skip all of that:</p>
+      <pre><code>npm run build</code></pre>
+      <p>
+        That flattens the whole site into <code>dist/winch.html</code>: one file,
+        249 kB, double-click it and it runs. Nothing is fetched at runtime except
+        the two Google Fonts, and it falls back to system fonts without them.
+      </p>
+      <p>
+        <strong>Requirements:</strong> a browser with WebGL2 and hardware
+        acceleration. Recent Chrome, Edge, Firefox or Safari 15+.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <div class="mark">Screen</div>
+    <div class="col">
+      <h2>What is actually on screen</h2>
+      <p class="lede">
+        Everything moving is one <code>&lt;canvas&gt;</code>, drawn in nineteen
+        passes per frame.
+      </p>
+
+      <div class="blocks">
+        <article>
+          <span class="fig">Geometry &mdash; none</span>
+          <h3>A signed distance field, sphere-traced</h3>
+          <p>
+            The sculpture has no geometry. It is four mathematical forms (a
+            noise-displaced sphere, a gyroid lattice, a rounded box frame and a
+            twisted torus) cross-faded as you scroll, and every pixel of it walks
+            the field until it hits the surface. It writes its own
+            <code>gl_FragDepth</code>, which is how the particle cloud can be
+            occluded by a shape that does not exist as triangles.
+          </p>
+        </article>
+
+        <article>
+          <span class="fig">Materials &mdash; six, no textures</span>
+          <h3>Light solved rather than sampled</h3>
+          <p>
+            GGX with height-correlated Smith visibility, anisotropic GGX with a
+            tangent frame built from a procedural direction field (a distance
+            field has no UVs), thin-film interference for the anodised titanium,
+            three-ray dispersion for the two
+            <span class="nb">glasses<span class="rays" aria-hidden="true"><i></i><i></i><i></i></span></span>,
+            and multi-scatter energy compensation so the rough metals are not
+            quietly too dark.
+          </p>
+          <p>
+            The environment is an analytic function of the view direction: a
+            studio written down rather than photographed. There is no HDRI and no
+            BRDF lookup table.
+          </p>
+        </article>
+
+        <article>
+          <span class="fig">Particles &mdash; 262 144</span>
+          <h3>Solved on the GPU, drawn from nothing</h3>
+          <p>
+            Position and velocity live in two <code>RGBA32F</code> textures
+            written by one fragment shader with two colour attachments. They are
+            advected by divergence-free curl noise, pulled onto the zero level set
+            of the sculpture, and then have the normal component of their velocity
+            removed so they flow <em>along</em> it rather than oscillating through
+            it. The renderer binds no vertex buffer: <code>gl_VertexID</code>
+            indexes straight into the state texture.
+          </p>
+        </article>
+
+        <article>
+          <span class="fig">Post &mdash; five stages</span>
+          <h3>The post chain</h3>
+          <p>
+            Temporal anti-aliasing with YCoCg neighbourhood clipping, the Call of
+            Duty bloom mip ladder with a Karis average on the first downsample, an
+            anamorphic streak, ACES, and a dither at exactly one 8-bit step so the
+            dark gradients do not band.
+          </p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="mark">Controls</div>
+    <div class="col">
+      <h2>Controls</h2>
+      <div class="table-wrap">
+        <table>
+          <tbody>
+            <tr><td class="key">click an orb</td><td class="def">trade it for the one on the sculpture</td></tr>
+            <tr><td class="key"><kbd>1</kbd> &ndash; <kbd>6</kbd></td><td class="def">the same, from the keyboard</td></tr>
+            <tr><td class="key">drag</td><td class="def">orbit the sculpture</td></tr>
+            <tr><td class="key"><kbd>P</kbd></td><td class="def">photo mode, UI hidden, higher render scale</td></tr>
+            <tr><td class="key"><kbd>Enter</kbd></td><td class="def">save a PNG</td></tr>
+            <tr><td class="key"><kbd>G</kbd></td><td class="def">open the performance readout; <kbd>esc</kbd> or the chip closes it</td></tr>
+            <tr><td class="key"><kbd>M</kbd></td><td class="def">calm mode, half the motion</td></tr>
+            <tr><td class="key"><kbd>?</kbd></td><td class="def">the full list</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>
+        <code>?tier=low|medium|high|ultra</code> in the URL overrides the
+        auto-detected quality.
+      </p>
+      <p>
+        Calm mode is the default for anyone whose system asks for reduced motion.
+        The DOM side of the page had listened to that setting for a while: reveals
+        fire at once, scrolling jumps rather than glides, the rotator stops
+        rotating. The 3D did not, which made the listening close to cosmetic,
+        given that the thing moving on this page is a full-screen sculpture with a
+        quarter of a million particles around it. <kbd>M</kbd> still toggles, so
+        it is a default rather than a decision taken away.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <div class="mark">Tree</div>
+    <div class="col">
+      <h2>Layout</h2>
+<pre><code>index.html          <span class="c">the whole page, statically</span>
+css/main.css        <span class="c">the "Signal" palette</span>
+js/
+  main.js           <span class="c">boot, input, the loop</span>
+  renderer.js       <span class="c">every pass, in order</span>
+  director.js       <span class="c">what the scene does per section</span>
+  ui.js             <span class="c">the DOM half</span>
+  gl.js             <span class="c">a thin WebGL2 layer</span>
+  math.js           <span class="c">the linear algebra this actually uses</span>
+  content.js        <span class="c">everything the page says</span>
+  shaders/
+    lib.js          <span class="c">shared GLSL: hash, noise, SDF, BRDF, colour</span>
+    raymarch.js     <span class="c">the hero pass</span>
+    particles.js    <span class="c">solver + attributeless renderer</span>
+    post.js         <span class="c">composite, TAA, bloom, streak, grade</span>
+tools/
+  lint.mjs          <span class="c">static check on the assembled GLSL</span>
+  audit.js          <span class="c">layout auditor, run inside the page</span>
+  gputest.mjs       <span class="c">headless Chrome over CDP, no dependencies</span>
+  build.mjs         <span class="c">flatten to one file</span></code></pre>
+    </div>
+  </section>
+
+  <section>
+    <div class="mark">Verify</div>
+    <div class="col">
+      <h2>Verifying it without a GPU</h2>
+      <p class="lede">
+        The shaders are assembled from string chunks, so the compiler that would
+        catch a mistake lives on a graphics card. Two tools stand in for one.
+      </p>
+<pre><code>npm run lint      <span class="c"># every program: undefined functions, chunk order, uniforms</span>
+npm run verify    <span class="c"># compile all 10 programs for real, in headless Chrome</span></code></pre>
+      <p>
+        <code>lint.mjs</code> catches the failure mode that concatenation invites.
+        GLSL has no forward declarations, so getting the chunk order wrong is a
+        compile error you only see on a machine with a working driver. It also
+        cross-checks every uniform the renderer sets against every uniform the
+        shaders declare, in both directions, because setting a uniform that does
+        not exist is a silent no-op by design.
+      </p>
+      <p>
+        <code>gputest.mjs</code> drives headless Chrome over the DevTools protocol
+        using nothing but the Node standard library, forces the SwiftShader
+        software rasteriser, and compiles and links all ten programs through the
+        real ANGLE translator. It can also load the site and screenshot it.
+      </p>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Variable</th><th>What it is for</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="key">SITE / SECTION</td>
+              <td class="def">which page, and which section to frame</td>
+            </tr>
+            <tr>
+              <td class="key">INJECT</td>
+              <td class="def">
+                runs a script before any of the page's own, which is the only
+                moment some things can be tested at all. The no-WebGL path is one:
+                by the time anything else could intervene the context exists and
+                the decision is made
+              </td>
+            </tr>
+            <tr>
+              <td class="key">MEDIA</td>
+              <td class="def">
+                sets media features, and it exists because headless Chrome reports
+                <code>prefers-reduced-motion: reduce</code> by default
+              </td>
+            </tr>
+            <tr>
+              <td class="key">FLAGS</td>
+              <td class="def">extra flags to Chrome, for the cases where that is enough</td>
+            </tr>
+            <tr>
+              <td class="key">GPU=1</td>
+              <td class="def">
+                runs the same harness on the real adapter instead, which is how
+                the sixty-eight-second shader compile was found
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+<pre><code>SITE='http://localhost:8141' SECTION='#work' node tools/gputest.mjs shot out.png
+INJECT='HTMLCanvasElement.prototype.getContext = () =&gt; null' node tools/gputest.mjs shot out.png
+GPU=1 node tools/gputest.mjs                    <span class="c"># per-program compile times</span>
+GPU=1 PAGE=bisect.html node tools/gputest.mjs   <span class="c"># which part of one costs what</span></code></pre>
+
+      <p>
+        The no-WebGL path is now checked rather than asserted. The notice appears
+        with the real reason, every reveal fires so the writing is readable, and
+        the two pieces of chrome that only make sense with a renderer behind them
+        take themselves off the page.
+      </p>
+      <p>
+        Every image in the repository is a real GPU capture taken through that
+        harness, at 1920&times;1080 and at 390&times;844, on an RTX 4070 at 60 fps,
+        with <code>?tier=ultra</code> in the URL. That is not vanity: headless
+        Chrome never gives the quality controller the clean frame timings it
+        wants, so it sits at the opening tier forever and every capture came back
+        dim, undersampled and full of particle noise that is not in the real
+        thing. An hour went into chasing a rendering bug that turned out to be the
+        harness photographing the fallback.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <div class="mark">Cut</div>
+    <div class="col">
+      <h2>What is not here</h2>
+      <p>
+        There was a physics section: a Verlet cloth you could grab and throw,
+        colliding against the same distance field. It was removed, and so was a
+        section of live render statistics. Both were interesting and neither was
+        about winch. A portfolio that spends two of its seven sections talking
+        about the portfolio has lost the plot. Five sections now: who, what he
+        builds, how it is built, the work, and how to reach him.
+      </p>
+      <p>
+        The cloth is in the history if it is ever wanted back. It cost three
+        shader programs, two float ping-pongs and nine draw calls a frame.
+      </p>
+      <p>
+        The corner shows a small GPU chip and nothing else until you ask for more.
+        Click it, or press <kbd>G</kbd>, and it opens into the live readout. A
+        performance panel that is always on is a developer tool wearing a
+        portfolio's clothes.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <div class="mark">Origin</div>
+    <div class="col">
+      <h2>Built in one prompt</h2>
+      <blockquote>
+        Create me a high-quality portfolio website On GPU. A website for me
+        (x.com/winchxyz, github.com/winchxyz). I need it with 3D. Make it with
+        maximum effort, show me best what you can create. Use all your power,
+        knowledge and make best graphics and best design. Surprise me with
+        graphics, materials, physics, textures and everything.
+      </blockquote>
+      <p>
+        Everything after that was refinement in the same session, with
+        <a href="https://claude.com/claude-code" target="_blank" rel="noopener">Claude Code</a>.
+      </p>
+    </div>
+  </section>
+
+  <footer>
+    <span>winchxyz.github.io</span>
+    <span>WebGL2 &middot; hand-written GLSL &middot; no engine</span>
+    <span>MIT</span>
+    <a class="sibling" href="/notes/not-what-it-looked-like/">Read: Not What It Looked Like &rarr;</a>
+  </footer>
+
+</div>
+
+</body>
+</html>

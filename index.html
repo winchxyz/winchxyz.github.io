@@ -257,6 +257,55 @@
     </div>
 
     <ul class="work-grid" id="work-grid"></ul>
+
+    <!-- Two long pieces about winchxyz.github.io, which is one of the repos in
+         the grid above and also this page. Neither is a project and neither is
+         a repo, so neither is a card and neither belongs to a filter chip. They
+         get two ruled rows under the grid rather than a second bordered box,
+         and no heading: a heading here would make the page's own documentation
+         a sixth thing the site is about, which is the section that got cut.
+
+         Both live in this repo, under /notes/, so both are ordinary links that
+         stay in the tab. The arrow is a plain one for that reason: the ↗ the
+         contact list uses is a promise that the link leaves the site.
+
+         Absolute rather than root-relative, the way REPOS[0].live already is.
+         tools/build.mjs flattens this page and not those two, so in
+         dist/winch.html a /notes/ path resolves against the filesystem root and
+         dies; the canonical URL is the one address that works from the site,
+         from the single file, and from anywhere else it gets handed to. -->
+    <p class="wn-lede" data-reveal data-reveal-delay="3">
+      Both of these are about <b class="mono">winchxyz.github.io</b>, which is
+      this page. One is the reference, one is the account of getting it wrong.
+    </p>
+
+    <ul class="work-notes">
+      <li data-reveal data-reveal-delay="4">
+        <a class="work-note" href="https://winchxyz.github.io/notes/how-it-works/">
+          <span class="wn-k mono">reference</span>
+          <span class="wn-t">
+            <b>A Studio, Written Down</b>
+            <em>How to run it, and what the GPU is drawing while you read: one
+            sphere-traced distance field, six materials written as maths,
+            262&nbsp;144 particles solved on the GPU, five post passes. It ends
+            with a way to check all ten shader programs without a GPU.</em>
+          </span>
+          <span class="wn-a" aria-hidden="true">→</span>
+        </a>
+      </li>
+      <li data-reveal data-reveal-delay="5">
+        <a class="work-note" href="https://winchxyz.github.io/notes/not-what-it-looked-like/">
+          <span class="wn-k mono">notes</span>
+          <span class="wn-t">
+            <b>Not What It Looked Like</b>
+            <em>Twelve times while building this page the obvious reading was
+            wrong and the measurement said something else. Five of the twelve
+            are my own mistakes, listed as mistakes.</em>
+          </span>
+          <span class="wn-a" aria-hidden="true">→</span>
+        </a>
+      </li>
+    </ul>
   </div>
 </section>
 
