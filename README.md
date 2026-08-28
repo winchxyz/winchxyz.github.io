@@ -34,7 +34,7 @@ Or skip all of that:
 npm run build
 ```
 
-That flattens this page into `dist/winch.html`: one file, about 270 kB, double-click
+That flattens this page into `dist/winch.html`: one file, about 263 kB, double-click
 it and it runs. Nothing is fetched at runtime except the two Google Fonts, and
 it falls back to system fonts without them. The two pages in `notes/` are not
 in it and do not need to be; each one is already a single self-contained file,

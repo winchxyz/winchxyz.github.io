@@ -838,97 +838,6 @@ html.scrolled .scroll-cue{ opacity:0; pointer-events:none; }
 }
 .card:hover .card-bar{ transform:none; }
 
-/* The write-ups. Neither of them is a project, so neither is a card: they are
-   two documents about one of the repos above, and that repo is this page. Both
-   are served out of this repo under /notes/.
-
-   Ruled rows, not a bordered box. The grid is a box, and a second box built
-   out of the same 1px --line-2 set under it reads as more entries of the same
-   kind. This borrows the contact list's rule model instead: a hairline over
-   the set and one under each row, which also means a third row costs one
-   hairline rather than the doubled 2px seam two adjacent boxes would draw.
-   The hover is this section's own and not the contact list's, so the rows read
-   as belonging to the work section without pretending to be entries in it.
-
-   No heading and no title: a named block here would make the page's own
-   documentation a sixth thing the site is about, which is the section that got
-   cut. One line of prose names the subject instead, because a position ("the
-   first card") stops being true the moment a filter chip is on. */
-.wn-lede{
-  margin:18px 0 14px; padding:0 clamp(20px,2.2vw,30px);
-  color:var(--muted); font-size:13.5px; line-height:1.75;
-  max-width:74ch; text-wrap:pretty;
-}
-.wn-lede b{ color:var(--ash); font-weight:400; font-size:13px; }
-
-/* The rows carry --ink for the same reason .work-grid li does. This block sits
-   at the very bottom of the section, where the scene is already morphing
-   toward contact and is at its brightest, and transparent rows lose the
-   description into the glow while the cards above stay crisp. */
-.work-notes{ list-style:none; margin:0; padding:0; }
-.work-notes li{ background:var(--ink); border-bottom:1px solid var(--line-2); }
-.work-notes li:first-child{ border-top:1px solid var(--line-2); }
-
-/* Three tracks: label, text, arrow. minmax(92px,max-content) rather than a
-   fixed width or max-content alone, because every row is its own grid and
-   max-content would size "reference" and "notes" differently and start the two
-   titles at different x. A floor of 92px puts them on the same x and still
-   grows rather than wraps if a longer label is ever added. minmax(0,1fr) on
-   the middle track because a grid track's default minimum is min-content, and
-   one long unbreakable token would otherwise push the row wider than the page.
-   The inline padding is the card's, so the row text lands within a pixel of
-   the card text directly above it. */
-.work-note{
-  display:grid; align-items:start;
-  grid-template-columns:minmax(92px,max-content) minmax(0,1fr) max-content;
-  gap:clamp(14px,2vw,26px);
-  padding:clamp(16px,1.9vw,22px) clamp(20px,2.2vw,30px);
-  transition:background .4s var(--ease);
-}
-.work-note:hover{ background:rgba(28,36,24,.30); }
-.work-notes .wn-k{
-  font-size:11px; letter-spacing:.14em; text-transform:uppercase;
-  color:var(--dim); padding-top:5px; transition:color .3s;
-}
-.work-note:hover .wn-k{ color:var(--lime); }
-.work-notes .wn-t{ display:flex; flex-direction:column; gap:5px; min-width:0; }
-.work-notes .wn-t b{
-  font-family:var(--mono); font-size:16px; font-weight:500; color:var(--chalk);
-  letter-spacing:-.01em; transition:color .3s;
-  /* Selection is off across the page and anything exempt has to put it back.
-     A write-up title is a thing people copy in order to search for it. Inside
-     an <a> a click-drag still starts a link drag in Chrome, so what this buys
-     is double-click and keyboard selection. That is most of it. */
-  -webkit-user-select:text; -moz-user-select:text; user-select:text;
-}
-.work-note:hover .wn-t b{ color:var(--lime); }
-/* The cap goes on the sentence, not on the row: the middle track runs to about
-   930px at 1280 and a description set at over a hundred characters is wider
-   than anything else on this page. It sits on an element with no background of
-   its own, so a capped box can never expose the surface behind it. */
-.work-notes .wn-t em{
-  font-style:normal; color:var(--muted); font-size:14.5px; line-height:1.6;
-  max-width:68ch;
-}
-.work-notes .wn-a{
-  color:var(--dim); font-size:15px; padding-top:4px;
-  transition:transform .4s var(--ease-out), color .3s;
-}
-/* Straight right, not the diagonal lift the contact list uses: that one
-   follows its own arrow, and this arrow points along the page rather than off
-   it. */
-.work-note:hover .wn-a{ transform:translateX(4px); color:var(--lime); }
-
-/* Stacked, the label takes its own line and the arrow stays. The row this
-   replaced hid the arrow below 560px, which left a phone with no visible sign
-   that the title was a link at all. Done with grid-column rather than a flex
-   `order` swap, so the painted order never diverges from the DOM order. */
-@media (max-width:560px){
-  .work-note{ grid-template-columns:minmax(0,1fr) max-content; gap:9px clamp(14px,4vw,20px); }
-  .work-notes .wn-k{ grid-column:1 / -1; padding-top:0; }
-  .work-notes .wn-a{ padding-top:2px; }
-}
-
 /* ══ NUMBERS ═════════════════════════════════════════════════════════════ */
 
 /* 240px, not 190px. "1,572,864" set at 42px is about 200px wide and the cell
@@ -1356,55 +1265,6 @@ body.cur-drag .c-lbl{ opacity:1; }
     </div>
 
     <ul class="work-grid" id="work-grid"></ul>
-
-    <!-- Two long pieces about winchxyz.github.io, which is one of the repos in
-         the grid above and also this page. Neither is a project and neither is
-         a repo, so neither is a card and neither belongs to a filter chip. They
-         get two ruled rows under the grid rather than a second bordered box,
-         and no heading: a heading here would make the page's own documentation
-         a sixth thing the site is about, which is the section that got cut.
-
-         Both live in this repo, under /notes/, so both are ordinary links that
-         stay in the tab. The arrow is a plain one for that reason: the ↗ the
-         contact list uses is a promise that the link leaves the site.
-
-         Absolute rather than root-relative, the way REPOS[0].live already is.
-         tools/build.mjs flattens this page and not those two, so in
-         dist/winch.html a /notes/ path resolves against the filesystem root and
-         dies; the canonical URL is the one address that works from the site,
-         from the single file, and from anywhere else it gets handed to. -->
-    <p class="wn-lede" data-reveal data-reveal-delay="3">
-      Both of these are about <b class="mono">winchxyz.github.io</b>, which is
-      this page. One is the reference, one is the account of getting it wrong.
-    </p>
-
-    <ul class="work-notes">
-      <li data-reveal data-reveal-delay="4">
-        <a class="work-note" href="https://winchxyz.github.io/notes/how-it-works/">
-          <span class="wn-k mono">reference</span>
-          <span class="wn-t">
-            <b>A Studio, Written Down</b>
-            <em>How to run it, and what the GPU is drawing while you read: one
-            sphere-traced distance field, six materials written as maths,
-            262&nbsp;144 particles solved on the GPU, five post passes. It ends
-            with a way to check all ten shader programs without a GPU.</em>
-          </span>
-          <span class="wn-a" aria-hidden="true">→</span>
-        </a>
-      </li>
-      <li data-reveal data-reveal-delay="5">
-        <a class="work-note" href="https://winchxyz.github.io/notes/not-what-it-looked-like/">
-          <span class="wn-k mono">notes</span>
-          <span class="wn-t">
-            <b>Not What It Looked Like</b>
-            <em>Twelve times while building this page the obvious reading was
-            wrong and the measurement said something else. Five of the twelve
-            are my own mistakes, listed as mistakes.</em>
-          </span>
-          <span class="wn-a" aria-hidden="true">→</span>
-        </a>
-      </li>
-    </ul>
   </div>
 </section>
 
@@ -4832,7 +4692,7 @@ class Renderer {
 /* ══════════════════════════════════════════════════════════════════════════
    content.js: everything the page says.
 
-   The repo numbers are a verified snapshot (2026-08-20). At runtime the page
+   The repo numbers are a verified snapshot (2026-08-28). At runtime the page
    tries the public GitHub API once and upgrades them if it answers; if it is
    rate-limited, offline, or blocked, nothing breaks and the snapshot stands.
    Set LIVE_STATS = false to make the page never touch the network at all.
@@ -4841,7 +4701,7 @@ class Renderer {
 const LIVE_STATS = true;
 const GH_USER = 'winchxyz';
 
-const SNAPSHOT_DATE = '2026-08-20';
+const SNAPSHOT_DATE = '2026-08-28';
 
 /* Which preset the page opens on. Index into MATERIALS. 5 is the cast
    crystal, which shows the dielectric solver, the dispersion and the
@@ -4891,7 +4751,7 @@ const REPOS = [
     group: 'graphics',
     desc: 'A 3D lunar rover survey game. WebGL2, no build step, no third-party assets. Every texture and every sound is generated at runtime.',
     lang: 'JavaScript',
-    stars: 102, forks: 23,
+    stars: 114, forks: 24,
     tags: ['WebGL2', 'procedural-audio', 'zero-assets', 'gamedev'],
     url: 'https://github.com/winchxyz/moon-rover',
   },
@@ -4900,7 +4760,7 @@ const REPOS = [
     group: 'graphics',
     desc: 'A 3D sandcastle simulator that runs entirely on the GPU. No engine, no libraries, no asset files, and a beach that actually obeys the angle of repose.',
     lang: 'JavaScript',
-    stars: 72, forks: 21,
+    stars: 77, forks: 21,
     tags: ['WebGL2', 'GLSL', 'zero-deps', 'one-prompt'],
     url: 'https://github.com/winchxyz/tidewright',
     live: 'https://winchxyz.github.io/tidewright/',
@@ -4910,16 +4770,34 @@ const REPOS = [
     group: 'graphics',
     desc: 'A whole cartoon town generated from a seed string and rendered with a hand-written cel-shading pipeline.',
     lang: 'JavaScript',
-    stars: 20, forks: 2,
+    stars: 22, forks: 3,
     tags: ['cel-shading', 'procedural', 'seeded'],
     url: 'https://github.com/winchxyz/bikini-bottom',
+  },
+  {
+    name: 'celadon',
+    group: 'graphics',
+    desc: 'A 3D pottery game with no art assets. The clay, the glaze chemistry, the kiln and every texture in the room are computed while you play.',
+    lang: 'JavaScript',
+    stars: 16, forks: 5,
+    tags: ['WebGL2', 'GLSL', 'physics', 'zero-assets'],
+    url: 'https://github.com/winchxyz/celadon',
+  },
+  {
+    name: 'endless-fishing',
+    group: 'graphics',
+    desc: 'An endless ocean under the sky that is actually above you right now. Physically correct astronomy, a JONSWAP sea, and buoyancy written by hand.',
+    lang: 'TypeScript',
+    stars: 11, forks: 0,
+    tags: ['astronomy', 'JONSWAP', 'buoyancy', 'TypeScript'],
+    url: 'https://github.com/winchxyz/endless-fishing',
   },
   {
     name: 'idea-to-build',
     group: 'tools',
     desc: 'Turn a raw idea into a plan you can build. A multi-agent methodology with isolated critique, fact-checking, and a handoff straight into Claude Code.',
     lang: 'Shell',
-    stars: 9, forks: 1,
+    stars: 9, forks: 3,
     tags: ['multi-agent', 'Claude Code', 'MCP', 'prompt-engineering'],
     url: 'https://github.com/winchxyz/idea-to-build',
   },
@@ -4928,7 +4806,7 @@ const REPOS = [
     group: 'tools',
     desc: 'Open-source, local Windows AI website builder. AI builds the site, you refine it by hand on the live render, and every edit is verified against the real DOM.',
     lang: 'CSS',
-    stars: 7, forks: 1,
+    stars: 8, forks: 2,
     tags: ['Electron', 'Claude Agent SDK', 'BYOK', 'local-first'],
     url: 'https://github.com/winchxyz/loupe',
     live: 'https://tryloupe.app',
@@ -4938,7 +4816,7 @@ const REPOS = [
     group: 'graphics',
     desc: 'A flooded Gothic cathedral rendered in real time. One HTML file, no assets. The rose window, the marble, the caustics and the reverb are all generated at load.',
     lang: 'HTML',
-    stars: 6, forks: 1,
+    stars: 10, forks: 2,
     tags: ['three.js', 'GLSL', 'single-file', 'procedural-audio'],
     url: 'https://github.com/winchxyz/navis',
     live: 'https://winchxyz.github.io/navis/',
@@ -4948,7 +4826,7 @@ const REPOS = [
     group: 'graphics',
     desc: 'A GPU shoe-repair simulator about roads that remember. One HTML file. Geometry, materials, audio and portraits all generated at runtime.',
     lang: 'HTML',
-    stars: 4, forks: 0,
+    stars: 5, forks: 0,
     tags: ['WebGL', 'GLSL', 'procedural', 'single-file'],
     url: 'https://github.com/winchxyz/solebound',
   },
@@ -4957,7 +4835,7 @@ const REPOS = [
     group: 'tools',
     desc: 'Your AI ghostwriter for X. It drafts posts and replies in your voice, runs locally, costs nothing, and you always hit publish yourself.',
     lang: 'PowerShell',
-    stars: 3, forks: 0,
+    stars: 3, forks: 1,
     tags: ['n8n', 'self-hosted', 'Telegram', 'build-in-public'],
     url: 'https://github.com/winchxyz/x-ghostwriter',
   },
@@ -4978,15 +4856,6 @@ const REPOS = [
     stars: 1, forks: 0,
     tags: ['hand-tracking', 'AR', 'fracture'],
     url: 'https://github.com/winchxyz/ar-butter',
-  },
-  {
-    name: 'endless-fishing',
-    group: 'graphics',
-    desc: 'An endless ocean under the sky that is actually above you right now. Physically correct astronomy, a JONSWAP spectrum, hand-written buoyancy.',
-    lang: 'TypeScript',
-    stars: 0, forks: 0,
-    tags: ['JONSWAP', 'astronomy', 'buoyancy'],
-    url: 'https://github.com/winchxyz/endless-fishing',
   },
   {
     name: 'loupe-website',

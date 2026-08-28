@@ -1,7 +1,7 @@
 /* ══════════════════════════════════════════════════════════════════════════
    content.js: everything the page says.
 
-   The repo numbers are a verified snapshot (2026-08-20). At runtime the page
+   The repo numbers are a verified snapshot (2026-08-28). At runtime the page
    tries the public GitHub API once and upgrades them if it answers; if it is
    rate-limited, offline, or blocked, nothing breaks and the snapshot stands.
    Set LIVE_STATS = false to make the page never touch the network at all.
@@ -10,7 +10,7 @@
 export const LIVE_STATS = true;
 export const GH_USER = 'winchxyz';
 
-export const SNAPSHOT_DATE = '2026-08-20';
+export const SNAPSHOT_DATE = '2026-08-28';
 
 /* Which preset the page opens on. Index into MATERIALS. 5 is the cast
    crystal, which shows the dielectric solver, the dispersion and the
@@ -60,7 +60,7 @@ export const REPOS = [
     group: 'graphics',
     desc: 'A 3D lunar rover survey game. WebGL2, no build step, no third-party assets. Every texture and every sound is generated at runtime.',
     lang: 'JavaScript',
-    stars: 102, forks: 23,
+    stars: 114, forks: 24,
     tags: ['WebGL2', 'procedural-audio', 'zero-assets', 'gamedev'],
     url: 'https://github.com/winchxyz/moon-rover',
   },
@@ -69,7 +69,7 @@ export const REPOS = [
     group: 'graphics',
     desc: 'A 3D sandcastle simulator that runs entirely on the GPU. No engine, no libraries, no asset files, and a beach that actually obeys the angle of repose.',
     lang: 'JavaScript',
-    stars: 72, forks: 21,
+    stars: 77, forks: 21,
     tags: ['WebGL2', 'GLSL', 'zero-deps', 'one-prompt'],
     url: 'https://github.com/winchxyz/tidewright',
     live: 'https://winchxyz.github.io/tidewright/',
@@ -79,16 +79,34 @@ export const REPOS = [
     group: 'graphics',
     desc: 'A whole cartoon town generated from a seed string and rendered with a hand-written cel-shading pipeline.',
     lang: 'JavaScript',
-    stars: 20, forks: 2,
+    stars: 22, forks: 3,
     tags: ['cel-shading', 'procedural', 'seeded'],
     url: 'https://github.com/winchxyz/bikini-bottom',
+  },
+  {
+    name: 'celadon',
+    group: 'graphics',
+    desc: 'A 3D pottery game with no art assets. The clay, the glaze chemistry, the kiln and every texture in the room are computed while you play.',
+    lang: 'JavaScript',
+    stars: 16, forks: 5,
+    tags: ['WebGL2', 'GLSL', 'physics', 'zero-assets'],
+    url: 'https://github.com/winchxyz/celadon',
+  },
+  {
+    name: 'endless-fishing',
+    group: 'graphics',
+    desc: 'An endless ocean under the sky that is actually above you right now. Physically correct astronomy, a JONSWAP sea, and buoyancy written by hand.',
+    lang: 'TypeScript',
+    stars: 11, forks: 0,
+    tags: ['astronomy', 'JONSWAP', 'buoyancy', 'TypeScript'],
+    url: 'https://github.com/winchxyz/endless-fishing',
   },
   {
     name: 'idea-to-build',
     group: 'tools',
     desc: 'Turn a raw idea into a plan you can build. A multi-agent methodology with isolated critique, fact-checking, and a handoff straight into Claude Code.',
     lang: 'Shell',
-    stars: 9, forks: 1,
+    stars: 9, forks: 3,
     tags: ['multi-agent', 'Claude Code', 'MCP', 'prompt-engineering'],
     url: 'https://github.com/winchxyz/idea-to-build',
   },
@@ -97,7 +115,7 @@ export const REPOS = [
     group: 'tools',
     desc: 'Open-source, local Windows AI website builder. AI builds the site, you refine it by hand on the live render, and every edit is verified against the real DOM.',
     lang: 'CSS',
-    stars: 7, forks: 1,
+    stars: 8, forks: 2,
     tags: ['Electron', 'Claude Agent SDK', 'BYOK', 'local-first'],
     url: 'https://github.com/winchxyz/loupe',
     live: 'https://tryloupe.app',
@@ -107,7 +125,7 @@ export const REPOS = [
     group: 'graphics',
     desc: 'A flooded Gothic cathedral rendered in real time. One HTML file, no assets. The rose window, the marble, the caustics and the reverb are all generated at load.',
     lang: 'HTML',
-    stars: 6, forks: 1,
+    stars: 10, forks: 2,
     tags: ['three.js', 'GLSL', 'single-file', 'procedural-audio'],
     url: 'https://github.com/winchxyz/navis',
     live: 'https://winchxyz.github.io/navis/',
@@ -117,7 +135,7 @@ export const REPOS = [
     group: 'graphics',
     desc: 'A GPU shoe-repair simulator about roads that remember. One HTML file. Geometry, materials, audio and portraits all generated at runtime.',
     lang: 'HTML',
-    stars: 4, forks: 0,
+    stars: 5, forks: 0,
     tags: ['WebGL', 'GLSL', 'procedural', 'single-file'],
     url: 'https://github.com/winchxyz/solebound',
   },
@@ -126,7 +144,7 @@ export const REPOS = [
     group: 'tools',
     desc: 'Your AI ghostwriter for X. It drafts posts and replies in your voice, runs locally, costs nothing, and you always hit publish yourself.',
     lang: 'PowerShell',
-    stars: 3, forks: 0,
+    stars: 3, forks: 1,
     tags: ['n8n', 'self-hosted', 'Telegram', 'build-in-public'],
     url: 'https://github.com/winchxyz/x-ghostwriter',
   },
@@ -147,15 +165,6 @@ export const REPOS = [
     stars: 1, forks: 0,
     tags: ['hand-tracking', 'AR', 'fracture'],
     url: 'https://github.com/winchxyz/ar-butter',
-  },
-  {
-    name: 'endless-fishing',
-    group: 'graphics',
-    desc: 'An endless ocean under the sky that is actually above you right now. Physically correct astronomy, a JONSWAP spectrum, hand-written buoyancy.',
-    lang: 'TypeScript',
-    stars: 0, forks: 0,
-    tags: ['JONSWAP', 'astronomy', 'buoyancy'],
-    url: 'https://github.com/winchxyz/endless-fishing',
   },
   {
     name: 'loupe-website',
