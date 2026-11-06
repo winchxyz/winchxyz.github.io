@@ -1,5 +1,33 @@
 # winch · portfolio
 
+**[winchxyz.github.io](https://winchxyz.github.io/)** · [@winchxyz](https://x.com/winchxyz)
+
+Tools, apps, games and films built with Claude Code: 37 open-source repos, 27
+of them live in the browser.
+
+The page is called *Develop*. Every picture on it arrives as text first and
+develops into the real thing as you scroll, like a print in a darkroom tray.
+The opening is the word `winch` drawn in characters over the real headline,
+measured from the same font so nothing moves when the type fades in; the cursor
+is a developer lens that clears the characters under it. Each screenshot is
+covered by a text print of itself (characters picked from the picture's
+brightness, coloured with the picture) that clears diagonally as the card rises.
+
+- `index.html`: the page, its styles and its script.
+- `assets/data.js`: every project, its one-liner, link and brief.
+- `assets/base.css`: the shared tokens (light and dark).
+- `assets/p/`: the 720x450 screenshots.
+- `assets/share.html` renders `assets/share.jpg`, the link preview card.
+
+Run it with `npm start` and open <http://localhost:8141>. No build step.
+
+## The classic site
+
+The previous version, a portfolio that renders itself on the GPU, is still
+here at [classic.html](https://winchxyz.github.io/classic.html). Everything
+below documents it. `npm run build` now flattens `classic.html`.
+
+
 A portfolio site that renders itself on the GPU. One WebGL2 context, a few
 thousand lines of hand-written GLSL, and no dependencies at all. No engine, no
 libraries, no asset files, no build step required to run it.

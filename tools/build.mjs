@@ -85,7 +85,7 @@ const bundle = order.map(({ abs, src }) => {
 }).join('\n');
 
 const css = readFileSync(join(ROOT, 'css/main.css'), 'utf8');
-let html = readFileSync(join(ROOT, 'index.html'), 'utf8');
+let html = readFileSync(join(ROOT, 'classic.html'), 'utf8');
 
 /* The replacements go through a function, not a string. A string replacement
    runs the inserted text through $-pattern substitution, which turns every

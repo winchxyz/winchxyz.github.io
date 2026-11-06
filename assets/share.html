@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>winch share card</title>
+<!-- Source of assets/share.jpg (rendered at 1200x630, device scale 2). -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;800&family=Geist+Mono:wght@500&display=swap">
+<style>
+  html, body { margin: 0; }
+  body { width: 1200px; height: 630px; background: #fff; font-family: Inter, sans-serif; color: #1d1d1f; -webkit-font-smoothing: antialiased; position: relative; overflow: hidden; }
+  canvas { position: absolute; inset: 0; }
+  .c { position: absolute; left: 84px; top: 70px; right: 84px; bottom: 64px; display: flex; flex-direction: column; }
+  .h { font: 500 18px/1 'Geist Mono', monospace; color: #6e6e73; }
+  h1 { margin: 26px 0 0; font-weight: 800; font-size: 210px; line-height: .9; letter-spacing: -.055em;
+       background: linear-gradient(90deg, #ff6b3d, #c13dff 48%, #3d7bff); -webkit-background-clip: text; background-clip: text; color: transparent; width: fit-content; padding-right: 8px; }
+  p { margin: 34px 0 0; font-weight: 600; font-size: 40px; letter-spacing: -.025em; line-height: 1.15; }
+  p span { color: #6e6e73; }
+  .n { margin-top: auto; display: flex; gap: 56px; }
+  .n div b { display: block; font-weight: 800; font-size: 56px; letter-spacing: -.045em; line-height: 1; }
+  .n div span { display: block; margin-top: 6px; font-size: 18px; color: #6e6e73; }
+</style>
+</head>
+<body>
+<canvas id="cv" width="2400" height="1260"></canvas>
+<div class="c">
+  <div class="h">@winchxyz · winchxyz.github.io</div>
+  <h1>winch</h1>
+  <p>I build tools, apps, games and films <span>with Claude Code.</span></p>
+  <div class="n"><div><b>37</b><span>open-source repos</span></div><div><b>27</b><span>live in the browser</span></div><div><b>479</b><span>stars on GitHub</span></div></div>
+</div>
+<script>
+  // the site's dot paper
+  const g = document.getElementById('cv').getContext('2d'); g.scale(2, 2);
+  g.font = '500 12px "Geist Mono", monospace'; g.fillStyle = '#d2d2d7';
+  for (let y = 0; y < 630; y += 14) for (let x = 0; x < 1200; x += 7.2) {
+    const cx = x / 7.2 | 0, cy = y / 14 | 0;
+    if (cx % 4 === 0 && cy % 3 === 0) g.fillText('·', x, y + 11);
+  }
+</script>
+</body>
+</html>
