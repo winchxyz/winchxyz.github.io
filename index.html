@@ -55,7 +55,9 @@
 .handle { font: 500 13px/1 var(--mono); color: var(--soft); letter-spacing: .02em; margin-bottom: 2.2vh; }
 h1.word {
   display: inline-block; margin: 0; font-weight: 800; line-height: 1;
-  font-size: clamp(120px, 27vw, 380px); letter-spacing: -.055em; padding-right: .02em;
+  font-size: clamp(120px, 27vw, 380px); letter-spacing: -.055em;
+  /* the mask clips to the box, and glyphs like @ overhang it: pad the box, cancel the pad in layout */
+  padding: .12em .1em .18em; margin: -.12em -.08em -.18em -.1em;
   will-change: transform;
   /* two mask layers: the scroll develop (uniform) plus the lens under the cursor */
   --dev: 0; --lx: -999px; --ly: -999px; --lr: 0px;
@@ -269,17 +271,69 @@ function countUp(b) {
   requestAnimationFrame(step);
 }
 
+/* ═══ contour map behind both headlines ═════════════════════════════════ */
+/* Marching squares over a slow 3D value-noise field. The lines drift very
+   slowly; the cursor raises a hill, so rings gather around it. */
+function h3(x, y, z) {
+  let n = (Math.imul(x, 374761393) + Math.imul(y, 668265263) + Math.imul(z, 1274126177)) | 0;
+  n = Math.imul(n ^ (n >>> 13), 1274126177); n ^= n >>> 16;
+  return (n >>> 0) / 4294967296;
+}
+function noise3(x, y, z) {
+  const xi = Math.floor(x), yi = Math.floor(y), zi = Math.floor(z);
+  const xf = x - xi, yf = y - yi, zf = z - zi;
+  const u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf), w = zf * zf * (3 - 2 * zf);
+  const L = (a, b, k) => a + (b - a) * k, c = (dx, dy, dz) => h3(xi + dx, yi + dy, zi + dz);
+  return L(L(L(c(0,0,0), c(1,0,0), u), L(c(0,1,0), c(1,1,0), u), v),
+           L(L(c(0,0,1), c(1,0,1), u), L(c(0,1,1), c(1,1,1), u), v), w);
+}
+const fbm = (x, y, z) => .65 * noise3(x, y, z) + .35 * noise3(x * 2.03 + 17, y * 2.03 + 9, z * 1.7);
+const SEG = [null, [[3, 2]], [[2, 1]], [[3, 1]], [[0, 1]], [[0, 1], [3, 2]], [[0, 2]], [[3, 0]], [[3, 0]], [[0, 2]], [[3, 0], [2, 1]], [[0, 1]], [[3, 1]], [[2, 1]], [[3, 2]], null];
+const isDark = () => document.documentElement.dataset.theme === 'dark' || (document.documentElement.dataset.theme !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
+function contours(ctx, o, t) {
+  const W = o.w, H = o.h, s = W < 700 ? 10 : 12, cols = Math.ceil(W / s) + 1, rows = Math.ceil(H / s) + 1;
+  if (!o.field || o.field.length !== cols * rows) o.field = new Float32Array(cols * rows);
+  const v = o.field, z = t * .00005, sc = W < 700 ? 200 : 280, R = W < 700 ? 110 : 170, bump = o.bump;
+  for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) {
+    const x = i * s, y = j * s;
+    let val = fbm(x / sc, y / sc, z);
+    if (bump > .01) { const dx = x - o.lx, dy = y - o.ly; val += .3 * bump * Math.exp(-(dx * dx + dy * dy) / (2 * R * R)); }
+    v[j * cols + i] = val;
+  }
+  const dark = isDark();
+  const gr = ctx.createLinearGradient(0, 0, W, 0);
+  gr.addColorStop(0, css('--g1')); gr.addColorStop(.5, css('--g2')); gr.addColorStop(1, css('--g3'));
+  ctx.lineWidth = 1; ctx.lineJoin = 'round';
+  const N = 12;
+  for (let k = 0; k < N; k++) {
+    const lv = .16 + k * (.7 / (N - 1));
+    ctx.beginPath();
+    for (let j = 0; j < rows - 1; j++) for (let i = 0; i < cols - 1; i++) {
+      const a = v[j * cols + i], b = v[j * cols + i + 1], c = v[(j + 1) * cols + i + 1], d = v[(j + 1) * cols + i];
+      const segs = SEG[(a > lv) << 3 | (b > lv) << 2 | (c > lv) << 1 | (d > lv)]; if (!segs) continue;
+      const x0 = i * s, y0 = j * s;
+      const P = e => e === 0 ? [x0 + s * (lv - a) / (b - a), y0] : e === 1 ? [x0 + s, y0 + s * (lv - b) / (c - b)]
+        : e === 2 ? [x0 + s * (lv - d) / (c - d), y0 + s] : [x0, y0 + s * (lv - a) / (d - a)];
+      for (const [e1, e2] of segs) { const p = P(e1), q = P(e2); ctx.moveTo(p[0], p[1]); ctx.lineTo(q[0], q[1]); }
+    }
+    if (k % 4 === 2) { ctx.strokeStyle = gr; ctx.globalAlpha = dark ? .55 : .5; }
+    else { ctx.strokeStyle = dark ? css('--faint') : '#dcdce1'; ctx.globalAlpha = 1; }
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+}
+
 /* ═══ ASCII word: a word drawn in characters, exactly over the real type ═══ */
 /* The live <h1> is measured and the same font is drawn into a mask, so when
    the text fades out and the type fades in, nothing moves. */
 const RAMP = 'winchWINCH#%&@$8';
 class AsciiWord {
   constructor(canvas, word, section, small) {
-    Object.assign(this, { canvas, word, section, small, ctx: canvas.getContext('2d'), mx: -1e4, my: -1e4, lx: -1e4, ly: -1e4, lr: 0, lrT: 0, born: performance.now() });
+    Object.assign(this, { canvas, word, section, small, ctx: canvas.getContext('2d'), mx: -1e4, my: -1e4, lx: -1e4, ly: -1e4, lr: 0, lrT: 0, bump: 0, born: performance.now() });
     this.layer = document.createElement('canvas');
     addEventListener('resize', () => this.build());
     /* The cursor is a developer lens: under it the characters clear and the
-       real type shows through, ringed by a thin rim of dots. */
+       real type shows through, and the contour map behind rises into a hill. */
     canvas.parentElement.addEventListener('pointermove', e => {
       if (e.pointerType !== 'mouse') return;
       const r = canvas.getBoundingClientRect(); this.mx = e.clientX - r.left; this.my = e.clientY - r.top;
@@ -305,8 +359,9 @@ class AsciiWord {
     const mt = g.measureText(this.word.textContent);
     const asc = mt.fontBoundingBoxAscent, desc = mt.fontBoundingBoxDescent;
     const lh = parseFloat(cs.lineHeight) || size;
-    const base = wr.top - r.top + (lh - (asc + desc)) / 2 + asc;
-    g.fillStyle = '#000'; g.fillText(this.word.textContent, wr.left - r.left, base);
+    const pl = parseFloat(cs.paddingLeft) || 0, pt = parseFloat(cs.paddingTop) || 0;
+    const base = wr.top - r.top + pt + (lh - (asc + desc)) / 2 + asc;
+    g.fillStyle = '#000'; g.fillText(this.word.textContent, wr.left - r.left + pl, base);
     const px = g.getImageData(0, 0, m.width, m.height).data;
     this.box = { x0: wr.left - r.left, x1: wr.right - r.left, y0: wr.top - r.top };
     this.cells = new Uint8Array(this.cols * this.rows);
@@ -330,7 +385,11 @@ class AsciiWord {
     this.lr += (this.lrT - this.lr) * .12;
     this.lx += (this.mx - this.lx) * .18; this.ly += (this.my - this.ly) * .18;
     if (this.lr < .5 && this.lrT === 0) { this.lx = this.ly = -1e4; }
-    const LR = this.lr, rim = cw * .75;
+    const LR = this.lr;
+    // the cursor raises a hill in the contour map behind the word
+    this.bump += ((this.lrT > 0 ? 1 : 0) - this.bump) * .04;
+    contours(ctx, this, reducedMotion ? 0 : t);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
     this.word.style.setProperty('--lx', (this.lx - this.box.x0) + 'px');
     this.word.style.setProperty('--ly', (this.ly - this.box.y0) + 'px');
     this.word.style.setProperty('--lr', LR.toFixed(1) + 'px');
@@ -349,10 +408,7 @@ class AsciiWord {
           else { word += ' '; dots += hash(x + (tt * 14 | 0), y) > .5 ? RAMP[(x + y) % RAMP.length] : ' '; }
           continue;
         }
-        word += ' ';
-        let c = (x % 4 === 0 && y % 3 === 0) ? '·' : ' ';
-        if (LR > 8) { if (Math.abs(d - LR) < rim) c = '·'; else if (d < LR) c = ' '; }
-        dots += c;
+        word += ' '; dots += ' ';
       }
       ctx.fillStyle = faint; ctx.globalAlpha = 1;
       ctx.fillText(dots, 0, y * ch);
