@@ -155,8 +155,12 @@ h1.word {
 .omt h2 { margin: 0; font-weight: 700; font-size: clamp(28px, 3.4vw, 44px); letter-spacing: -.035em; color: var(--soft); }
 .omt h1.word { font-size: clamp(64px, 15vw, 220px); margin-top: 3vh; }
 .omt .line { color: var(--soft); }
+.reach { margin: 4.5vh 0 0; max-width: 760px; font-size: 15px; line-height: 1.5; color: var(--soft); text-wrap: balance; }
+.reach a { color: var(--ink); font-weight: 600; white-space: nowrap; border-bottom: 1px solid var(--faint); transition: border-color .2s; }
+.reach a:hover { border-bottom-color: var(--pill); }
 footer { padding: 40px 0 60px; font-size: 13px; color: var(--soft); display: flex; justify-content: space-between; gap: 20px; }
 footer a { color: var(--ink); }
+footer .fl { display: flex; gap: 18px; }
 
 @media (max-width: 760px) {
   .nav .links { display: none; }
@@ -227,11 +231,14 @@ footer a { color: var(--ink); }
         <a class="pill" href="https://x.com/winchxyz">Follow on X</a>
         <a class="pill ghost" href="https://github.com/winchxyz">All 37 repos ↗</a>
       </div>
+      <p class="reach">Want help, or need something built? Write me:
+        <a href="https://x.com/winchxyz" rel="me noopener" target="_blank">X @winchxyz</a> or
+        <a href="https://t.me/winchxyz" rel="me noopener" target="_blank">Telegram @winchxyz</a></p>
     </div>
   </div>
 </section>
 
-<div class="wrap"><footer><span>winch · made with Claude Code, every picture developed from text.</span><a href="https://github.com/winchxyz">github.com/winchxyz</a></footer></div>
+<div class="wrap"><footer><span>winch · made with Claude Code, every picture developed from text.</span><span class="fl"><a href="https://x.com/winchxyz">X</a><a href="https://t.me/winchxyz">Telegram</a><a href="https://github.com/winchxyz">GitHub</a></span></footer></div>
 
 <script type="module">
 import { SECTIONS, PROJECTS, STATS, byId, reducedMotion } from './assets/data.js';
