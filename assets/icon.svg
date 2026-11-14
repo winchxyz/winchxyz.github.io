@@ -1,9 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <!-- winchxyz site icon: the dark widget with a few LED dots in the section colours
-       (tools green, Hermes blue, visual magenta, games purple) -->
-  <rect width="64" height="64" rx="15" fill="#17181b"/>
-  <g fill="#3fd46a"><circle cx="14" cy="14" r="4.6" opacity=".28"/><circle cx="14" cy="26" r="4.6"/><circle cx="14" cy="38" r="4.6"/><circle cx="14" cy="50" r="4.6"/></g>
-  <g fill="#3b8cf5"><circle cx="26" cy="14" r="4.6"/><circle cx="26" cy="26" r="4.6" opacity=".28"/><circle cx="26" cy="38" r="4.6"/><circle cx="26" cy="50" r="4.6"/></g>
-  <g fill="#ee3c9f"><circle cx="38" cy="14" r="4.6" opacity=".28"/><circle cx="38" cy="26" r="4.6"/><circle cx="38" cy="38" r="4.6" opacity=".28"/><circle cx="38" cy="50" r="4.6"/></g>
-  <g fill="#9a5cf2"><circle cx="50" cy="14" r="4.6"/><circle cx="50" cy="26" r="4.6" opacity=".28"/><circle cx="50" cy="38" r="4.6"/><circle cx="50" cy="50" r="4.6"/></g>
+  <!-- winchxyz site icon: the Tools legend icon, a terminal prompt, on the tools green.
+       tools/share.mjs draws favicon.ico and icon-180.png from this file. -->
+  <rect width="64" height="64" rx="14" fill="#3fd46a"/>
+  <path d="M18 21 29 32 18 43M35 43H47" fill="none" stroke="#17181b" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

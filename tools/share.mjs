@@ -1,6 +1,7 @@
 // Takes the site's still pictures in headless Chromium:
 //   assets/share.jpg     the link preview (index.html?card, 1200x630 at 2x)
 //   assets/icon-180.png  the touch icon, from assets/icon.svg
+//   favicon.ico          the tab icon at 16, 32 and 48 px, for browsers without SVG icons
 //   node tools/share.mjs        (run node tools/build-site.mjs first)
 // Needs playwright-core and its Chromium: set PLAYWRIGHT_CORE to playwright-core's index.mjs as a
 // file:// URL, or install playwright-core next to this repo.
@@ -43,14 +44,39 @@ async function open(url, viewport, dpr) {
   await ctx.close();
   console.log('assets/share.jpg');
 }
-{ // the touch icon: iOS rounds the corners itself, so the square is drawn edge to edge
-  const svg = fs.readFileSync(path.join(ROOT, 'assets', 'icon.svg'), 'utf8').replace(/rx="15"/, 'rx="0"');
-  const ctx = await browser.newContext({ viewport: { width: 180, height: 180 }, deviceScaleFactor: 1 });
+{ // the icons, drawn from assets/icon.svg at each size rather than scaled down from one picture
+  const svg = fs.readFileSync(path.join(ROOT, 'assets', 'icon.svg'), 'utf8');
+  const ctx = await browser.newContext({ deviceScaleFactor: 1 });
   const page = await ctx.newPage();
-  await page.setContent(`<!doctype html><style>html,body{margin:0}svg{display:block;width:180px;height:180px}</style>${svg}`);
-  await page.screenshot({ path: path.join(ROOT, 'assets', 'icon-180.png') });
-  await ctx.close();
+  const draw = async (src, size) => {
+    await page.setViewportSize({ width: size, height: size });
+    await page.setContent(`<!doctype html><style>html,body{margin:0;background:transparent}svg{display:block;width:${size}px;height:${size}px}</style>${src}`);
+    return page.screenshot({ omitBackground: true });
+  };
+  // the touch icon: iOS rounds the corners itself, so the square is drawn edge to edge
+  fs.writeFileSync(path.join(ROOT, 'assets', 'icon-180.png'), await draw(svg.replace(/ rx="[\d.]+"/, ''), 180));
   console.log('assets/icon-180.png');
+  // favicon.ico: PNG entries (every current browser reads them), corners kept round
+  const pngs = [];
+  for (const size of [16, 32, 48]) pngs.push({ size, buf: await draw(svg, size) });
+  const head = Buffer.alloc(6);
+  head.writeUInt16LE(1, 2);
+  head.writeUInt16LE(pngs.length, 4);
+  let offset = 6 + 16 * pngs.length;
+  const entries = pngs.map(({ size, buf }) => {
+    const e = Buffer.alloc(16);
+    e.writeUInt8(size, 0);
+    e.writeUInt8(size, 1);
+    e.writeUInt16LE(1, 4);
+    e.writeUInt16LE(32, 6);
+    e.writeUInt32LE(buf.length, 8);
+    e.writeUInt32LE(offset, 12);
+    offset += buf.length;
+    return e;
+  });
+  fs.writeFileSync(path.join(ROOT, 'favicon.ico'), Buffer.concat([head, ...entries, ...pngs.map(p => p.buf)]));
+  console.log('favicon.ico');
+  await ctx.close();
 }
 
 await browser.close();

@@ -26,8 +26,9 @@ between category, stars and programming language. `#<repo>` (for example
   `assets/p/`. `assets/fonts/`: Inter and Geist Mono, used only where SF is not
   installed.
 - `tools/share.mjs` takes `assets/share.jpg` (the link preview, from
-  `index.html?card`) and `assets/icon-180.png`. `index.html?card=hero` is the
-  widget alone, for the profile README.
+  `index.html?card`), and draws `assets/icon-180.png` and `favicon.ico` from
+  `assets/icon.svg` (the tab icon: the Tools prompt on green).
+  `index.html?card=hero` is the widget alone, for the profile README.
 
 Run it with `npm start` and open <http://localhost:8141>. After editing
 `content.json`, run `node tools/build-site.mjs`.
