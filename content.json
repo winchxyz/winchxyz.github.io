@@ -1,0 +1,183 @@
+{
+  "_about": "One content source for winchxyz.github.io and the GitHub profile README (draft 2026-11-13). Order (the user's, 2026-11-14): Tools (one section, More tools and X tools merged), then the Hermes plugins, then the visual tools, then games and the rest. short = one line for README tiles (50 chars max), line = the longer site copy. Images: assets/p/<id>.jpg (720x450).",
+  "line": "I build tools: tools for AI agents and X, plugins for Hermes Agent, and visual tools that run in your browser.",
+  "stats": [
+    [8, "tools for AI agents, X and 3D printing"],
+    [4, "plugins in the Hermes Agent catalog"],
+    [8, "visual tools in your browser"],
+    [585, "stars on GitHub"],
+    [44, "open-source repos"]
+  ],
+  "sections": [
+    {
+      "id": "tools",
+      "title": "Tools",
+      "line": "For building with Claude Code and agents, posting on X, making videos and 3D printing.",
+      "ids": ["loupe", "follower-sweep", "idea-to-build", "draft-desk", "x-ghostwriter", "crunch-time", "motion-studio", "mc-print-3d"]
+    },
+    {
+      "id": "hermes",
+      "title": "Hermes plugins",
+      "line": "Four plugins for Hermes Agent, all in its official plugin catalog.",
+      "ids": ["hermes-x-bookmarks", "hermes-ghost-call", "hermes-phone", "hermes-blueprint"]
+    },
+    {
+      "id": "visual",
+      "title": "Visual tools",
+      "line": "Turn a picture into something else. Everything runs in your browser, and your pictures are not uploaded.",
+      "ids": ["afterglyph", "nightgrain", "spiralist", "typist", "pasteup", "mosaiz", "seedplot", "platen"]
+    },
+    {
+      "id": "games",
+      "title": "Games and graphics",
+      "line": "Side projects. Most have no asset files: every mesh, texture and sound is made in code.",
+      "ids": ["moon-rover", "tidewright", "tria-prima", "celadon", "crayon-contraptions", "navis"],
+      "also": ["vesper-street", "endless-fishing", "aetherflow", "ant-farm", "cut", "wumpus-torture-simulator", "pudgy-torture-simulator", "bikini-bottom", "solebound", "credits-cubed", "ar-butter", "motion-reels", "zodiac-z13-z32"]
+    }
+  ],
+  "projects": {
+    "hermes-x-bookmarks": {
+      "short": "Your X bookmarks, sorted and kept in your notes.",
+      "line": "Reads every X bookmark, threads and Articles too, sorts them with your own model and keeps them in Notion, Obsidian, Google Docs or a desktop board.",
+      "label": "Code", "stars": 40, "lang": "Python"
+    },
+    "hermes-ghost-call": {
+      "short": "Listens to your call and whispers hints to you.",
+      "line": "You stay on the call. Hermes listens, whispers one-line hints to you only, and sends one summary when you hang up.",
+      "label": "Code", "stars": 5, "lang": "Python"
+    },
+    "hermes-phone": {
+      "short": "Makes the phone call for you and reports back.",
+      "line": "Hermes makes the call you keep putting off. When it needs an answer it asks you in chat, then sends the result and the transcript.",
+      "label": "Code", "stars": 10, "lang": "Python"
+    },
+    "hermes-blueprint": {
+      "short": "Turns a raw idea into a plan you can build.",
+      "line": "From a raw idea to a plan you can build: research with sources, a critic that does not cave, and estimates in hours.",
+      "label": "Code", "stars": 1, "lang": "Python"
+    },
+    "afterglyph": {
+      "short": "Pictures and video as glowing glyph art, in 3D.",
+      "line": "Turn any image, GIF or video into glowing glyph art you can spin in 3D. Save it as a video, a GIF or text.",
+      "live": "https://winchxyz.github.io/afterglyph/", "label": "Open", "stars": 41, "lang": "HTML"
+    },
+    "nightgrain": {
+      "short": "Pictures and video as shimmering pixel art.",
+      "line": "Turn any image, GIF or video into dithered pixel art that shimmers. Save a PNG, GIF, MP4 or a Telegram sticker.",
+      "live": "https://winchxyz.github.io/nightgrain/", "label": "Open", "stars": 2, "lang": "JavaScript"
+    },
+    "spiralist": {
+      "short": "A photo drawn with one continuous line.",
+      "line": "Draws your photo as one continuous line, then films it being drawn.",
+      "live": "https://winchxyz.github.io/spiralist/", "label": "Open", "stars": 69, "lang": "JavaScript"
+    },
+    "typist": {
+      "short": "Photo to text art for Instagram, X and Telegram.",
+      "line": "Turn any photo into text art you can paste into Instagram, X and Telegram.",
+      "live": "https://winchxyz.github.io/typist/", "label": "Open", "stars": 18, "lang": "JavaScript"
+    },
+    "pasteup": {
+      "short": "Lay out pictures for X before you post them.",
+      "line": "Lay out pictures for X before you post: rows of up to 20, one picture cut into strips, avatar and banner.",
+      "live": "https://winchxyz.github.io/pasteup/", "label": "Open", "stars": 0, "lang": "JavaScript"
+    },
+    "mosaiz": {
+      "short": "Any photo as a real mosaic you can build.",
+      "line": "Turn any photo into a real mosaic: 3D preview, build video and a numbered 3D-print kit.",
+      "live": "https://winchxyz.github.io/mosaiz/", "label": "Open", "stars": 0, "lang": "JavaScript"
+    },
+    "seedplot": {
+      "short": "Five art styles. Same seed, same picture.",
+      "line": "A drawing machine that works from a seed: five algorithmic art styles, same seed, same picture.",
+      "live": "https://winchxyz.github.io/seedplot/", "label": "Open", "stars": 1, "lang": "JavaScript"
+    },
+    "platen": {
+      "short": "A cozy 3D typewriter that draws.",
+      "line": "A cozy 3D typewriter. Write, draw typewriter art, or get a guide to type it on your own machine.",
+      "live": "https://winchxyz.github.io/platen/", "label": "Open", "stars": 16, "lang": "JavaScript"
+    },
+    "loupe": {
+      "short": "AI makes the site, you fix it by hand.",
+      "line": "A local website builder for Windows. AI makes the site, you fix it by hand on the live page.",
+      "live": "https://tryloupe.app/", "label": "Site", "stars": 20, "lang": "CSS"
+    },
+    "idea-to-build": {
+      "short": "A Claude Code plugin: raw idea to a build plan.",
+      "line": "A Claude Code plugin that turns a raw idea into a plan you can build.",
+      "label": "Code", "stars": 12, "lang": "Shell"
+    },
+    "crunch-time": {
+      "short": "Your Claude Code agents in a PS1-style office.",
+      "line": "Watch your Claude Code agents work in a PS1-style low-poly office. Live via hooks, zero tokens.",
+      "live": "https://winchxyz.github.io/crunch-time/", "label": "Open", "stars": 0, "lang": "JavaScript"
+    },
+    "motion-studio": {
+      "short": "One brief in, a finished motion video out.",
+      "line": "One brief in, a finished motion video out. A Claude Code workflow where every frame is code.",
+      "label": "Code", "stars": 0, "lang": "JavaScript"
+    },
+    "mc-print-3d": {
+      "short": "Minecraft builds to multi-colour 3D prints.",
+      "line": "A desktop app that turns Minecraft schematics into multi-colour, print-ready 3D models with the real block textures.",
+      "label": "Code", "stars": 2, "lang": "Python"
+    },
+    "follower-sweep": {
+      "short": "Finds dead followers on X, within X's rules.",
+      "line": "A Chrome extension that finds dead followers on X and marks them for you, within X's rules.",
+      "live": "https://winchxyz.github.io/follower-sweep/", "label": "Open", "stars": 0, "lang": "JavaScript"
+    },
+    "draft-desk": {
+      "short": "Grok researches, Claude drafts, Telegram asks you.",
+      "line": "An n8n pipeline: Grok researches X, Claude drafts posts and replies in your voice, Telegram hands you a one-tap button.",
+      "label": "Code", "stars": 0, "lang": "JavaScript", "noimg": true
+    },
+    "x-ghostwriter": {
+      "short": "Drafts X posts in your voice. You press publish.",
+      "line": "Drafts X posts and replies in your voice, locally and for free. You always press publish.",
+      "label": "Code", "stars": 4, "lang": "PowerShell"
+    },
+    "moon-rover": {
+      "short": "Drive a rover across the Moon.",
+      "line": "A 3D lunar rover survey game. Every texture and sound is generated at runtime.",
+      "live": "https://winchxyz.github.io/moon-rover/", "label": "Play", "stars": 137, "lang": "JavaScript"
+    },
+    "tidewright": {
+      "short": "Sandcastles on a beach that runs on the GPU.",
+      "line": "A 3D sandcastle simulator that runs entirely on the GPU. No engine, no libraries, no asset files.",
+      "live": "https://winchxyz.github.io/tidewright/", "label": "Play", "stars": 77, "lang": "JavaScript"
+    },
+    "tria-prima": {
+      "short": "A dark-fantasy alchemy game in first person.",
+      "line": "A dark-fantasy alchemy adventure in first person. Fully procedural, plays in the browser.",
+      "live": "https://winchxyz.github.io/tria-prima/", "label": "Play", "stars": 4, "lang": "JavaScript"
+    },
+    "celadon": {
+      "short": "A pottery game: wheel, glaze chemistry, kiln.",
+      "line": "A pottery game. Throw a pot on the wheel, mix the glaze chemistry, fire the kiln.",
+      "live": "https://winchxyz.github.io/celadon/", "label": "Play", "stars": 22, "lang": "JavaScript"
+    },
+    "crayon-contraptions": {
+      "short": "A Rube Goldberg puzzle game drawn in crayon.",
+      "line": "A Rube Goldberg puzzle game drawn in crayon: 100 levels and seven crayons with their own physics.",
+      "live": "https://winchxyz.github.io/crayon-contraptions/", "label": "Play", "stars": 5, "lang": "JavaScript"
+    },
+    "navis": {
+      "short": "A flooded Gothic cathedral in one HTML file.",
+      "line": "A flooded Gothic cathedral rendered in real time, from one HTML file with no assets.",
+      "live": "https://winchxyz.github.io/navis/", "label": "Open", "stars": 11, "lang": "HTML"
+    },
+    "vesper-street": { "short": "Survival horror in a drowned voxel town.", "live": "https://winchxyz.github.io/vesper-street/", "stars": 11, "lang": "JavaScript" },
+    "endless-fishing": { "short": "An ocean under tonight's real sky.", "live": "https://winchxyz.github.io/endless-fishing/", "stars": 12, "lang": "TypeScript" },
+    "aetherflow": { "short": "A GPU fluid lab with caustics.", "live": "https://winchxyz.github.io/aetherflow/", "stars": 1, "lang": "HTML" },
+    "ant-farm": { "short": "An ant farm on a hand-written WebGL2 engine.", "live": "https://winchxyz.github.io/ant-farm/", "stars": 5, "lang": "JavaScript" },
+    "cut": { "short": "Slice objects along your mouse path.", "live": "https://winchxyz.github.io/cut/", "stars": 2, "lang": "JavaScript" },
+    "wumpus-torture-simulator": { "name": "wumpus sim", "short": "A ragdoll sandbox with 25 tools.", "live": "https://winchxyz.github.io/wumpus-torture-simulator/", "stars": 21, "lang": "JavaScript" },
+    "pudgy-torture-simulator": { "name": "pudgy sim", "short": "The same sandbox, with a penguin.", "live": "https://winchxyz.github.io/pudgy-torture-simulator/", "stars": 0, "lang": "JavaScript" },
+    "bikini-bottom": { "short": "A cel-shaded town grown from a seed.", "live": "https://winchxyz.github.io/bikini-bottom/", "stars": 25, "lang": "JavaScript" },
+    "solebound": { "short": "A shoe-repair sim about roads that remember.", "stars": 6, "lang": "HTML" },
+    "credits-cubed": { "short": "A picture cube made from Credits.", "live": "https://winchxyz.github.io/credits-cubed/", "stars": 1, "lang": "JavaScript" },
+    "ar-butter": { "short": "Crack butter with your hands through a webcam.", "stars": 2, "lang": "TypeScript" },
+    "motion-reels": { "short": "Short motion videos made with AI and code.", "live": "https://winchxyz.github.io/motion-reels/", "stars": 0, "lang": "HTML" },
+    "zodiac-z13-z32": { "name": "zodiac z13 / z32", "short": "Two unsolved ciphers, tested.", "live": "https://winchxyz.github.io/zodiac-z13-z32/", "stars": 2, "lang": "JavaScript" }
+  }
+}

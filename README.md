@@ -1,25 +1,40 @@
-# winch · portfolio
+# winchxyz · tools
 
 **[winchxyz.github.io](https://winchxyz.github.io/)** · [@winchxyz](https://x.com/winchxyz)
 
-Tools, apps, games and films built with Claude Code: 37 open-source repos, 27
-of them live in the browser.
+I build tools: tools for AI agents and X, plugins for Hermes Agent, and visual
+tools that run in your browser. 39 open-source projects, 585 stars on GitHub.
 
-The page is called *Develop*. Every picture on it arrives as text first and
-develops into the real thing as you scroll, like a print in a darkroom tray.
-The opening is the word `winch` drawn in characters over the real headline,
-measured from the same font so nothing moves when the type fades in; the cursor
-is a developer lens that clears the characters under it. Each screenshot is
-covered by a text print of itself (characters picked from the picture's
-brightness, coloured with the picture) that clears diagonally as the card rises.
+![The link preview](assets/share.jpg)
 
-- `index.html`: the page, its styles and its script.
-- `assets/data.js`: every project, its one-liner, link and brief.
-- `assets/base.css`: the shared tokens (light and dark).
-- `assets/p/`: the 720x450 screenshots.
-- `assets/share.html` renders `assets/share.jpg`, the link preview card.
+The page opens with one dark widget, like a storage panel: an LED bar that holds
+every project, coloured by kind, with a legend under it. Hover the bar to see a
+project, click it to jump to its card. "Show tools only" clears the games out of
+the bar. Below it, one page of dark widgets in this order: Tools, Hermes
+plugins, Visual tools, then games and experiments. Every card shows the real
+screenshot, the stars and the language. "Sort by" switches the list and the bar
+between category, stars and programming language. `#<repo>` (for example
+`#loupe`) opens the page at that card.
 
-Run it with `npm start` and open <http://localhost:8141>. No build step.
+- `content.json`: the one content source, for this page and the profile README
+  (winchxyz/winchxyz). Section order, every project's lines, stars and language.
+- `tools/build-site.mjs` writes `assets/winch.js`, the page's data, from it.
+- `index.html`: the markup. `assets/site.css`, `assets/site.js`: the page.
+  `assets/led.js` draws the LED bar, `assets/icons.js` the icons.
+- `assets/p/`: the 720x450 screenshots, one per project id. `tools/shoot.mjs`
+  screenshots live project pages and `tools/thumbs.py` cuts them to 720x450 into
+  `assets/p/`. `assets/fonts/`: Inter and Geist Mono, used only where SF is not
+  installed.
+- `tools/share.mjs` takes `assets/share.jpg` (the link preview, from
+  `index.html?card`) and `assets/icon-180.png`. `index.html?card=hero` is the
+  widget alone, for the profile README.
+
+Run it with `npm start` and open <http://localhost:8141>. After editing
+`content.json`, run `node tools/build-site.mjs`.
+
+The previous homepage, *Develop* (every picture arrives as text and develops as
+you scroll), is kept at [develop.html](https://winchxyz.github.io/develop.html)
+with its `assets/data.js` and `assets/base.css`.
 
 ## The classic site
 
