@@ -58,7 +58,7 @@ body {
   text-rendering: optimizeLegibility;
 }
 .num { font-variant-numeric: tabular-nums; }
-a { color: inherit; text-decoration: none; }
+a { color: inherit; text-decoration: none; transition: color .2s; }
 button { font: inherit; color: inherit; border: 0; background: none; padding: 0; cursor: pointer; }
 img { display: block; max-width: 100%; }
 canvas { display: block; }
@@ -135,6 +135,9 @@ html, body { background: var(--page); color: var(--ink); }
 .status .mono { font-size: 15px; color: var(--t3); }
 .status .ok { color: var(--t1); display: inline-flex; align-items: center; gap: 9px; }
 .status .ok .ic { color: var(--green); }
+/* a line that ends something rises in (site.js setStatus with fade) */
+.status.in { animation: line-in .5s var(--ease); }
+@keyframes line-in { from { opacity: 0; transform: translateY(5px); } }
 
 .bar { position: relative; display: block; margin: 30px 0 34px; cursor: default; outline: none; }
 .bar.link { cursor: pointer; }
@@ -153,6 +156,7 @@ html, body { background: var(--page); color: var(--ink); }
 .lg .v { margin-left: auto; color: var(--t3); font-variant-numeric: tabular-nums; }
 .lg:hover, .lg.on { background: var(--hl); color: var(--t1); }
 .lg.off { opacity: .32; }
+.lg.wait { opacity: .3; } /* until the scan reaches the row */
 
 .foot { display: flex; align-items: center; justify-content: space-between; gap: 20px; min-height: 86px; padding: 14px 0; }
 .tip { margin: 0; display: flex; align-items: center; gap: 12px; font-size: 17px; color: var(--t2); letter-spacing: -.01em; }
@@ -171,18 +175,29 @@ html, body { background: var(--page); color: var(--ink); }
 }
 .sortbar.stuck { box-shadow: 0 1px 0 rgba(0, 0, 0, .08); }
 .seg {
+  position: relative;
   display: inline-flex; align-items: center; gap: 2px; padding: 4px;
   border-radius: 13px; background: #ececf0;
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .03);
 }
 .seg .sl { padding: 0 8px 0 12px; font-size: 14.5px; color: var(--ink-2); white-space: nowrap; }
 .seg button {
+  position: relative; z-index: 1;
   height: 34px; padding: 0 16px; border-radius: 9px;
   font-size: 14.5px; font-weight: 500; letter-spacing: -.01em; color: var(--ink-2);
   transition: background .2s, color .2s, box-shadow .2s;
 }
 .seg button:hover { color: var(--ink); }
 .seg button[aria-checked="true"] { background: #fff; color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.08), 0 3px 10px -3px rgba(0,0,0,.14); }
+/* with site.js the white is a thumb that slides from button to button */
+.seg .thumb {
+  position: absolute; left: 0; top: 4px; bottom: 4px; width: 0; border-radius: 9px; pointer-events: none;
+  background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.08), 0 3px 10px -3px rgba(0,0,0,.14);
+  opacity: 0; transition: transform .45s var(--ease), width .45s var(--ease);
+}
+.seg.slid .thumb { opacity: 1; }
+.seg.still .thumb { transition: none; }
+.seg.slid button[aria-checked="true"] { background: transparent; box-shadow: none; }
 
 /* ---------- groups ---------- */
 #groups { transition: opacity .17s; }
@@ -215,7 +230,9 @@ html, body { background: var(--page); color: var(--ink); }
   background: var(--card); color: var(--t1);
   box-shadow: 0 0 0 1px var(--card-edge), 0 1px 2px rgba(0,0,0,.16), 0 16px 40px -20px rgba(0,0,0,.42);
   scroll-margin-top: 84px;
+  transition: box-shadow .35s var(--ease);
 }
+.wg:hover { box-shadow: 0 0 0 1px #2d2e33, 0 2px 4px rgba(0,0,0,.2), 0 24px 52px -20px rgba(0,0,0,.56); }
 .wg .cover { position: absolute; inset: 0; z-index: 1; border-radius: inherit; }
 .wh { display: flex; align-items: center; gap: 9px; height: 22px; flex: none; }
 .wh .ic { flex: none; }
@@ -232,7 +249,7 @@ html, body { background: var(--page); color: var(--ink); }
   border-radius: 12px; overflow: hidden; background: #0f1012;
 }
 .pv::after { content: ""; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1px rgba(255,255,255,.08); pointer-events: none; }
-.pv img { width: 100%; height: 100%; object-fit: cover; transition: transform .6s var(--ease); }
+.pv img { width: 100%; height: 100%; object-fit: cover; transition: transform .6s var(--ease), opacity .6s var(--ease); }
 .wg:hover .pv img { transform: scale(1.025); }
 .wd { margin: 14px 0 0; font-size: 14.5px; line-height: 1.45; color: var(--t2); letter-spacing: -.006em; }
 .wf { display: flex; align-items: center; gap: 4px; flex: none; min-height: 32px; margin-top: auto; padding-top: 12px; }
@@ -285,7 +302,7 @@ html, body { background: var(--page); color: var(--ink); }
 .gm { display: block; min-width: 0; border-radius: 10px; scroll-margin-top: 84px; }
 .gm .th { position: relative; display: block; aspect-ratio: 16 / 10; border-radius: 10px; overflow: hidden; background: #0f1012; }
 .gm .th::after { content: ""; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1px rgba(255,255,255,.07); }
-.gm img { width: 100%; height: 100%; object-fit: cover; transition: transform .5s var(--ease); }
+.gm img { width: 100%; height: 100%; object-fit: cover; transition: transform .5s var(--ease), opacity .6s var(--ease); }
 .gm:hover img { transform: scale(1.04); }
 .gm b { display: flex; align-items: center; gap: 6px; margin-top: 9px; font-size: 14px; font-weight: 600; letter-spacing: -.01em; }
 .gm b .nm { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -300,6 +317,22 @@ html, body { background: var(--page); color: var(--ink); }
 .end span { color: var(--ink); font-weight: 600; margin-right: auto; }
 .nojs { margin: 40px 4px 0; font-size: 17px; color: var(--ink-2); }
 .nojs a { color: var(--ink); text-decoration: underline; }
+
+/* ---------- motion: the page arrives, cards rise as they come into view, pictures fade in ----------
+   html.js is set in the head (not for ?card), html.ready by site.js once the fonts are in, and
+   html.rise when it can watch the cards. Without JavaScript everything is simply there. */
+@keyframes rise { from { opacity: 0; transform: translateY(18px); } }
+@keyframes fade { from { opacity: 0; } }
+html.js:not(.ready) .top, html.js:not(.ready) .intro h1, html.js:not(.ready) .hero, html.js:not(.ready) .sortbar { opacity: 0; }
+html.js.ready .top { animation: fade .7s var(--ease) backwards; }
+html.js.ready .intro h1 { animation: rise .9s var(--ease) backwards; }
+html.js.ready .hero { animation: rise 1s var(--ease) .09s backwards; }
+html.js.ready .sortbar { animation: rise .9s var(--ease) .18s backwards; }
+html.rise .rv:not(.in) { opacity: 0; }
+.rv.in { animation: rise .8s var(--ease) var(--d, 0s) backwards; }
+.rv.in.flash { animation: rise .8s var(--ease) var(--d, 0s) backwards, flash 2.2s var(--ease); }
+html.rise .pv img, html.rise .gm img { opacity: 0; }
+html.rise .pv img.ld, html.rise .gm img.ld { opacity: 1; }
 
 /* ---------- tablet: two across ---------- */
 @media (max-width: 980px) {

@@ -9,6 +9,9 @@
 (function () {
   'use strict';
   const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map(v => (v + 0.5) / 16);
+  /* sine by table: the dots' breathing needs thousands a frame */
+  const SIN_N = 1024, SIN_K = SIN_N / (2 * Math.PI), SIN = new Float32Array(SIN_N);
+  for (let k = 0; k < SIN_N; k++) SIN[k] = Math.sin(k / SIN_K);
   const hex = h => { h = String(h).replace('#', ''); if (h.length === 3) h = h.replace(/./g, '$&$&'); return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)]; };
   const mix = (a, b, k) => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k];
   const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
@@ -40,13 +43,15 @@
        o.tint     how much of its colour an unlit dot keeps (per cell override in set)
        o.fill     how much of its colour the square behind a dot keeps
        o.noise    0 = pure ordered dither, 1 = random threshold per dot
-       o.glow     bloom strength; o.shimmer how much the threshold breathes */
+       o.glow     bloom strength; o.shimmer how much the threshold breathes, each dot at its own pace
+       o.soft     width of the ramp around the threshold: above 0 a dot fades in and out, not on and off
+       o.flicker  how much a lit dot's brightness breathes along with its threshold */
     constructor(el, opts = {}) {
       this.cv = el;
       this.ctx = el.getContext('2d');
       this.o = Object.assign({
         pitch: 4, lit: 0.66, dim: 0.34, off: '#222326', bg: '#17181b',
-        tint: 0.24, fill: 0.075, noise: 0.35, glow: 0.7, shimmer: 0, focusDim: 0.2, speed: 9, maxDpr: 2,
+        tint: 0.24, fill: 0.075, noise: 0.35, glow: 0.7, shimmer: 0, soft: 0, flicker: 0, focusDim: 0.2, speed: 9, maxDpr: 2,
       }, opts);
       this.parts = [];
       this.t = 0; this.last = 0;
@@ -84,7 +89,8 @@
       this.fil = new Float32Array(n).fill(-1);
       this.rnd = new Float32Array(n);
       this.ph = new Float32Array(n);
-      for (let i = 0; i < n; i++) { this.rnd[i] = Math.random(); this.ph[i] = Math.random() * 6.283; }
+      this.spd = new Float32Array(n); // each dot breathes at its own pace, 0.8 to 2.4 radians a second
+      for (let i = 0; i < n; i++) { this.rnd[i] = Math.random(); this.ph[i] = Math.random() * 6.283; this.spd[i] = 0.8 + Math.random() * 1.6; }
       for (const k of ['fill', 'dim', 'lit']) { this.L[k].width = cols; this.L[k].height = rows; }
       this.L.half.width = Math.max(1, cols >> 1); this.L.half.height = Math.max(1, rows >> 1);
       this.L.quarter.width = Math.max(1, cols >> 2); this.L.quarter.height = Math.max(1, rows >> 2);
@@ -193,13 +199,17 @@
       return dt;
     }
 
+    /* this.glint, while set, is a band of light across the dots: {x, k, w, a, r0}, its centre at
+       column x on row r0, moving k columns per row down, w wide, adding up to a to a dot's level */
     render() {
-      const { cols, rows, img, col, has, cur, hot, grp, groupW, groupB, rnd, ph, tnt, fil } = this;
+      const { cols, rows, img, col, has, cur, hot, grp, groupW, groupB, rnd, ph, spd, tnt, fil } = this;
       const boost = this.o.boost ?? 0.5;
       const F = img.fill.data, D = img.dim.data, Lt = img.lit.data;
       const off = this.offRgb, bg = this.bgRgb, o = this.o;
-      const noise = o.noise, sh = o.shimmer, t = this.t, dTint = o.tint, dFill = o.fill;
+      const noise = o.noise, sh = o.shimmer, fl = o.flicker || 0, t = this.t, dTint = o.tint, dFill = o.fill;
+      const inv = o.soft > 0 ? 1 / o.soft : 0, gl = this.glint;
       for (let r = 0, i = 0; r < rows; r++) {
+        const gx = gl ? gl.x + (r - gl.r0) * gl.k : 0, giw = gl ? 1 / gl.w : 0;
         for (let c = 0; c < cols; c++, i++) {
           const p = i * 4;
           if (!has[i]) {
@@ -213,13 +223,22 @@
           F[p] = bg[0] + (R - bg[0]) * fk; F[p + 1] = bg[1] + (G - bg[1]) * fk; F[p + 2] = bg[2] + (B - bg[2]) * fk; F[p + 3] = 255;
           const tk = (tnt[i] >= 0 ? tnt[i] : dTint) * (0.5 + 0.5 * gw);
           D[p] = bg[0] + (R - bg[0]) * tk; D[p + 1] = bg[1] + (G - bg[1]) * tk; D[p + 2] = bg[2] + (B - bg[2]) * tk; D[p + 3] = 255;
-          let th = BAYER[(r & 3) * 4 + (c & 3)] * (1 - noise) + rnd[i] * noise;
-          if (sh) th += sh * Math.sin(t * 1.7 + ph[i]);
-          const level = cur[i] * (0.35 + 0.65 * gw) * (1 + boost * gb) + 0.05 * gb;
+          const s = sh || fl ? SIN[((t * spd[i] + ph[i]) * SIN_K) & (SIN_N - 1)] : 0;
+          const th = BAYER[(r & 3) * 4 + (c & 3)] * (1 - noise) + rnd[i] * noise + sh * s;
+          let level = cur[i] * (0.35 + 0.65 * gw) * (1 + boost * gb) + 0.05 * gb;
           const h = hot[i];
-          if (level > th) {
-            const a = 0.28 + 0.72 * gw;
-            Lt[p] = R + (255 - R) * h; Lt[p + 1] = G + (255 - G) * h; Lt[p + 2] = B + (255 - B) * h; Lt[p + 3] = 255 * a;
+          let hl = h;
+          if (gl && gi >= 0) {
+            const d = (c - gx) * giw;
+            if (d > -2.6 && d < 2.6) { const e = Math.exp(-d * d) * gl.a; level += e; if (e * 0.6 > hl) hl = e * 0.6; }
+          }
+          /* how lit the dot is: all or nothing, or a ramp o.soft wide around its threshold */
+          let a = level < 0.004 ? 0 : inv ? (level - th) * inv + 0.5 : level > th ? 1 : 0;
+          if (a > 0) {
+            if (a > 1) a = 1;
+            const al = (0.28 + 0.72 * gw) * a * (1 - fl * (0.5 + 0.5 * s));
+            Lt[p] = R + (255 - R) * hl; Lt[p + 1] = G + (255 - G) * hl; Lt[p + 2] = B + (255 - B) * hl;
+            Lt[p + 3] = 255 * (h * 0.9 > al ? h * 0.9 : al);
           } else if (h > 0.05) {
             Lt[p] = 255; Lt[p + 1] = 255; Lt[p + 2] = 255; Lt[p + 3] = 255 * h * 0.9;
           } else Lt[p + 3] = 0;

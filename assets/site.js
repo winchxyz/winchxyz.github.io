@@ -8,6 +8,7 @@
   /* ?card and ?card=hero turn the page into a still picture for tools/share.mjs */
   const CARD = new URLSearchParams(location.search).get('card');
   if (CARD !== null) document.documentElement.classList.add('card', ...(CARD ? [`card-${CARD}`] : []));
+  const LIVE = CARD === null; // the live page moves; a card is a still picture
   const $ = (s, el = document) => el.querySelector(s);
   const $$ = (s, el = document) => [...el.querySelectorAll(s)];
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -97,9 +98,13 @@
   const sScan = repo => `<span>Scanning</span><span class="mono">~/winchxyz/${esc(repo)}</span>`;
   const sOk = text => `<span class="ok">${ICON.check(18)}${esc(text)}</span>`;
   let statusHold = 0;
-  const setStatus = (html, hold = 0) => { status.innerHTML = html; statusHold = hold ? performance.now() + hold : 0; };
+  /* fade: the line rises in. For lines that end something, not for hover, which follows the pointer */
+  const setStatus = (html, hold = 0, fade = false) => {
+    status.innerHTML = html; statusHold = hold ? performance.now() + hold : 0;
+    if (fade && LIVE) { status.classList.remove('in'); void status.offsetWidth; status.classList.add('in'); }
+  };
   /* a message shown for a while (hold) gives way to the view's own line when it runs out */
-  const idleStatus = () => { if (statusHold && performance.now() > statusHold && hoverQ < 0 && hoverItem < 0) { statusHold = 0; status.innerHTML = V.idle(); } };
+  const idleStatus = () => { if (statusHold && performance.now() > statusHold && hoverQ < 0 && hoverItem < 0) setStatus(V.idle(), 0, true); };
 
   const TIP_ALL = `${ICON.cat('pad', 'purple', 20)}<span>Games and experiments are half of what is here. Tools come first now.</span>`;
   const TIP_TOOLS = `${ICON.cat('wrench', 'green', 20)}<span>Showing the ${N_TOOLS} tools. The games are hidden, not gone.</span>`;
@@ -143,7 +148,7 @@
   }
 
   function card(it, size = 'S') {
-    const s = it.kind, el = h('article', `wg ${size}`);
+    const s = it.kind, el = h('article', `wg ${size} rv`);
     el.id = it.id;
     el.style.setProperty('--kind', hex(s.color));
     const main = it.live || it.code;
@@ -167,7 +172,7 @@
   function section(id, icon, title, n, line) {
     const sec = h('section', 'group');
     sec.id = id;
-    sec.innerHTML = `<div class="gh"><h2>${icon}${esc(title)}<span class="n">${n}</span></h2><p>${esc(line)}</p></div>`;
+    sec.innerHTML = `<div class="gh rv"><h2>${icon}${esc(title)}<span class="n">${n}</span></h2><p>${esc(line)}</p></div>`;
     root.append(sec);
     return sec;
   }
@@ -181,7 +186,7 @@
     const gs = KINDS.find(s => s.id === 'games'), al = KINDS.find(s => s.id === 'also');
     if (!gs) return;
     const sec = section('k-games', kindIcon(gs, 22), gs.title, gs.items.length + (al ? al.items.length : 0), gs.line);
-    const box = h('div', 'widget games');
+    const box = h('div', 'widget games rv');
     const tile = it => `<a class="gm" id="${it.id}" style="--kind:${hex(gs.color)}" href="${it.live || it.code}" target="_blank" rel="noopener"><span class="th">${it.img ? `<img src="${it.img}" alt="" loading="lazy" decoding="async">` : ''}</span><b><span class="nm">${esc(it.name)}</span>${it.stars ? `<span class="v">${ICON.star(10)}${it.stars}</span>` : ''}</b><span>${esc(it.short)}</span></a>`;
     box.innerHTML = `<div class="gr">${gs.items.map(tile).join('')}</div>`
       + (al ? `<p class="also" id="k-also"><b>${esc(al.title)}</b>${al.items.map(it => `<a id="${it.id}" style="--kind:${hex(al.color)}" href="${it.live || it.code}" target="_blank" rel="noopener" title="${esc(it.short)}">${esc(it.name)}</a>`).join(' · ')}</p>` : '');
@@ -207,7 +212,26 @@
         grid(section(`l-${slug(r.key)}`, r.icon, r.title, list.length, `${plural(list.length, 'project', 'projects')}, ${starsOf(list)} stars on GitHub.`), list.map(it => [it, 'S']));
       });
     }
+    settle();
   }
+
+  /* ---------- arrival: the cards rise as they come into view, the pictures fade in once loaded ---------- */
+  const RISE = LIVE && 'IntersectionObserver' in window;
+  if (RISE) document.documentElement.classList.add('rise');
+  let armed = false;
+  const riser = RISE ? new IntersectionObserver(es => {
+    /* the ones that came into view together go top to bottom, left to right, a beat apart */
+    const ins = es.filter(e => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top || a.boundingClientRect.left - b.boundingClientRect.left);
+    ins.forEach((e, k) => { e.target.style.setProperty('--d', `${Math.min(k, 8) * 60}ms`); e.target.classList.add('in'); riser.unobserve(e.target); });
+  }, { rootMargin: '0px 0px -5% 0px' }) : null;
+  function settle() {
+    $$('img', root).forEach(i => { if (i.complete && i.naturalWidth) i.classList.add('ld'); });
+    if (riser && armed) $$('.rv:not(.in)', root).forEach(el => riser.observe(el));
+  }
+  const arm = () => { if (!armed) { armed = true; settle(); } };
+  root.addEventListener('load', e => { if (e.target.tagName === 'IMG') e.target.classList.add('ld'); }, true);
+  /* once risen, an element is plain again, so a later flash or hover starts from rest */
+  root.addEventListener('animationend', e => { if (e.animationName === 'rise') e.target.classList.remove('rv', 'in'); });
 
   let swapT = 0;
   function renderListSoft(keepTop) {
@@ -228,6 +252,9 @@
   function go(id, smooth = true) {
     const el = document.getElementById(id);
     if (!el) return false;
+    /* a card that has not risen yet shows at once */
+    const rv = el.closest('.rv');
+    if (rv && !rv.classList.contains('in')) { rv.style.setProperty('--d', '0ms'); rv.classList.add('in'); if (riser) riser.unobserve(rv); }
     el.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'center' });
     flash(el);
     return true;
@@ -246,7 +273,7 @@
   }
 
   /* ---------- the LED bar ---------- */
-  const bar = $('#bar'), cv = $('#led'), count = $('#count'), of = $('#of'), rescanBtn = $('#rescan');
+  const bar = $('#bar'), cv = $('#led'), count = $('#count'), unit = $('#unit'), of = $('#of'), rescanBtn = $('#rescan');
   rescanBtn.querySelector('.ri').outerHTML = ICON.rescan(19);
   of.textContent = ` and ${N_REST} games and experiments`;
   const MT = 18, MB = 5, MS = 5; // canvas margins around the bar, in cells
@@ -270,7 +297,7 @@
 
   let m = null, P = 4.5, barCols = 0, off = 0;
   let order = [], colItem = new Int16Array(0), colSeg = [], itemStart = new Int16Array(0), itemEnd = new Int16Array(0);
-  let shown = new Uint8Array(0);
+  let shown = new Uint8Array(0), rowFirst = [];
   let hoverQ = -1, hoverItem = -1, busy = false;
   let scanCol = -1, scanA = 0, anim = null, animStop = null, GEN = 0;
 
@@ -284,7 +311,9 @@
     bar.style.height = `${ROWS * P}px`;
     cv.style.left = `${off - MS * P}px`;
     cv.style.top = `${-MT * P}px`;
-    const opts = { pitch: P, rows: ROWS + MT + MB, cols: barCols + 2 * MS, off: null, tint: 0.24, fill: 0.1, noise: 0.16, glow: 0.42, focusDim: 0.22, boost: 0.4 };
+    /* live, the dots breathe: the few near their threshold fade in and out, slowly. A card stays still */
+    const opts = { pitch: P, rows: ROWS + MT + MB, cols: barCols + 2 * MS, off: null, tint: 0.24, fill: 0.1, noise: 0.16, glow: 0.42, focusDim: 0.22, boost: 0.4,
+      shimmer: LIVE ? 0.06 : 0, soft: LIVE ? 0.07 : 0, flicker: LIVE ? 0.12 : 0 };
     if (!m) { m = new LED.Matrix(cv, opts); m.after = drawOver; m.before = step; }
     else { Object.assign(m.o, opts); m.resize(); }
     allot();
@@ -310,6 +339,9 @@
       itemEnd[j] = c;
     });
     shown = new Uint8Array(barCols);
+    /* the first column of each legend row, so the legend can light up as the scan reaches it */
+    rowFirst = BV.rows.map(() => barCols);
+    order.forEach((it, j) => { const q = BV.rowOf(it); rowFirst[q] = Math.min(rowFirst[q], itemStart[j]); });
   }
 
   const cellOf = (bc, r) => m.idx(MS + bc, MT + r);
@@ -354,21 +386,57 @@
       let c1 = c + 1;
       while (c1 < barCols && shown[c1] && colSeg[c1] === key) c1++;
       const it = order[colItem[c]], q = BV.rowOf(it), focus = hoverQ < 0 || hoverQ === q;
-      run.push({ c0: MS + c, c1: MS + c1, color: BV.rows[q].color, a: (it.also ? 0.4 : 1) * (focus ? 1 : 0.5), glow: hoverQ === q ? 1.8 : it.also ? 0.4 : 1 });
+      run.push({ c0: MS + c, c1: MS + c1, color: BV.rows[q].color, a: (it.also ? 0.4 : 1) * (focus ? 1 : 0.5), glow: (hoverQ === q ? 1.8 : it.also ? 0.4 : 1) * neon(mm, q, c, c1) });
       c = c1;
     }
     flush();
     if (scanA > 0 && scanCol >= 0) LED.drawScan(ctx, mm, MS + scanCol, MT, MT + ROWS, scanA);
   }
+  /* live, each segment's glow breathes slowly on its own, and flares while a glint crosses it */
+  function neon(mm, q, c0, c1) {
+    if (!LIVE) return 1;
+    let k = 0.84 + 0.32 * vnoise(mm.t * 0.5 + q * 5.3, q * 1.7 + 0.5);
+    const g = mm.glint;
+    if (g) {
+      const x = g.x + g.k * ROWS / 2 - MS, d = Math.max(0, c0 - x, x - c1) / (g.w * 2.5);
+      k += 0.8 * Math.exp(-d * d);
+    }
+    return k;
+  }
 
-  /* per frame: run the current animation, sparkle when idle */
-  let sparkT = 0;
+  /* per frame: run the current animation. When idle, a dot twinkles every few frames, and now and
+     then a glint of light runs along the bar; every scan ends with one */
+  const GLINT_MS = 2400;
+  let sparkT = 0, glintT = 0, glintAt = 4, glint0 = -1;
+  function twinkle(mm) {
+    for (let k = 0; k < 8; k++) {
+      const bc = (Math.random() * barCols) | 0;
+      if (!shown[bc]) continue;
+      const i = cellOf(bc, (Math.random() * (ROWS - 1)) | 0);
+      if (mm.cur[i] > 0.2) { mm.hot[i] = Math.max(mm.hot[i], 0.75 + Math.random() * 0.25); return; }
+    }
+  }
   function step(mm, dt) {
-    if (anim) anim(performance.now());
+    const now = performance.now();
+    if (anim) anim(now);
     if (!busy) {
-      sparkT += dt;
-      if (sparkT > 0.22) { sparkT = 0; mm.sparkle(1, 0.3); }
       idleStatus();
+      if (LIVE) {
+        sparkT += dt;
+        if (sparkT > 0.13) { sparkT = 0; twinkle(mm); }
+        glintT += dt;
+        if (glint0 < 0 && glintT > glintAt && hoverItem < 0 && hoverQ < 0) { glint0 = now; glintT = 0; glintAt = 7 + Math.random() * 4; }
+      }
+    }
+    /* a glint that has started runs to its end, even if a scan begins meanwhile */
+    if (glint0 >= 0) {
+      const k = (now - glint0) / GLINT_MS;
+      if (k >= 1) { glint0 = -1; mm.glint = null; }
+      else {
+        /* a band leaning like "/", from wholly left of the bar to wholly right of it */
+        const w = 5, slant = -0.55, x0 = MS - 3 * w, x1 = MS + barCols + 3 * w - slant * (ROWS - 1);
+        mm.glint = { x: x0 + (x1 - x0) * (1 - Math.cos(Math.PI * k)) / 2, k: slant, w, a: 0.3, r0: MT };
+      }
     }
   }
 
@@ -397,8 +465,11 @@
       if (counting) {
         let tools = 0;
         for (let j = 0; j < order.length; j++) if (order[j].tool && itemStart[j] < x) tools++;
-        count.textContent = Math.max(Number(count.textContent) || 0, tools);
+        const n = Math.max(Number(count.textContent) || 0, tools);
+        count.textContent = n;
+        unit.textContent = n === 1 ? ' tool' : ' tools';
         if (!toolsOnly && it && !it.tool) of.classList.remove('gone');
+        legendRows.forEach((b, q) => { if (rowFirst[q] < x) b.classList.remove('wait'); });
       }
     }, ms);
   }
@@ -440,8 +511,11 @@
   function finish(text, hold) {
     busy = false; rescanBtn.disabled = false; rescanBtn.classList.remove('spin');
     count.textContent = String(N_TOOLS);
+    unit.textContent = N_TOOLS === 1 ? ' tool' : ' tools';
     of.classList.toggle('gone', toolsOnly);
-    setStatus(sOk(text), hold);
+    legendRows.forEach(b => b.classList.remove('wait'));
+    setStatus(sOk(text), hold, true);
+    glintT = 0; glintAt = 0.45; // every scan ends with a glint
   }
 
   async function intro() {
@@ -449,6 +523,7 @@
     for (let bc = 0; bc < barCols; bc++) setTrack(bc);
     count.textContent = '0';
     of.classList.add('gone');
+    legendRows.forEach(b => b.classList.add('wait')); // each row lights as the scan reaches it
     await LED.wait(250); if (gen !== GEN) return;
     await scanIn(0, barCols, toolsOnly ? 1600 : 2600, true); if (gen !== GEN) return;
     finish(V.done(), 2600);
@@ -477,7 +552,21 @@
   const seg = $('#seg'), sortbar = $('#sortbar');
   /* a hairline under the sort bar once it sticks */
   new IntersectionObserver(([e]) => sortbar.classList.toggle('stuck', !e.isIntersecting && e.boundingClientRect.top < 0)).observe($('#sortsent'));
-  const markSeg = () => $$('button', seg).forEach(b => b.setAttribute('aria-checked', String(b.dataset.v === view)));
+  /* a white thumb slides to the chosen button */
+  const thumb = h('span', 'thumb');
+  thumb.setAttribute('aria-hidden', 'true');
+  seg.append(thumb);
+  function moveThumb(smooth = true) {
+    const b = $(`button[data-v="${view}"]`, seg);
+    if (!b || !b.offsetWidth) return;
+    if (!smooth) seg.classList.add('still');
+    thumb.style.width = `${b.offsetWidth}px`;
+    thumb.style.transform = `translateX(${b.offsetLeft}px)`;
+    seg.classList.add('slid');
+    if (!smooth) { void thumb.offsetWidth; seg.classList.remove('still'); }
+  }
+  new ResizeObserver(() => moveThumb(false)).observe(seg);
+  const markSeg = () => { $$('button', seg).forEach(b => b.setAttribute('aria-checked', String(b.dataset.v === view))); moveThumb(); };
   async function sortBy(name) {
     if (!VIEWS[name] || name === view) return;
     const gen = begin();
@@ -536,6 +625,10 @@
   /* ---------- start ---------- */
   tip.innerHTML = TIP_ALL;
   renderLegend();
+  if (LIVE) { // until the first scan: the legend dim, the games line hidden
+    legendRows.forEach(b => b.classList.add('wait'));
+    of.classList.add('gone');
+  }
   renderList();
   layout();
   for (let bc = 0; bc < barCols; bc++) setTrack(bc);
@@ -556,8 +649,20 @@
   if (deep && BYID[deep]) requestAnimationFrame(() => go(deep, false));
 
   const fontsReady = document.fonts ? document.fonts.ready : Promise.resolve();
-  if (CARD === null) fontsReady.then(() => setTimeout(intro, 200));
-  else fontsReady.then(() => {
+  if (LIVE) {
+    /* the page arrives: the headline, the widget and the sort bar rise in (site.css, html.ready),
+       the scan starts as the widget settles, and the cards rise as they come into view */
+    let started = false;
+    const start = () => {
+      if (started) return;
+      started = true;
+      document.documentElement.classList.add('ready');
+      setTimeout(arm, 260);
+      setTimeout(intro, 380);
+    };
+    fontsReady.then(start);
+    setTimeout(start, 3000); // in case the fonts never report
+  } else fontsReady.then(() => {
     /* the whole bar, lit and still: no scan, no sparkle, no hover */
     layout(); fillAll();
     busy = true;

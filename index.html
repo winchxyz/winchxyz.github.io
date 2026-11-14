@@ -26,6 +26,9 @@
 <meta name="twitter:image" content="https://winchxyz.github.io/assets/share.jpg?v=6">
 <link rel="preload" href="assets/fonts/inter.woff" as="font" type="font/woff" crossorigin>
 <link rel="stylesheet" href="assets/site.css">
+<!-- the arrival animation starts hidden (site.css, html.js); ?card is a still picture, so not there.
+     If site.js never says ready, the page shows itself after 3 s anyway. -->
+<script>(function(d){if(new URLSearchParams(location.search).has('card'))return;d.classList.add('js');setTimeout(function(){d.classList.add('ready')},3000)})(document.documentElement)</script>
 </head>
 <body>
 <div class="page">
