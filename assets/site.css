@@ -318,6 +318,23 @@ html, body { background: var(--page); color: var(--ink); }
 .nojs { margin: 40px 4px 0; font-size: 17px; color: var(--ink-2); }
 .nojs a { color: var(--ink); text-decoration: underline; }
 
+/* ---------- the first screen fits the window ----------
+   On a desktop window the headline and the whole widget fit above the fold: in windows lower
+   than 950 px the spacing and the headline shrink with the height, down to a 650 px window.
+   Once the widget is wide enough the legend is one row. Cards (?card) keep their own sizes. */
+@media (min-width: 761px) {
+  html:not(.card) .top { height: clamp(56px, 5.33vh + 21px, 72px); }
+  html:not(.card) .intro { padding: clamp(24px, 13.33vh - 63px, 64px) 0 clamp(20px, 6.67vh - 23px, 40px); }
+  html:not(.card) .intro h1 { font-size: clamp(34px, min(4.8vw, 4vh + 16px), 54px); }
+  html:not(.card) .hero { padding-top: clamp(24px, 2vh + 11px, 30px); }
+  html:not(.card) .bar { margin: clamp(22px, 2.67vh + 5px, 30px) 0 clamp(24px, 3.33vh + 2px, 34px); }
+  html:not(.card) .legend { margin-bottom: clamp(14px, 2.67vh - 3px, 22px); }
+  html:not(.card) .foot { min-height: clamp(72px, 4.67vh + 42px, 86px); }
+}
+@media (min-width: 1100px) {
+  html:not(.card) .legend { grid-template-columns: repeat(5, auto); justify-content: space-between; }
+}
+
 /* ---------- motion: the page arrives, cards rise as they come into view, pictures fade in ----------
    html.js is set in the head (not for ?card), html.ready by site.js once the fonts are in, and
    html.rise when it can watch the cards. Without JavaScript everything is simply there. */
